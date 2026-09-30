@@ -12,7 +12,7 @@ import { plans, getSubscription, activateSubscription, validAdminKey, paymentUrl
 import { smsConfig, createPaymentRequest, issueActivationCode, activateWithCode, getStatus as getSmsStatus, sendPremiumPriceSMS, adminRequests as getSmsAdminRequests } from "./smsPremium.js";
 import { adminLogin, requireAdminToken, adminLogout, listUsers, createManagedUser, updateManagedUser, deleteManagedUser, adminStats, publicAccount, userIsActive, userPermissions, getUserByUsername, validUsername, FEATURE_KEYS, PRO_PERMISSIONS, PREMIUM_PERMISSIONS } from "./adminPanel.js";
 
-const APP_VERSION = "39.0.0";
+const APP_VERSION = "42.0.0";
 const USER_SESSION_HOURS = Math.max(1, Number(process.env.USER_SESSION_HOURS || 72));
 const LOGIN_WINDOW_MS = 10 * 60_000;
 const LOGIN_MAX_ATTEMPTS = 12;
@@ -97,7 +97,18 @@ const livePushChangePct = Math.max(0.01, Number(process.env.LIVE_PUSH_CHANGE_PCT
 app.disable("x-powered-by");
 app.use((req,res,next)=>{res.setHeader("X-Content-Type-Options","nosniff");res.setHeader("Referrer-Policy","strict-origin-when-cross-origin");res.setHeader("X-Frame-Options","SAMEORIGIN");next();});
 console.log(`Gold Alert Pro v${APP_VERSION} booting`);
-app.use((req, res, next) => { res.setHeader("Access-Control-Allow-Origin", process.env.CORS_ORIGIN || "*"); res.setHeader("Access-Control-Allow-Headers", "Content-Type"); res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS"); if (req.method === "OPTIONS") return res.sendStatus(204); next(); });
+const allowedOrigins = String(process.env.CORS_ORIGIN || "").split(",").map(x => x.trim()).filter(Boolean);
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (origin && allowedOrigins.includes(origin)) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+    res.setHeader("Vary", "Origin");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, X-Admin-Session, X-Admin-Key, Authorization");
+    res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
+  }
+  if (req.method === "OPTIONS") return origin && !allowedOrigins.includes(origin) ? res.sendStatus(403) : res.sendStatus(204);
+  next();
+});
 app.use(express.json({ limit: "64kb" }));
 app.use(express.static("public", { maxAge: "1h", setHeaders: (res, filePath) => { if (/\/(app|sw)\.js$/.test(filePath) || /\/index\.html$/.test(filePath)) res.setHeader("Cache-Control", "no-store"); } }));
 
@@ -840,7 +851,7 @@ app.get("/api/state", (_, res) => res.json({
 }));
 app.get("/api/news", async (req, res) => { const news = await getNews(); if (news.length) state.news = news; const sub = await getSubscription(req.query.deviceId); res.json(sub.active ? (state.news || []) : (state.news || []).slice(0, 5)); });
 app.get("/api/backtest", async (req, res) => { try { if(!(await requireFeature(req,'backtest',req.query.deviceId))) return res.status(403).json({error:"دسترسی بک‌تست برای این حساب فعال نیست."}); const sub = await getSubscription(req.query.deviceId); if (!sub.active) return res.status(402).json({ error: "این قابلیت مخصوص Gold Alert Pro+ است." }); const h = await getHistory(); if (!h.length) return res.status(503).json({ error: "history unavailable" }); res.json(await runBacktest(h)); } catch (e) { res.status(500).json({ error: e.message }); } });
-app.post("/api/reset", async (_, res) => { state.events = []; state.targetEvents = []; state.activeTrade = null; state.lastSignal = "WAIT"; scheduleSave(); res.json({ ok: true }); });
+app.post("/api/reset", async (req, res) => { if (!(await adminAuth(req,res))) return res.status(403).json({error:"admin session invalid"}); state.events = []; state.targetEvents = []; state.activeTrade = null; state.lastSignal = "WAIT"; scheduleSave(); await audit("state_reset",{}); res.json({ ok: true }); });
 
 const server = app.listen(port, "0.0.0.0", async () => {
   console.log(`Gold Alert Pro listening on 0.0.0.0:${port}`);

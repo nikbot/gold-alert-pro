@@ -37,11 +37,12 @@ export function publicAccount(a){return publicUser(a);}
 export async function adminLogin(username, password){
   const u=String(username||'').trim();
   const p=String(password||'');
-  const expectedUser=String(process.env.ADMIN_USERNAME||'09130115920');
-  const expectedPass=String(process.env.ADMIN_PASSWORD||'20058');
+  const expectedUser=String(process.env.ADMIN_USERNAME||'').trim();
+  const expectedPass=String(process.env.ADMIN_PASSWORD||'');
   const legacyKey=String(process.env.ADMIN_KEY||'');
+  if (!expectedUser || expectedPass.length < 14) throw new Error('اطلاعات مدیر تنظیم نشده است؛ ADMIN_USERNAME و ADMIN_PASSWORD با رمز حداقل ۱۴ کاراکتری را در تنظیمات محیطی وارد کنید.');
   const attemptKey=`admin:${u}`; const now=Date.now(); const prev=adminAttempts.get(attemptKey); if(prev && now-prev.startedAt<ADMIN_LOGIN_WINDOW_MS && prev.count>=ADMIN_LOGIN_MAX_ATTEMPTS) throw new Error('تلاش‌های ورود مدیریت زیاد است؛ چند دقیقه بعد دوباره امتحان کنید.'); if(!prev || now-prev.startedAt>=ADMIN_LOGIN_WINDOW_MS) adminAttempts.set(attemptKey,{startedAt:now,count:1}); else prev.count++;
-  const valid=(u===expectedUser && p===expectedPass) || (legacyKey && p===legacyKey && u==='admin');
+  const valid=(u===expectedUser && p===expectedPass);
   if(!valid) throw new Error('نام کاربری یا رمز مدیریت صحیح نیست.');
   adminAttempts.delete(attemptKey);
   const token=crypto.randomBytes(32).toString('hex');
