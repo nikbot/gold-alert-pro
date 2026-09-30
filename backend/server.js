@@ -13,7 +13,7 @@ import { plans, getSubscription, activateSubscription, validAdminKey, paymentUrl
 import { smsConfig, createPaymentRequest, issueActivationCode, activateWithCode, getStatus as getSmsStatus, sendPremiumPriceSMS, adminRequests as getSmsAdminRequests } from "./smsPremium.js";
 import { adminLogin, requireAdminToken, adminLogout, listUsers, createManagedUser, updateManagedUser, deleteManagedUser, adminStats, publicAccount, userIsActive, userPermissions, getUserByUsername, validUsername, FEATURE_KEYS, PRO_PERMISSIONS, PREMIUM_PERMISSIONS } from "./adminPanel.js";
 
-const APP_VERSION = "43.0.0";
+const APP_VERSION = "45.0.0";
 const USER_SESSION_HOURS = Math.max(1, Number(process.env.USER_SESSION_HOURS || 72));
 const LOGIN_WINDOW_MS = 10 * 60_000;
 const LOGIN_MAX_ATTEMPTS = 12;
@@ -146,7 +146,7 @@ function scheduleSave() {
 
 
 async function audit(action, meta={}){ try{ const a=await readJsonFile(AUDIT_FILE,[]); a.unshift({id:crypto.randomUUID(),action:String(action).slice(0,120),meta,at:new Date().toISOString()}); await writeJsonFile(AUDIT_FILE,a.slice(0,1000)); }catch{} }
-async function addNotification(userId,title,message,type="info"){ const all=await readJsonFile(NOTIFICATIONS_FILE,[]); const item={id:crypto.randomUUID(),userId,title:String(title).slice(0,120),message:String(message).slice(0,1000),type,read:false,createdAt:new Date().toISOString()}; all.unshift(item); await writeJsonFile(NOTIFICATIONS_FILE,all.slice(0,5000)); try{ const store=await readJsonFile(ACCOUNTS_FILE,{}); const a=Object.values(store).find(x=>x?.id===userId); if(a?.deviceId) await sendWebPushToDevice(a.deviceId,{title:String(title).slice(0,120),body:String(message).slice(0,500),icon:'/icon-192.png',badge:'/icon-192.png',tag:`user-notification-${item.id}`,data:{url:'/#notificationCenter'}},`NOTIF_${item.id}`,Date.now()); }catch(e){ console.warn('User notification push failed:',e.message); } return item; }
+async function addNotification(userId,title,message,type="info"){ const all=await readJsonFile(NOTIFICATIONS_FILE,[]); const item={id:crypto.randomUUID(),userId,deviceId:null,title:String(title).slice(0,120),message:String(message).slice(0,1000),type,read:false,createdAt:new Date().toISOString()}; all.unshift(item); await writeJsonFile(NOTIFICATIONS_FILE,all.slice(0,5000)); try{ const store=await readJsonFile(ACCOUNTS_FILE,{}); const a=Object.values(store).find(x=>x?.id===userId); if(a?.deviceId) await sendWebPushToDevice(a.deviceId,{title:String(title).slice(0,120),body:String(message).slice(0,500),icon:'/icon-192.png',badge:'/icon-192.png',tag:`user-notification-${item.id}`,data:{url:'/#notificationCenter'}},`NOTIF_${item.id}`,Date.now()); }catch(e){ console.warn('User notification push failed:',e.message); } return item; }
 async function readJsonFile(file, fallback) { try { return JSON.parse(await fs.readFile(file, "utf8")); } catch { return fallback; } }
 async function writeJsonFile(file, value) { await fs.mkdir(DATA_DIR, { recursive: true }); await fs.writeFile(file, JSON.stringify(value), "utf8"); }
 function normalizePhone(v) { return String(v || "").replace(/\s+/g, "").replace(/-/g, "").trim(); }
@@ -303,6 +303,7 @@ async function checkPersonalPriceAlerts(price) {
     changed = true;
     const direction = a.direction === "above" ? "⬆️ قیمت از هدف شما عبور کرد" : "⬇️ قیمت به زیر هدف شما رسید";
     const body = `${a.label} به ${rial(price)} ریال رسید. هدف شما: ${rial(a.price)} ریال`;
+    try { const all=await readJsonFile(NOTIFICATIONS_FILE,[]); all.unshift({id:crypto.randomUUID(),userId:null,deviceId:a.deviceId,title:'هشدار قیمت فعال شد',message:body,type:'price-alert',read:false,createdAt:new Date().toISOString(),alertId:a.id}); await writeJsonFile(NOTIFICATIONS_FILE,all.slice(0,5000)); } catch(e) { console.warn('In-app alert persistence failed:',e.message); }
     await safeAlert(() => sendWebPushToDevice(a.deviceId, { title: `🎯 ${direction}`, body, icon: "/icon-192.png", badge: "/icon-192.png", tag: `personal-price-${a.id}`, data: { url: "/#priceAlerts" } }, `PERSONAL_${a.id}`, price));
   }
   if (changed) schedulePersonalAlertSave();
@@ -753,8 +754,8 @@ app.put("/api/user-settings", async (req,res)=>{
   all[a.id]={investorProfile,storageLocations,householdPortfolios,updatedAt:new Date().toISOString()}; await writeJsonFile(USER_SETTINGS_FILE,all); res.json({ok:true,settings:all[a.id]});
 });
 
-app.get("/api/notifications", async (req,res)=>{ const a=await accountFromReq(req); if(!a)return res.status(401).json({error:'ابتدا وارد حساب شوید.'}); const all=await readJsonFile(NOTIFICATIONS_FILE,[]); res.json({ok:true,notifications:all.filter(x=>x.userId===a.id).slice(0,100)}); });
-app.post("/api/notifications/:id/read", async (req,res)=>{ const a=await accountFromReq(req); if(!a)return res.status(401).json({error:'ابتدا وارد حساب شوید.'}); const all=await readJsonFile(NOTIFICATIONS_FILE,[]),n=all.find(x=>x.id===req.params.id&&x.userId===a.id); if(n)n.read=true; await writeJsonFile(NOTIFICATIONS_FILE,all); res.json({ok:true}); });
+app.get("/api/notifications", async (req,res)=>{ const a=await accountFromReq(req); const deviceId=cleanDeviceId(req.query.deviceId); if(!a&&!deviceId)return res.status(401).json({error:'ابتدا وارد حساب شوید یا شناسه دستگاه را ارسال کنید.'}); const all=await readJsonFile(NOTIFICATIONS_FILE,[]); const notifications=all.filter(x=>a?x.userId===a.id:(x.deviceId===deviceId&&x.type==='price-alert')).slice(0,100); res.json({ok:true,notifications}); });
+app.post("/api/notifications/:id/read", async (req,res)=>{ const a=await accountFromReq(req); const deviceId=cleanDeviceId(req.body?.deviceId||req.query.deviceId); if(!a&&!deviceId)return res.status(401).json({error:'ابتدا وارد حساب شوید یا شناسه دستگاه را ارسال کنید.'}); const all=await readJsonFile(NOTIFICATIONS_FILE,[]),n=all.find(x=>x.id===req.params.id&&(a?x.userId===a.id:(x.deviceId===deviceId&&x.type==='price-alert'))); if(n)n.read=true; await writeJsonFile(NOTIFICATIONS_FILE,all); res.json({ok:true}); });
 app.post("/api/account/change-password", async (req,res)=>{ const a=await accountFromReq(req); if(!a)return res.status(401).json({error:'ابتدا وارد حساب شوید.'}); const old=String(req.body?.oldPassword||''),next=String(req.body?.newPassword||''); if(next.length<6)return res.status(400).json({error:'رمز جدید حداقل ۶ کاراکتر باشد.'}); if(!verifyPassword(old,a.salt,a.hash))return res.status(403).json({error:'رمز فعلی صحیح نیست.'}); const store=await readJsonFile(ACCOUNTS_FILE,{}),key=Object.keys(store).find(k=>store[k]===a); Object.assign(a,hashPassword(next)); a.token=''; store[key]=a; await writeJsonFile(ACCOUNTS_FILE,store); await audit('user_password_changed',{userId:a.id}); res.json({ok:true,message:'رمز تغییر کرد؛ دوباره وارد شوید.'}); });
 app.post("/api/account/register", async (req,res)=>{ try { if(String(process.env.SELF_REGISTER_ENABLED||'true').toLowerCase()==='false') return res.status(403).json({error:'ثبت‌نام عمومی غیرفعال است؛ با مدیریت تماس بگیرید.'}); const phone=normalizePhone(req.body?.phone||req.body?.username); const username=phone; const password=String(req.body?.password||''); const deviceId=cleanDeviceId(req.body?.deviceId); if(!/^09\d{9}$/.test(phone)||password.length<6||!deviceId) return res.status(400).json({error:'شماره موبایل معتبر و رمز عبور حداقل ۶ کاراکتری لازم است.'}); const store=await readJsonFile(ACCOUNTS_FILE,{}); if(Object.values(store).some(x=>String(x.username||'').toLowerCase()===username || normalizePhone(x.phone)===phone)) return res.status(409).json({error:'این شماره موبایل قبلاً ثبت شده است.'}); const hp=hashPassword(password); const account={id:crypto.randomUUID(),username,phone,...hp,token:crypto.randomBytes(32).toString('hex'),createdAt:new Date().toISOString(),deviceId,role:'user',permissions:['dashboard','market','portfolio','alerts','account'],active:true}; store[account.id]=account; await writeJsonFile(ACCOUNTS_FILE,store); res.json({ok:true,token:account.token,username,user:userView(account)}); } catch(e){res.status(500).json({error:e.message});} });
 app.post("/api/account/login", async (req,res)=>{ try { const username=normalizePhone(req.body?.username||req.body?.phone); const password=String(req.body?.password||''); const attemptKey=`user:${req.ip}:${username}`; if(!loginAllowed(attemptKey)) return res.status(429).json({error:'تلاش‌های ورود زیاد است؛ چند دقیقه بعد دوباره امتحان کنید.'}); const store=await readJsonFile(ACCOUNTS_FILE,{}); const a=Object.values(store).find(x=>normalizePhone(x.phone)===username || String(x.username||'').toLowerCase()===username.toLowerCase()) || store[username]; if(!a||!verifyPassword(password,a.salt,a.hash)) return res.status(401).json({error:'نام کاربری یا رمز عبور اشتباه است.'}); if(!userIsActive(a)) return res.status(403).json({error:'دسترسی این حساب غیرفعال یا منقضی شده است.'}); clearLoginAttempts(attemptKey); a.token=crypto.randomBytes(32).toString('hex'); a.tokenExpiresAt=new Date(Date.now()+USER_SESSION_HOURS*3600000).toISOString(); a.lastLoginAt=new Date().toISOString(); if(req.body?.deviceId)a.deviceId=cleanDeviceId(req.body.deviceId); if(!a.role)a.role='user'; if(!Array.isArray(a.permissions))a.permissions=['dashboard','market','portfolio','alerts','account']; const key=Object.keys(store).find(k=>store[k]===a); store[key]=a; await writeJsonFile(ACCOUNTS_FILE,store); await audit('user_login',{userId:a.id}); res.json({ok:true,token:a.token,expiresAt:a.tokenExpiresAt,username:a.username||username,user:userView(a)}); } catch(e){res.status(500).json({error:e.message});} });
@@ -843,6 +844,20 @@ ${JSON.stringify(ctx)}
 
 سؤال کاربر:
 ${q}`}],temperature:.2,max_tokens:900})}); const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d?.error?.message||`GapGPT HTTP ${r.status}`);const text=d?.choices?.[0]?.message?.content||d?.choices?.[0]?.text;if(!text)throw new Error('پاسخ AI خالی است.');res.json({ok:true,text,at:new Date().toISOString()}); }catch(e){res.status(502).json({error:e.message});} });
+
+app.get("/api/crypto-markets", async (_req,res)=>{
+  const symbols=["BTCUSDT","ETHUSDT","BNBUSDT","SOLUSDT","XRPUSDT","ADAUSDT","DOGEUSDT","TONUSDT"];
+  const controller=new AbortController(); const timeout=setTimeout(()=>controller.abort(),9000);
+  try{
+    const response=await fetch("https://api.binance.com/api/v3/ticker/24hr",{signal:controller.signal,headers:{Accept:"application/json"}});
+    if(!response.ok) throw new Error(`Crypto provider HTTP ${response.status}`);
+    const rows=await response.json(); const bySymbol=new Map((Array.isArray(rows)?rows:[]).map(x=>[x.symbol,x]));
+    const markets=symbols.map(symbol=>{const x=bySymbol.get(symbol);if(!x)return null;const price=Number(x.lastPrice),change=Number(x.priceChangePercent),quoteVolume=Number(x.quoteVolume);if(!Number.isFinite(price)||price<=0||!Number.isFinite(change))return null;return {symbol,base:symbol.replace("USDT",""),quote:"USDT",price,changePct:change,high24h:Number(x.highPrice)||null,low24h:Number(x.lowPrice)||null,quoteVolume:Number.isFinite(quoteVolume)?quoteVolume:null,source:"Binance Spot",at:new Date().toISOString()};}).filter(Boolean);
+    if(!markets.length) throw new Error("No valid crypto tickers returned");
+    res.set("Cache-Control","public, max-age=15");res.json({ok:true,source:"Binance Spot 24h ticker",at:new Date().toISOString(),markets});
+  }catch(e){res.status(503).json({ok:false,error:"داده رمزارز موقتاً در دسترس نیست.",detail:process.env.NODE_ENV==="development"?e.message:undefined});}
+  finally{clearTimeout(timeout);}
+});
 
 app.get("/api/state", (_, res) => res.json({
   ...state,

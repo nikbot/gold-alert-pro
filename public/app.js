@@ -38,6 +38,18 @@ function renderGoldChart(prices){
  chg.textContent=(delta>=0?'▲ ':'▼ ')+f2(Math.abs(delta))+'٪'; chg.style.color=delta>=0?'var(--green)':'var(--red)';
  const u=document.getElementById('chartUpdated'); if(u&&latest?.updatedAt)u.textContent='آخرین بروزرسانی: '+new Date(latest.updatedAt).toLocaleTimeString('fa-IR')+' • '+fa(raw.length)+' نقطه';
 }
+let cryptoLastFetch=0;
+async function loadCryptoMarkets(force=false){
+ const grid=document.getElementById('cryptoMarketGrid');if(!grid)return;
+ if(!force&&Date.now()-cryptoLastFetch<60000)return;cryptoLastFetch=Date.now();
+ const status=document.getElementById('cryptoStatus'),updated=document.getElementById('cryptoUpdated');
+ try{const r=await fetch('/api/crypto-markets',{cache:'no-store'});const data=await r.json();if(!r.ok||!data.ok)throw new Error(data.error||'Crypto data unavailable');
+ const names={BTC:'بیت‌کوین',ETH:'اتریوم',BNB:'بایننس‌کوین',SOL:'سولانا',XRP:'ریپل',ADA:'کاردانو',DOGE:'دوج‌کوین',TON:'تون‌کوین'};
+ grid.innerHTML=(data.markets||[]).map(x=>{const change=Number(x.changePct),cls=change>=0?'up':'down',sign=change>=0?'▲ ':'▼ ';return `<article class="cryptoAsset"><div class="cryptoAssetTop"><span class="cryptoAssetName">${esc(names[x.base]||x.base)}</span><span class="cryptoSymbol">${esc(x.symbol)}</span></div><div class="cryptoPrice">${Number(x.price).toLocaleString('en-US',{maximumFractionDigits:8})} <small>USDT</small></div><div class="cryptoChange ${cls}">${sign}${Math.abs(change).toFixed(2)}٪</div><div class="cryptoMeta"><span>بیشینه ${Number(x.high24h||0).toLocaleString('en-US',{maximumFractionDigits:5})}</span><span>کمینه ${Number(x.low24h||0).toLocaleString('en-US',{maximumFractionDigits:5})}</span></div></article>`}).join('')||'<div class="small">داده‌ای برای نمایش وجود ندارد.</div>';
+ if(status)status.textContent='متصل • '+(data.source||'');if(updated)updated.textContent=new Date(data.at).toLocaleTimeString('fa-IR');
+ }catch(e){if(status)status.textContent='داده موقتاً در دسترس نیست';if(grid&&!grid.dataset.loaded)grid.innerHTML='<div class="small">اتصال به منبع رمزارز ناموفق بود. بعداً دوباره تلاش کنید.</div>'; }
+}
+
 function initChartControls(){document.querySelectorAll('[data-range]').forEach(btn=>btn.addEventListener('click',()=>{chartRange=Number(btn.dataset.range)||60;document.querySelectorAll('[data-range]').forEach(x=>x.classList.remove('active'));btn.classList.add('active');renderGoldChart(latest?.prices||[])}))}
 
 function openAccountQuickMenu(){ applyCategory('account'); setTimeout(()=>document.getElementById('account')?.scrollIntoView({behavior:'smooth',block:'start'}),50); }
@@ -207,13 +219,14 @@ async function applyAppUpdate(){
  catch(e){alert('⚠️ '+e.message);if(btn){btn.disabled=false;btn.textContent='🔄 آپدیت';}}
 }
 async function adminCheckUpdate(){const d=await checkForAppUpdate(false);const e=document.getElementById('adminUpdateStatus');if(e)e.textContent=d?.available?`نسخه ${d.version} آماده است`:`نسخه فعلی ${d?.currentVersion||'—'}`;}
-document.addEventListener('DOMContentLoaded',()=>{ updateCommandCenter(); const b=document.getElementById('updateBtn'),later=document.getElementById('updateLaterBtn');if(b)b.addEventListener('click',applyAppUpdate);if(later)later.addEventListener('click',()=>{const x=document.getElementById('updateBanner');if(x)x.style.display='none';});setTimeout(()=>checkForAppUpdate(true),2500);});
+document.addEventListener('DOMContentLoaded',()=>{ loadCryptoMarkets(false);setInterval(()=>loadCryptoMarkets(false),60000); updateCommandCenter(); const b=document.getElementById('updateBtn'),later=document.getElementById('updateLaterBtn');if(b)b.addEventListener('click',applyAppUpdate);if(later)later.addEventListener('click',()=>{const x=document.getElementById('updateBanner');if(x)x.style.display='none';});setTimeout(()=>checkForAppUpdate(true),2500);});
 
 // v22: clean professional side menu. The dashboard is the only category shown at first load.
 const categoryLabels={
- dashboard:'پیشخوان', market:'بازار و نمودار', ai:'هوش و تحلیل', alerts:'هشدارها', tools:'دارایی و ابزار', news:'اخبار بازار', sms:'سرویس SMS', account:'حساب و پشتیبان', decision:'اتاق تصمیم', calendar:'تقویم اقتصادی', admin:'پنل مدیریت'
+ dashboard:'پیشخوان', market:'بازار و نمودار', crypto:'رمزارزها', ai:'هوش و تحلیل', alerts:'هشدارها', tools:'دارایی و ابزار', news:'اخبار بازار', sms:'سرویس SMS', account:'حساب و پشتیبان', decision:'اتاق تصمیم', calendar:'تقویم اقتصادی', admin:'پنل مدیریت'
 };
 function applyCategory(category,scroll=true){
+ if(category==='crypto')loadCryptoMarkets(true);
  document.querySelectorAll('.categorySection').forEach(el=>{el.classList.remove('categoryVisible');el.style.display='none';});
  document.body.classList.toggle('categoryView',category!=='dashboard');
  document.querySelectorAll('.menuItem').forEach(b=>b.classList.toggle('active',b.dataset.category===category));
@@ -264,6 +277,8 @@ document.addEventListener('DOMContentLoaded',initSideMenu);
 let serverPriceAlerts=[];
 async function fetchPriceAlerts(){
  try{const r=await fetch('/api/price-alerts?deviceId='+encodeURIComponent(deviceId),{cache:'no-store'});const d=await r.json();if(!r.ok)throw new Error(d.error||'خطای دریافت هشدارها');serverPriceAlerts=Array.isArray(d.alerts)?d.alerts:[];renderPriceAlerts();}catch(e){const box=document.getElementById('alertList');if(box)box.innerHTML='<div class="emptyAlert">⚠️ دریافت هشدارها ناموفق بود.</div>';}}
+async function ensureGold18DefaultAlert(){try{await fetchPriceAlerts();if(serverPriceAlerts.some(a=>a.direction==='above'&&Number(a.price)===15000000&&a.label==='طلای ۱۸ عیار'))return;const r=await fetch('/api/price-alerts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({deviceId,price:15000000,direction:'above',label:'طلای ۱۸ عیار'})});const d=await r.json();if(r.ok){serverPriceAlerts.unshift(d.alert);renderPriceAlerts();}}catch(e){console.warn('Default gold alert setup failed:',e.message)}}
+document.addEventListener('DOMContentLoaded',()=>setTimeout(ensureGold18DefaultAlert,1200));
 function renderPriceAlerts(){
  const box=document.getElementById('alertList'); if(!box)return;
  if(!serverPriceAlerts.length){box.innerHTML='<div class="emptyAlert">هنوز هشداری ثبت نشده است.</div>';return}
@@ -512,8 +527,8 @@ setInterval(loadMarketStructure,10000);setInterval(loadEconomicCalendar,180000);
 let appNotifications=[];
 async function loadNotifications(showError=false){
  try{
-  if(!accountToken)return;
-  const r=await fetch('/api/notifications',{headers:accountHeaders(),cache:'no-store'});
+  const url=accountToken?'/api/notifications':'/api/notifications?deviceId='+encodeURIComponent(deviceId);
+  const r=await fetch(url,{headers:accountToken?accountHeaders():{},cache:'no-store'});
   const d=await r.json(); if(!r.ok)throw new Error(d.error||'خطا');
   const next=Array.isArray(d.notifications)?d.notifications:[];
   if(notificationsBootstrapped){
@@ -534,7 +549,7 @@ function renderNotifications(){
 }
 async function readNotification(id){
  const n=appNotifications.find(x=>String(x.id)===String(id));if(!n)return;n.read=true;renderNotifications();
- try{await fetch('/api/notifications/'+encodeURIComponent(id)+'/read',{method:'POST',headers:accountHeaders()});}catch{}
+ try{await fetch('/api/notifications/'+encodeURIComponent(id)+'/read'+(accountToken?'':'?deviceId='+encodeURIComponent(deviceId)),{method:'POST',headers:accountToken?accountHeaders():{'Content-Type':'application/json'},body:accountToken?undefined:JSON.stringify({deviceId})});}catch{}
 }
 function scrollToNotifications(){
   applyCategory('dashboard',false);

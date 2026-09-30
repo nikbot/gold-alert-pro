@@ -1,61 +1,37 @@
-# Gold Alert Pro v42 — Security baseline + Admin access
+# Gold Alert Pro v45
 
-## ورود کاربران
-- صفحه اول سامانه همیشه Login است.
-- نام کاربری کاربر = شماره موبایل 11 رقمی با فرمت 09xxxxxxxxx
-- کاربر در ثبت‌نام رمز عبور تعیین می‌کند.
-- پس از ورود، نشست کاربر روی دستگاه ذخیره می‌شود و در ورود بعدی در صورت معتبر بودن نشست، داشبورد نمایش داده می‌شود.
-- خروج از حساب، کاربر را به صفحه Login برمی‌گرداند.
+Gold Alert Pro is a market monitoring and analysis web application. This package builds on v44 Smart Alerts and adds a dedicated cryptocurrency market workspace.
 
-## پشتیبانی / تیکت
-- کاربر می‌تواند تیکت جدید ثبت کند و داخل همان تیکت پاسخ بدهد.
-- مدیر می‌تواند همه تیکت‌ها را ببیند، پاسخ بدهد و وضعیت را به باز / در حال بررسی / پاسخ داده شد / بسته تغییر دهد.
+## Requirements
+- Node.js 20+
+- npm
 
-## مدیریت کاربران
-- نام کاربری و رمز مدیر از متغیرهای محیطی `ADMIN_USERNAME` و `ADMIN_PASSWORD` خوانده می‌شود؛ رمز پیش‌فرضی در سورس وجود ندارد و رمز باید حداقل ۱۴ کاراکتر باشد.
-- مدیر می‌تواند کاربر، سطح دسترسی، فعال/غیرفعال، تاریخ انقضا و رمز جدید را مدیریت کند.
-- رمز عبور کاربران به‌صورت هش‌شده ذخیره می‌شود و عمداً در پنل به شکل متن ساده نمایش داده نمی‌شود؛ مدیر می‌تواند رمز جدید تعیین کند.
-- برای اعتبار زمانی، تاریخ انقضا برای هر کاربر قابل تعیین است.
-
-## Deplexo
-Install: `npm install --omit=dev --no-audit --no-fund`
-Build: `npm run check`
-Start: `node backend/server.js`
-Port: `3000`
-
-متغیرهای قبلی GapGPT، IPPanel، Push، SMS و هشدارها را حفظ کنید.
-
-## In-app update system (v33)
-Set these Deplexo environment variables to enable one-click updates:
-- `UPDATE_MANIFEST_URL` = URL of a JSON manifest
-- optional `UPDATE_PACKAGE_URL` = fallback ZIP URL
-
-Manifest example:
-```json
-{"version":"37.0.0","packageUrl":"https://example.com/Gold-Alert-Pro-v34.zip","sha256":"...","mandatory":false,"notes":"بهبود نمودار و رفع خطاها"}
+## Run
+```bash
+npm install
+cp .env.example .env
+npm start
 ```
-The updater downloads to the persistent data directory, verifies SHA-256 when provided, extracts to a staging directory, preserves `.env`/`node_modules` and all persistent `/data/gold-alert-pro` user data, then replaces application files and restarts the process. Do not expose a package URL that is not trusted.
+Open `http://localhost:3000`.
 
+## Deploy
+Configure a persistent writable `DATA_DIR` on your host. Keep API keys in the host's secret/environment settings, never in `public/` or source control. Use the included `deplexo.yaml` or Dockerfile where applicable, then deploy the repository/package.
 
-## v37 additions
-- Professional AI endpoint using market + portfolio + investor profile.
-- Persistent investor profile, storage locations and household portfolio settings.
-- Professional tools: ladder simulation, invoice record, account security shortcuts.
-- Admin overview dashboard with operational status.
-- Admin login no longer defaults to a username/password in the browser.
+## v45 additions
+- Responsive cryptocurrency market category in the side menu.
+- Server endpoint `/api/crypto-markets` fetching 24-hour spot ticker information for selected USDT pairs from Binance public API.
+- Price, 24-hour percent change, high/low, source and timestamp display.
+- Request timeout and unavailable-source handling.
 
+## Existing features retained
+- Iran 18k gold, dollar, global gold and local coin market panels where providers are reachable.
+- Technical indicators, AI endpoints, price alerts, notifications, portfolio tools, admin workflows and paper-trade foundations from earlier versions.
 
-## v39 changes
-- AI core access for registered users; robust GapGPT model fallback and real connection diagnostic endpoint.
-- Desktop browser notifications + Web Push integration; server notifications attempt direct push to the user's registered device.
-- Admin health/AI diagnostic controls.
-- Persistent data path /data/gold-alert-pro is preserved.
+## Important limitations
+- Crypto market data depends on external Binance API availability and regional/network access; it is not a guaranteed executable quote.
+- USDT is a quote asset and is not guaranteed to equal USD.
+- Only USD/IRR has an existing configured local-market feed. No EUR, GBP or JPY prices are fabricated; configure a trusted provider before displaying those quotes.
+- Trading analysis and AI outputs are informational scenarios, not guaranteed predictions or individualized financial advice. Verify quotes and assumptions independently.
+- v45 is an incremental release, not completion of every feature planned through v50.
 
-## GitHub + Deplexo
-
-This project is prepared for repository-based deployment. See `GITHUB_DEPLOY.md` for the exact GitHub/Deplexo flow.
-
-Secrets must stay in Deplexo Environment Variables; never commit a real `.env` file or API key.
-
-## v43 Professional APIs
-See `V43_CHANGELOG.md` for the newly added authenticated market-intelligence, risk-sizing, alert-rule evaluation, and paper-trading APIs. Run `npm test` for unit tests.
+See `V45_CHANGELOG.md`, `GITHUB_DEPLOY.md` and `SECURITY.md`.
