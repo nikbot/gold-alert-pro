@@ -13,7 +13,7 @@ import { plans, getSubscription, activateSubscription, validAdminKey, paymentUrl
 import { smsConfig, createPaymentRequest, issueActivationCode, activateWithCode, getStatus as getSmsStatus, sendPremiumPriceSMS, adminRequests as getSmsAdminRequests } from "./smsPremium.js";
 import { adminLogin, requireAdminToken, adminLogout, listUsers, createManagedUser, updateManagedUser, deleteManagedUser, adminStats, publicAccount, userIsActive, userPermissions, getUserByUsername, validUsername, FEATURE_KEYS, PRO_PERMISSIONS, PREMIUM_PERMISSIONS } from "./adminPanel.js";
 
-const APP_VERSION = "45.0.0";
+const APP_VERSION = "46.0.0";
 const USER_SESSION_HOURS = Math.max(1, Number(process.env.USER_SESSION_HOURS || 72));
 const LOGIN_WINDOW_MS = 10 * 60_000;
 const LOGIN_MAX_ATTEMPTS = 12;
@@ -660,6 +660,8 @@ app.get("/api/update", async (req,res)=>{try{const m=await fetchUpdateManifest()
 app.post("/api/update/apply", async (req,res)=>{try{const token=String(req.headers["x-account-token"]||req.body?.accountToken||"");const account=await publicAccount(token);if(!account) return res.status(401).json({error:"ابتدا وارد حساب شوید."});const m=await fetchUpdateManifest();if(!m.available)return res.json({ok:true,updated:false,version:APP_VERSION,message:"نسخه جدیدی موجود نیست."});if(m.mandatory===false && req.body?.confirm!==true)return res.status(409).json({ok:false,needsConfirm:true,...m});const result=await applySelfUpdate(m);res.json(result);setTimeout(()=>process.exit(0),1200);}catch(e){res.status(500).json({ok:false,error:e.message});}});
 
 app.get("/health", (_, res) => res.json({ ok: true, status: "running", uptime: Math.round(process.uptime()), updatedAt: state.updatedAt, error: state.error, dataReady: state.dataReady, subscriptions: subscriptionCount(), personalAlerts: state.personalAlerts.length, smsPremium: smsConfig(), ai: { provider: "GapGPT", configured: Boolean(process.env.GAPGPT_API_KEY), model: AI_MODEL, baseUrl: AI_BASE_URL } }));
+// Platform readiness probe: process availability is independent of external market/AI providers.
+app.get("/healthz", (_req, res) => res.status(200).json({ ok: true, status: "ready", version: APP_VERSION, uptime: Math.round(process.uptime()) }));
 app.get("/api/push/status", (_, res) => res.json({ configured: Boolean(getPublicVapidKey()), publicKey: getPublicVapidKey() ? "ready" : "missing", subscriptions: subscriptionCount() }));
 app.get("/api/push/public-key", (_, res) => res.json({ publicKey: getPublicVapidKey() }));
 app.post("/api/push/reset-device", async (req, res) => { try { const deviceId = cleanDeviceId(req.body?.deviceId); if (!deviceId) return res.status(400).json({ ok:false, error:"deviceId required" }); const removed = await removeDeviceSubscriptions(deviceId); res.json({ ok:true, removed }); } catch (e) { res.status(400).json({ ok:false, error:e.message }); } });
@@ -885,15 +887,22 @@ app.get("/api/pro/paper-trades", async (req,res)=>{const a=await requireSignedIn
 app.post("/api/pro/paper-trades", async (req,res)=>{const a=await requireSignedIn(req,res);if(!a)return;try{const all=await readJsonFile(PAPER_TRADES_FILE,{}),trades=Array.isArray(all[a.id])?all[a.id]:[];const trade=createPaperTrade(req.body||{});trades.unshift(trade);all[a.id]=trades.slice(0,1000);await writeJsonFile(PAPER_TRADES_FILE,all);await audit("paper_trade_opened",{userId:a.id,tradeId:trade.id});res.status(201).json({ok:true,trade});}catch(e){res.status(400).json({ok:false,error:e.message});}});
 app.post("/api/pro/paper-trades/:id/close", async (req,res)=>{const a=await requireSignedIn(req,res);if(!a)return;try{const all=await readJsonFile(PAPER_TRADES_FILE,{}),trades=Array.isArray(all[a.id])?all[a.id]:[],i=trades.findIndex(t=>t.id===req.params.id);if(i<0)return res.status(404).json({ok:false,error:"معامله پیدا نشد."});trades[i]=closePaperTrade(trades[i],req.body?.exit);all[a.id]=trades;await writeJsonFile(PAPER_TRADES_FILE,all);await audit("paper_trade_closed",{userId:a.id,tradeId:req.params.id});res.json({ok:true,trade:trades[i]});}catch(e){res.status(400).json({ok:false,error:e.message});}});
 
-const server = app.listen(port, "0.0.0.0", async () => {
+const server = app.listen(port, "0.0.0.0", () => {
   console.log(`Gold Alert Pro listening on 0.0.0.0:${port}`);
-  await loadState();
-  await loadPersonalAlerts();
-  await initAlerts();
-  try { await loadHistorySeed(); console.log(`History seed: ${state.prices.length} points`); } catch (e) { console.warn("History seed error:", e.message); }
-  await tick();
-  setInterval(() => tick().catch(e => console.warn("Interval tick error:", e.message)), pollMs);
+  // Do not let a provider, push, or persistence initialization failure prevent the
+  // HTTP process from becoming reachable by the hosting platform's health probe.
+  void (async () => {
+    try { await fs.mkdir(DATA_DIR, { recursive: true }); }
+    catch (e) { console.error("Data directory initialization failed:", e.message); }
+    for (const [name, task] of [["state", loadState], ["personal alerts", loadPersonalAlerts], ["push", initAlerts], ["history", loadHistorySeed]]) {
+      try { await task(); console.log(`${name} initialization complete`); }
+      catch (e) { console.error(`${name} initialization failed:`, e?.stack || e); }
+    }
+    // Start polling even if optional integrations or seed history are unavailable.
+    try { await tick(); } catch (e) { console.warn("Initial market tick failed:", e?.stack || e); }
+    setInterval(() => tick().catch(e => console.warn("Interval tick error:", e?.stack || e)), pollMs);
+  })();
 });
-server.on("error", e => console.error("Server error:", e));
+server.on("error", e => { console.error("Server error:", e); });
 process.on("unhandledRejection", e => console.error("Unhandled rejection:", e));
-process.on("uncaughtException", e => console.error("Uncaught exception:", e));
+process.on("uncaughtException", e => { console.error("Uncaught exception:", e); process.exit(1); });
