@@ -1,5 +1,13 @@
-const TGJU_GOLD_URL = process.env.TGJU_GOLD_URL || "https://www.tgju.org/profile/geram18";
-const TGJU_GOLD_FALLBACK_URL = "https://gem.tgju.org/profile/geram18";
+const TGJU_GOLD_URL = process.env.TGJU_GOLD_URL || "https://www.tgju.org/";
+const TGJU_GOLD_FALLBACK_URLS = [
+  "https://gem.tgju.org/profile/geram18/history",
+  "https://www.tgju.org/profile/geram18/today",
+  "https://www.tgju.org/profile/geram18"
+];
+const SERVIX_GOLD_URL = process.env.SERVIX_GOLD_URL || "https://servix.cc/api/v1/assets/GOLD_18_RLS";
+const SERVIX_API_KEY = process.env.SERVIX_API_KEY || "";
+const TINDEX_GOLD_URL = process.env.TINDEX_GOLD_URL || "https://tindex.app/api/public/indicators/precious-metals/GOLD-18K";
+const TINDEX_API_TOKEN = process.env.TINDEX_API_TOKEN || "";
 const TGJU_COIN_URL = process.env.TGJU_COIN_URL || "https://www.tgju.org/coin";
 const TGJU_DOLLAR_URL = process.env.TGJU_DOLLAR_URL || "https://www.tgju.org/profile/price_dollar_rl/today";
 const TGJU_WORLD_URL = process.env.TGJU_WORLD_URL || "https://www.tgju.org/world-market/currency/profile/geram18";
@@ -41,8 +49,8 @@ async function fetchText(url, options = {}) {
     return await response.text();
   } finally { clearTimeout(timeout); }
 }
-async function fetchJson(url) {
-  const text = await fetchText(url, {headers:{Accept:"application/json"}});
+async function fetchJson(url, headers = {}) {
+  const text = await fetchText(url, {headers:{Accept:"application/json", ...headers}});
   try { return JSON.parse(text); } catch { throw new Error("Invalid JSON response"); }
 }
 function extractFirst(text, patterns) {
@@ -53,27 +61,53 @@ export function parseIran18PriceFromText(text) {
   const normalized = normalizeDigits(text);
   return extractFirst(normalized, [
     /نرخ\s*فعلی\s*:{0,2}\s*((?:\d{1,3}(?:,\d{3})+)|(?:\d+))/i,
-    /طلای\s*18\s*عیار[^\d]{0,160}((?:\d{1,3}(?:,\d{3})+)|(?:\d+))/i
+    /طلای\s*18\s*عیار[^\d]{0,160}((?:\d{1,3}(?:,\d{3})+)|(?:\d+))/i,
+    /طلا\s*18\s*\|?\s*((?:\d{1,3}(?:,\d{3})+)|(?:\d+))/i
   ]);
 }
+function priceFromJson(payload) {
+  const candidates = [payload?.value, payload?.price, payload?.data?.value, payload?.data?.price,
+    payload?.data?.indicator?.price, ...(Array.isArray(payload?.data?.rows) ? payload.data.rows.filter(x => /GOLD-18K|18.?k|18 عیار/i.test(`${x.slug||""} ${x.name||""}`)).map(x => x.price) : [])];
+  for (const candidate of candidates) {
+    const n = typeof candidate === "string" ? parseNumber(candidate) : Number(candidate);
+    if (Number.isFinite(n) && n > 100000) return Math.round(n);
+  }
+  return null;
+}
+async function tryIran18Html(url) {
+  const html = await fetchText(url);
+  const price = parseIran18PriceFromText(cleanText(html));
+  if (!Number.isFinite(price) || price < 1000000) throw new Error("18k price not found in response");
+  return { priceIRR: Math.round(price), source: `TGJU (${new URL(url).host})`, at: new Date().toISOString(), unit: "IRR_PER_GRAM" };
+}
 export async function getIran18() {
-  const urls = [...new Set([TGJU_GOLD_URL, TGJU_GOLD_FALLBACK_URL])];
+  const urls = [...new Set([TGJU_GOLD_URL, ...TGJU_GOLD_FALLBACK_URLS])];
   const errors = [];
   for (const url of urls) {
+    try { return await tryIran18Html(url); }
+    catch (error) { errors.push(`${new URL(url).host}: ${error.name === "AbortError" ? "request timeout" : error.message}`); }
+  }
+  // Authenticated structured feeds are optional; configure keys in deployment secrets only.
+  if (SERVIX_API_KEY) {
     try {
-      const html = await fetchText(url);
-      const price = parseIran18PriceFromText(cleanText(html));
-      if (!Number.isFinite(price) || price < 1000000) {
-        errors.push(`${new URL(url).host}: 18k price not found in response`);
-        continue;
-      }
-      return { priceIRR: Math.round(price), source: `TGJU (${new URL(url).host})`, at: new Date().toISOString(), unit: "IRR_PER_GRAM" };
-    } catch (error) {
-      errors.push(`${new URL(url).host}: ${error.name === "AbortError" ? "request timeout" : error.message}`);
-    }
+      const payload = await fetchJson(SERVIX_GOLD_URL, {"X-API-Key": SERVIX_API_KEY});
+      const quote = priceFromJson(payload);
+      if (!quote) throw new Error("valid GOLD_18_RLS value missing");
+      return { priceIRR: quote, source: "Servix API", at: payload?.businessTime || new Date().toISOString(), unit: "IRR_PER_GRAM" };
+    } catch (error) { errors.push(`Servix: ${error.name === "AbortError" ? "request timeout" : error.message}`); }
+  }
+  if (TINDEX_API_TOKEN) {
+    try {
+      const payload = await fetchJson(TINDEX_GOLD_URL, {Authorization: `Bearer ${TINDEX_API_TOKEN}`});
+      const value = priceFromJson(payload);
+      if (!value) throw new Error("valid GOLD-18K value missing");
+      // Tindex's documented GOLD-18K quote is Toman per gram; app state stores Rial.
+      return { priceIRR: Math.round(value * 10), source: "Tindex API", at: payload?.data?.updated_at || new Date().toISOString(), unit: "IRR_PER_GRAM" };
+    } catch (error) { errors.push(`Tindex: ${error.name === "AbortError" ? "request timeout" : error.message}`); }
   }
   throw new Error(`Iran 18k gold unavailable — ${errors.join("; ")}`);
 }
+
 function parseLabelPrice(text, label) {
   const re = new RegExp(label.replace(/[.*+?^${}()|[\]\\]/g,"\\$&") + "\\s*\\|?\\s*((?:\\d{1,3}(?:,\\d{3})+)|(?:\\d+))", "i");
   const m = text.match(re);
