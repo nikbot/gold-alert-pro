@@ -870,17 +870,6 @@ app.get("/api/state", (_, res) => res.json({
   marketStructure: marketStructure(state.prices),
   units: { gold18: "IRR_PER_GRAM", dollar: "IRR_PER_USD", coins: "IRR" }
 }));
-app.post("/api/ai-analysis", async (req, res) => {
-  try {
-    const data = req.body || {};
-    const result = await analyzeGold(data);
-    res.json({ ok:true, success:true, ...result });
-  } catch (e) {
-    console.error("AI route error:", e.message);
-    res.status(500).json({ ok:false, success:false, error:e.message });
-  }
-});
-
 app.get("/api/news", async (req, res) => { const news = await getNews(); if (news.length) state.news = news; const sub = await getSubscription(req.query.deviceId); res.json(sub.active ? (state.news || []) : (state.news || []).slice(0, 5)); });
 app.get("/api/backtest", async (req, res) => { try { if(!(await requireFeature(req,'backtest',req.query.deviceId))) return res.status(403).json({error:"دسترسی بک‌تست برای این حساب فعال نیست."}); const sub = await getSubscription(req.query.deviceId); if (!sub.active) return res.status(402).json({ error: "این قابلیت مخصوص Gold Alert Pro+ است." }); const h = await getHistory(); if (!h.length) return res.status(503).json({ error: "history unavailable" }); res.json(await runBacktest(h)); } catch (e) { res.status(500).json({ error: e.message }); } });
 app.post("/api/reset", async (_, res) => { state.events = []; state.targetEvents = []; state.activeTrade = null; state.lastSignal = "WAIT"; scheduleSave(); res.json({ ok: true }); });
