@@ -14,7 +14,7 @@ import { getCommerceSettings, setCommerceSettings } from "./commerceSettings.js"
 import { adminLogin, requireAdminToken, adminLogout, listUsers, createManagedUser, updateManagedUser, deleteManagedUser, adminStats, publicAccount, userIsActive, userPermissions, getUserByUsername, validUsername, FEATURE_KEYS, PRO_PERMISSIONS, PREMIUM_PERMISSIONS } from "./adminPanel.js";
 import { analyzeGold } from "./ai/manager.js";
 
-const APP_VERSION = "53.1.0"
+const APP_VERSION = "53.2.0"
 const USER_SESSION_HOURS = Math.max(1, Number(process.env.USER_SESSION_HOURS || 72));
 const LOGIN_WINDOW_MS = 10 * 60_000;
 const LOGIN_MAX_ATTEMPTS = 12;
@@ -886,6 +886,34 @@ app.get("/api/news", async (req, res) => { const news = await getNews(); if (new
 app.get("/api/backtest", async (req, res) => { try { if(!(await requireFeature(req,'backtest',req.query.deviceId))) return res.status(403).json({error:"دسترسی بک‌تست برای این حساب فعال نیست."}); const sub = await getSubscription(req.query.deviceId); if (!sub.active) return res.status(402).json({ error: "این قابلیت مخصوص Gold Alert Pro+ است." }); const h = await getHistory(); if (!h.length) return res.status(503).json({ error: "history unavailable" }); res.json(await runBacktest(h)); } catch (e) { res.status(500).json({ error: e.message }); } });
 app.post("/api/reset", async (_, res) => { state.events = []; state.targetEvents = []; state.activeTrade = null; state.lastSignal = "WAIT"; scheduleSave(); res.json({ ok: true }); });
 
+
+
+// AI Control Center
+app.get("/api/ai-status", (req,res)=>{
+  res.json({
+    ok:true,
+    providers:["Gemini","Groq","OpenAI"],
+    configured:{
+      Gemini:Boolean(process.env.GEMINI_API_KEY),
+      Groq:Boolean(process.env.GROQ_API_KEY),
+      OpenAI:Boolean(process.env.OPENAI_API_KEY)
+    }
+  });
+});
+
+app.post("/api/ai-test", async(req,res)=>{
+ try{
+   const result=await analyzeGold({
+     price:15000000,
+     usd:0,
+     xau:0,
+     change:0
+   });
+   res.json({ok:true,...result});
+ }catch(e){
+   res.status(500).json({ok:false,error:e.message});
+ }
+});
 const server = app.listen(port, "0.0.0.0", async () => {
   console.log(`Gold Alert Pro listening on 0.0.0.0:${port}`);
   await loadState();
