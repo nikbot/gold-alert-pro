@@ -13,7 +13,7 @@ import { smsConfig, createPaymentRequest, issueActivationCode, activateWithCode,
 import { getCommerceSettings, setCommerceSettings } from "./commerceSettings.js";
 import { adminLogin, requireAdminToken, adminLogout, listUsers, createManagedUser, updateManagedUser, deleteManagedUser, adminStats, publicAccount, userIsActive, userPermissions, getUserByUsername, validUsername, FEATURE_KEYS, PRO_PERMISSIONS, PREMIUM_PERMISSIONS } from "./adminPanel.js";
 
-const APP_VERSION = "50.0.0"
+const APP_VERSION = "51.1.0"
 const USER_SESSION_HOURS = Math.max(1, Number(process.env.USER_SESSION_HOURS || 72));
 const LOGIN_WINDOW_MS = 10 * 60_000;
 const LOGIN_MAX_ATTEMPTS = 12;

@@ -1,8 +1,10 @@
-const TGJU_GOLD_URL = process.env.TGJU_GOLD_URL || "https://www.tgju.org/";
+const TGJU_GOLD_URL = process.env.TGJU_GOLD_URL || "https://www.tgju.org/profile/geram18/today";
 const TGJU_GOLD_FALLBACK_URLS = [
+  "https://www.tgju.org/profile/geram18",
+  "https://www.tgju.org/profile/geram18/history",
   "https://gem.tgju.org/profile/geram18/history",
-  "https://www.tgju.org/profile/geram18/today",
-  "https://www.tgju.org/profile/geram18"
+  "https://www.tgju.org/",
+  "https://tgju.org/"
 ];
 const SERVIX_GOLD_URL = process.env.SERVIX_GOLD_URL || "https://servix.cc/api/v1/assets/GOLD_18_RLS";
 const SERVIX_API_KEY = process.env.SERVIX_API_KEY || "";
@@ -13,7 +15,8 @@ const TGJU_DOLLAR_URL = process.env.TGJU_DOLLAR_URL || "https://www.tgju.org/pro
 const TGJU_WORLD_URL = process.env.TGJU_WORLD_URL || "https://www.tgju.org/world-market/currency/profile/geram18";
 const GOLDPRICE_URL = process.env.GOLDPRICE_URL || "https://api.goldprice.dev/v1/prices?symbol=XAU-USD-SPOT";
 const GDELT_URL = process.env.GDELT_URL || "https://api.gdeltproject.org/api/v2/doc/doc";
-const HTTP_TIMEOUT = Math.max(5000, Number(process.env.HTTP_TIMEOUT || 12000));
+const configuredTimeout = Number(process.env.HTTP_TIMEOUT || 12000);
+const HTTP_TIMEOUT = Number.isFinite(configuredTimeout) ? Math.max(5000, configuredTimeout) : 12000;
 
 function normalizeDigits(value) {
   return String(value ?? "")
@@ -49,6 +52,23 @@ async function fetchText(url, options = {}) {
     return await response.text();
   } finally { clearTimeout(timeout); }
 }
+async function fetchTextWithRetry(url, options = {}, attempts = 2) {
+  let lastError;
+  for (let attempt = 1; attempt <= attempts; attempt++) {
+    try {
+      return await fetchText(url, options);
+    } catch (error) {
+      lastError = error;
+      const statusMatch = String(error?.message || "").match(/^HTTP (\d{3})$/);
+      const status = statusMatch ? Number(statusMatch[1]) : null;
+      const retryable = error?.name === "AbortError" || error?.name === "TypeError" ||
+        status === 408 || status === 425 || status === 429 || (status !== null && status >= 500);
+      if (!retryable || attempt === attempts) break;
+      await new Promise(resolve => setTimeout(resolve, 500 * attempt));
+    }
+  }
+  throw lastError || new Error("Request failed");
+}
 async function fetchJson(url, headers = {}) {
   const text = await fetchText(url, {headers:{Accept:"application/json", ...headers}});
   try { return JSON.parse(text); } catch { throw new Error("Invalid JSON response"); }
@@ -60,8 +80,8 @@ function extractFirst(text, patterns) {
 export function parseIran18PriceFromText(text) {
   const normalized = normalizeDigits(text);
   return extractFirst(normalized, [
-    /نرخ\s*فعلی\s*:{0,2}\s*((?:\d{1,3}(?:,\d{3})+)|(?:\d+))/i,
     /طلای\s*18\s*عیار[^\d]{0,160}((?:\d{1,3}(?:,\d{3})+)|(?:\d+))/i,
+    /طلا\s*18\s*عیار[^\d]{0,160}((?:\d{1,3}(?:,\d{3})+)|(?:\d+))/i,
     /طلا\s*18\s*\|?\s*((?:\d{1,3}(?:,\d{3})+)|(?:\d+))/i
   ]);
 }
@@ -75,7 +95,7 @@ function priceFromJson(payload) {
   return null;
 }
 async function tryIran18Html(url) {
-  const html = await fetchText(url);
+  const html = await fetchTextWithRetry(url);
   const price = parseIran18PriceFromText(cleanText(html));
   if (!Number.isFinite(price) || price < 1000000) throw new Error("18k price not found in response");
   return { priceIRR: Math.round(price), source: `TGJU (${new URL(url).host})`, at: new Date().toISOString(), unit: "IRR_PER_GRAM" };
@@ -242,5 +262,10 @@ export function parseHistoryHtml(html) {
   return out.filter(x=>!seen.has(x.date)&&seen.add(x.date)).sort((a,b)=>a.date.localeCompare(b.date));
 }
 export async function getHistory() {
-  try { return parseHistoryHtml(await fetchText(`${TGJU_GOLD_URL}/history`)); } catch { return []; }
+  // Build an absolute path to avoid malformed URLs such as /profile/.../today/history
+  // or a double slash when TGJU_GOLD_URL is the site root.
+  try {
+    const historyUrl = new URL("/profile/geram18/history", TGJU_GOLD_URL).toString();
+    return parseHistoryHtml(await fetchTextWithRetry(historyUrl));
+  } catch { return []; }
 }
