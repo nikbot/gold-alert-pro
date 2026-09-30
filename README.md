@@ -1,12 +1,18 @@
-# Gold Alert Pro v57.1 Stability Patch
+# Gold Alert Pro v57.2 Safe Integration Edition
 
-Purpose:
-- Prevent startup crashes introduced by v57 modules
-- Safe loading of tenant/subscription/role modules
-- Keep compatibility with existing server.js
+هدف:
+- جلوگیری از Crash در Startup
+- سازگاری با v56/v57
+- عدم وابستگی اجباری ماژول های جدید
+- مدیریت خطاهای AI/API
+- Health Check
+
+نکته:
+این نسخه Patch است و باید روی پروژه اصلی Merge شود، نه جایگزینی کامل.
 
 Deploy:
-1. Merge with current project
-2. Commit
-3. Push
-4. Redeploy
+1- Backup
+2- Merge files
+3- Commit
+4- Push
+5- Redeploy
