@@ -1,15 +1,12 @@
-# Gold Alert Pro v57 MultiTenant Edition
+# Gold Alert Pro v57.1 Stability Patch
 
-Features prepared:
-- Multi tenant foundation
-- Organization management
-- Subscription structure
-- Roles and permissions foundation
-- VIP branding support
+Purpose:
+- Prevent startup crashes introduced by v57 modules
+- Safe loading of tenant/subscription/role modules
+- Keep compatibility with existing server.js
 
 Deploy:
-1. Backup current project
-2. Replace/merge files
-3. Commit
-4. Push
-5. Redeploy
+1. Merge with current project
+2. Commit
+3. Push
+4. Redeploy

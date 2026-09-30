@@ -1,4 +1,4 @@
-Commit message:
-Gold Alert Pro v57 MultiTenant Edition
+Commit:
+Gold Alert Pro v57.1 Stability Patch
 
-After push redeploy in Deplexo.
+This patch should be merged with the existing v56/v57 server.

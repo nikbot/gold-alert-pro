@@ -1,8 +1,7 @@
-const roles=[
+module.exports=[
 "SUPER_ADMIN",
 "ADMIN",
 "MANAGER",
 "SUPPORT",
 "CUSTOMER"
 ];
-module.exports=roles;

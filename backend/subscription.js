@@ -1,7 +1,7 @@
-// Subscription plans foundation
-const plans=[
- {name:"Free"},
- {name:"Pro"},
- {name:"VIP"}
-];
-module.exports=plans;
+module.exports={
+ plans:[
+  {name:"Free"},
+  {name:"Pro"},
+  {name:"VIP"}
+ ]
+};
