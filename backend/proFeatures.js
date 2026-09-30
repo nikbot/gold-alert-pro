@@ -37,3 +37,28 @@ export function closePaperTrade(trade, exit) {
   const pnl=(trade.side==='buy'?exit-trade.entry:trade.entry-exit)*trade.quantity;
   return {...trade,status:'closed',exit,pnl,closedAt:new Date().toISOString()};
 }
+
+
+// Multi-window technical context derived from ordered close/price samples.
+export function technicalSuite(input=[]) {
+  const p=input.map(Number).filter(x=>Number.isFinite(x)&&x>0).slice(-500);
+  if(p.length<2) return {ready:false,samples:p.length,notice:"حداقل دو نمونه معتبر لازم است."};
+  const last=p.at(-1), first=p[0], changes=p.slice(1).map((v,i)=>(v/p[i]-1)*100);
+  const mean=changes.reduce((a,b)=>a+b,0)/changes.length;
+  const volatility=Math.sqrt(changes.reduce((a,b)=>a+(b-mean)**2,0)/changes.length);
+  const window=(n)=>p.length>=n?p.slice(-n):null;
+  const avg=a=>a? a.reduce((x,y)=>x+y,0)/a.length:null;
+  const returns=n=>p.length>n?(last/p[p.length-1-n]-1)*100:null;
+  const recent=p.slice(-Math.min(50,p.length));
+  const sorted=[...recent].sort((a,b)=>a-b);
+  const q=(f)=>sorted[Math.min(sorted.length-1,Math.floor((sorted.length-1)*f))];
+  const high=Math.max(...recent), low=Math.min(...recent);
+  const range=high-low;
+  return {ready:p.length>=50,samples:p.length,last,changePct:returns(p.length-1),
+    returns:{sample:returns(p.length-1),short:returns(5),medium:returns(20)},
+    averages:{sma5:avg(window(5)),sma10:avg(window(10)),sma20:avg(window(20)),sma50:avg(window(50))},
+    volatility:{stdReturnPct:volatility,rangePct:last?range/last*100:null},
+    levels:{recentHigh:high,recentLow:low,median:q(.5),resistance:q(.8),support:q(.2)},
+    momentum:changes.length?{positiveSamples:changes.filter(x=>x>0).length,negativeSamples:changes.filter(x=>x<0).length}:null,
+    notice:"محاسبه بر اساس نمونه‌های قیمت موجود است؛ سطوح آماری، پیش‌بینی یا تضمین حرکت آینده نیستند."};
+}

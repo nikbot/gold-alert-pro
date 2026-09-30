@@ -38,3 +38,6 @@ See `V45_CHANGELOG.md`, `GITHUB_DEPLOY.md` and `SECURITY.md`.
 
 
 نسخه 46 شامل مقاوم‌سازی راه‌اندازی و مسیر `/healthz` برای عیب‌یابی وضعیت سرویس است. برای علت‌یابی 503 در هاست، Runtime Logs و تنظیمات پورت/Health Check را بررسی کنید.
+
+### v47 technical analysis API
+Signed-in accounts can request `/api/pro/technical-suite` to receive multi-window moving averages, historical returns, volatility and empirical price levels derived from available local gold history. These statistics are descriptive and are not forecasts or guaranteed signals.

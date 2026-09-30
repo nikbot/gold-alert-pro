@@ -7,13 +7,13 @@ import express from "express";
 import { getIran18, getGlobalGold, getCoins, getDollar, getNews, getHistory } from "./provider.js";
 import { runBacktest } from "./backtest.js";
 import { analyze } from "./indicators.js";
-import { riskPositionSize, detectRegime, evaluateAlertRule, createPaperTrade, closePaperTrade } from "./proFeatures.js";
+import { riskPositionSize, detectRegime, evaluateAlertRule, createPaperTrade, closePaperTrade, technicalSuite } from "./proFeatures.js";
 import { initAlerts, sendTelegram, sendWebPush, sendWebPushToDevice, addSubscription, removeSubscription, removeDeviceSubscriptions, getPublicVapidKey, subscriptionCount } from "./alerts.js";
 import { plans, getSubscription, activateSubscription, validAdminKey, paymentUrl, supportUrl } from "./subscription.js";
 import { smsConfig, createPaymentRequest, issueActivationCode, activateWithCode, getStatus as getSmsStatus, sendPremiumPriceSMS, adminRequests as getSmsAdminRequests } from "./smsPremium.js";
 import { adminLogin, requireAdminToken, adminLogout, listUsers, createManagedUser, updateManagedUser, deleteManagedUser, adminStats, publicAccount, userIsActive, userPermissions, getUserByUsername, validUsername, FEATURE_KEYS, PRO_PERMISSIONS, PREMIUM_PERMISSIONS } from "./adminPanel.js";
 
-const APP_VERSION = "46.0.0";
+const APP_VERSION = "47.0.0";
 const USER_SESSION_HOURS = Math.max(1, Number(process.env.USER_SESSION_HOURS || 72));
 const LOGIN_WINDOW_MS = 10 * 60_000;
 const LOGIN_MAX_ATTEMPTS = 12;
@@ -881,6 +881,7 @@ app.get("/api/pro/market-intelligence", async (req,res)=>{
   const recent=prices.slice(-30);
   res.json({ok:true,version:APP_VERSION,regime,market:{price:recent.at(-1)??null,changePct:recent.length>1?(recent.at(-1)/recent[0]-1)*100:null,samples:recent.length},indicators:state.analysis||null,updatedAt:state.updatedAt||null,stale:!state.updatedAt||Date.now()-Date.parse(state.updatedAt)>Math.max(60000,pollMs*3),notice:"اطلاعات تحلیلی و سناریویی است و تضمین‌کننده نتیجه آینده نیست."});
 });
+app.get("/api/pro/technical-suite", async (req,res)=>{const a=await requireSignedIn(req,res);if(!a)return;try{const h=await getHistory();const prices=(Array.isArray(h)?h:[]).map(x=>Number(x.priceIRR ?? x.price ?? x.iran)).filter(x=>Number.isFinite(x)&&x>0);res.json({ok:true,asset:"gold18/local-history",...technicalSuite(prices),updatedAt:state.updatedAt||null});}catch(e){res.status(503).json({ok:false,error:"تاریخچه برای تحلیل تکنیکال در دسترس نیست."});}});
 app.post("/api/pro/risk-size", async (req,res)=>{const a=await requireSignedIn(req,res);if(!a)return;try{res.json({ok:true,...riskPositionSize(req.body||{})});}catch(e){res.status(400).json({ok:false,error:e.message});}});
 app.post("/api/pro/evaluate-alert", async (req,res)=>{const a=await requireSignedIn(req,res);if(!a)return;const result=evaluateAlertRule(req.body?.rule,req.body?.snapshot);if(!result.valid)return res.status(400).json({ok:false,error:"قاعده یا داده هشدار نامعتبر است."});res.json({ok:true,...result,evaluatedAt:new Date().toISOString()});});
 app.get("/api/pro/paper-trades", async (req,res)=>{const a=await requireSignedIn(req,res);if(!a)return;const all=await readJsonFile(PAPER_TRADES_FILE,{});res.json({ok:true,trades:Array.isArray(all[a.id])?all[a.id]:[]});});

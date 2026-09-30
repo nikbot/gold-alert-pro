@@ -51,3 +51,5 @@
 - از Node.js نسخه 20 یا بالاتر استفاده کنید. فرمان شروع: `node backend/server.js`.
 - `DATA_DIR` باید مسیر قابل نوشتن و ترجیحاً persistent volume باشد (در Docker این پروژه `/data/gold-alert-pro` است).
 - اگر هنوز صفحه 503 نمایش داده می‌شود، در Deplexo بخش Deploy/Runtime Logs را بررسی کنید: خطای نصب dependency، خطای اجرای Node، پورت/health-check ناهماهنگ، یا محدودیت حافظه. مسیر `/healthz` را پس از Deploy باز کنید. این بسته به‌تنهایی نمی‌تواند تنظیمات داشبورد Deplexo یا وضعیت زیرساخت را اصلاح کند.
+
+For v47, authenticated technical context is available at `GET /api/pro/technical-suite`. It requires a valid signed-in session and uses the locally available gold price history.
