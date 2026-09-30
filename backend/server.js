@@ -455,7 +455,14 @@ async function tick() {
     const global = results[1].status === "fulfilled" ? results[1].value : null;
     const dollar = results[2].status === "fulfilled" ? results[2].value : null;
     const coins = results[3].status === "fulfilled" ? results[3].value : null;
-    if (!iran) throw new Error(results[0].reason?.message || "Iran gold price unavailable");
+    if (!iran) {
+      console.warn("Iran18 unavailable, keeping previous state");
+      if (state.iran) {
+        state.error = results[0].reason?.message || "Iran gold provider unavailable";
+        return;
+      }
+      throw new Error(results[0].reason?.message || "Iran gold price unavailable");
+    }
     state.iran = iran; state.global = global; state.dollar = dollar; state.coins = coins;
     pushPrice(iran.priceIRR); pushTick({iran,global,dollar,coins});
     state.marketPressure = calcMarketPressure();

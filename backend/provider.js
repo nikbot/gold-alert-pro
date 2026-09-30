@@ -17,6 +17,7 @@ const GOLDPRICE_URL = process.env.GOLDPRICE_URL || "https://api.goldprice.dev/v1
 const GDELT_URL = process.env.GDELT_URL || "https://api.gdeltproject.org/api/v2/doc/doc";
 const configuredTimeout = Number(process.env.HTTP_TIMEOUT || 12000);
 const HTTP_TIMEOUT = Number.isFinite(configuredTimeout) ? Math.max(5000, configuredTimeout) : 12000;
+let lastValidIran18 = null;
 
 function normalizeDigits(value) {
   return String(value ?? "")
@@ -98,7 +99,9 @@ async function tryIran18Html(url) {
   const html = await fetchTextWithRetry(url);
   const price = parseIran18PriceFromText(cleanText(html));
   if (!Number.isFinite(price) || price < 1000000) throw new Error("18k price not found in response");
-  return { priceIRR: Math.round(price), source: `TGJU (${new URL(url).host})`, at: new Date().toISOString(), unit: "IRR_PER_GRAM" };
+  const result = { priceIRR: Math.round(price), source: `TGJU (${new URL(url).host})`, at: new Date().toISOString(), unit: "IRR_PER_GRAM" };
+  lastValidIran18 = result;
+  return result;
 }
 export async function getIran18() {
   const urls = [...new Set([TGJU_GOLD_URL, ...TGJU_GOLD_FALLBACK_URLS])];
@@ -124,6 +127,14 @@ export async function getIran18() {
       // Tindex's documented GOLD-18K quote is Toman per gram; app state stores Rial.
       return { priceIRR: Math.round(value * 10), source: "Tindex API", at: payload?.data?.updated_at || new Date().toISOString(), unit: "IRR_PER_GRAM" };
     } catch (error) { errors.push(`Tindex: ${error.name === "AbortError" ? "request timeout" : error.message}`); }
+  }
+  if (lastValidIran18) {
+    return {
+      ...lastValidIran18,
+      source: `${lastValidIran18.source} (CACHE)`,
+      cached: true,
+      warning: errors.join("; ")
+    };
   }
   throw new Error(`Iran 18k gold unavailable — ${errors.join("; ")}`);
 }
