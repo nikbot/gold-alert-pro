@@ -18,6 +18,23 @@ const GDELT_URL = process.env.GDELT_URL || "https://api.gdeltproject.org/api/v2/
 const configuredTimeout = Number(process.env.HTTP_TIMEOUT || 12000);
 const HTTP_TIMEOUT = Number.isFinite(configuredTimeout) ? Math.max(5000, configuredTimeout) : 12000;
 let lastValidIran18 = null;
+let lastIran18FetchAt = 0;
+const CACHE_MAX_AGE = 60000; // 60 seconds
+
+function isValidPrice(price){
+  return Number.isFinite(price) && price > 1000000 && price < 10000000000;
+}
+
+function saveFreshPrice(result){
+  if(!isValidPrice(result.priceIRR)) throw new Error("Invalid price rejected");
+  lastValidIran18 = {
+    ...result,
+    cached:false,
+    at:new Date().toISOString()
+  };
+  lastIran18FetchAt = Date.now();
+  return lastValidIran18;
+}
 
 function normalizeDigits(value) {
   return String(value ?? "")
@@ -107,7 +124,10 @@ export async function getIran18() {
   const urls = [...new Set([TGJU_GOLD_URL, ...TGJU_GOLD_FALLBACK_URLS])];
   const errors = [];
   for (const url of urls) {
-    try { return await tryIran18Html(url); }
+    try {
+      const fresh = await tryIran18Html(url);
+      return saveFreshPrice(fresh);
+    }
     catch (error) { errors.push(`${new URL(url).host}: ${error.name === "AbortError" ? "request timeout" : error.message}`); }
   }
   // Authenticated structured feeds are optional; configure keys in deployment secrets only.
@@ -128,8 +148,9 @@ export async function getIran18() {
       return { priceIRR: Math.round(value * 10), source: "Tindex API", at: payload?.data?.updated_at || new Date().toISOString(), unit: "IRR_PER_GRAM" };
     } catch (error) { errors.push(`Tindex: ${error.name === "AbortError" ? "request timeout" : error.message}`); }
   }
-  if (lastValidIran18) {
+  if (lastValidIran18 && (Date.now() - lastIran18FetchAt) < CACHE_MAX_AGE) {
     return {
+
       ...lastValidIran18,
       source: `${lastValidIran18.source} (CACHE)`,
       cached: true,
