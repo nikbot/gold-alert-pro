@@ -45,7 +45,7 @@ The updater downloads to the persistent data directory, verifies SHA-256 when pr
 - Admin login no longer defaults to a username/password in the browser.
 
 
-## v38 changes
+## v39 changes
 - AI core access for registered users; robust GapGPT model fallback and real connection diagnostic endpoint.
 - Desktop browser notifications + Web Push integration; server notifications attempt direct push to the user's registered device.
 - Admin health/AI diagnostic controls.

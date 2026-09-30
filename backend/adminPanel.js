@@ -6,6 +6,9 @@ const DATA_DIR = process.env.DATA_DIR || '/data/gold-alert-pro';
 const ACCOUNTS_FILE = path.join(DATA_DIR, 'accounts.json');
 const ADMIN_SESSIONS_FILE = path.join(DATA_DIR, 'admin-sessions.json');
 const ADMIN_SESSION_HOURS = Math.max(1, Number(process.env.ADMIN_SESSION_HOURS || 12));
+const ADMIN_LOGIN_WINDOW_MS = 10 * 60_000;
+const ADMIN_LOGIN_MAX_ATTEMPTS = 10;
+const adminAttempts = new Map();
 
 export const FEATURE_KEYS = [
   'dashboard','market','decision','ai','portfolio','alerts','news','tools','backtest','sms','account','reports','chat','calendar'
@@ -37,8 +40,10 @@ export async function adminLogin(username, password){
   const expectedUser=String(process.env.ADMIN_USERNAME||'09130115920');
   const expectedPass=String(process.env.ADMIN_PASSWORD||'20058');
   const legacyKey=String(process.env.ADMIN_KEY||'');
+  const attemptKey=`admin:${u}`; const now=Date.now(); const prev=adminAttempts.get(attemptKey); if(prev && now-prev.startedAt<ADMIN_LOGIN_WINDOW_MS && prev.count>=ADMIN_LOGIN_MAX_ATTEMPTS) throw new Error('تلاش‌های ورود مدیریت زیاد است؛ چند دقیقه بعد دوباره امتحان کنید.'); if(!prev || now-prev.startedAt>=ADMIN_LOGIN_WINDOW_MS) adminAttempts.set(attemptKey,{startedAt:now,count:1}); else prev.count++;
   const valid=(u===expectedUser && p===expectedPass) || (legacyKey && p===legacyKey && u==='admin');
   if(!valid) throw new Error('نام کاربری یا رمز مدیریت صحیح نیست.');
+  adminAttempts.delete(attemptKey);
   const token=crypto.randomBytes(32).toString('hex');
   const sessions=await readJson(ADMIN_SESSIONS_FILE,{});
   sessions[token]={username:u,createdAt:new Date().toISOString(),expiresAt:new Date(Date.now()+ADMIN_SESSION_HOURS*3600000).toISOString()};
