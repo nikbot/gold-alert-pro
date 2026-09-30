@@ -1,18 +1,14 @@
-# Gold Alert Pro v57.2 Safe Integration Edition
+# Gold Alert Pro v56 Branding Edition
 
-هدف:
-- جلوگیری از Crash در Startup
-- سازگاری با v56/v57
-- عدم وابستگی اجباری ماژول های جدید
-- مدیریت خطاهای AI/API
-- Health Check
-
-نکته:
-این نسخه Patch است و باید روی پروژه اصلی Merge شود، نه جایگزینی کامل.
+Added:
+- Admin-only branding settings
+- Dynamic application name
+- Logo/favicon configuration
+- Brand colors
+- Dashboard background settings
 
 Deploy:
-1- Backup
-2- Merge files
-3- Commit
-4- Push
-5- Redeploy
+1. Replace files in repository
+2. Commit
+3. Push
+4. Redeploy

@@ -1,4 +1,6 @@
-Commit:
-Gold Alert Pro v57.1 Stability Patch
+Gold Alert Pro v56 Deployment Guide
 
-This patch should be merged with the existing v56/v57 server.
+Commit:
+Gold Alert Pro v56 Branding Edition
+
+Then push and redeploy.
