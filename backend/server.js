@@ -13,6 +13,7 @@ import { smsConfig, createPaymentRequest, issueActivationCode, activateWithCode,
 import { getCommerceSettings, setCommerceSettings } from "./commerceSettings.js";
 import { adminLogin, requireAdminToken, adminLogout, listUsers, createManagedUser, updateManagedUser, deleteManagedUser, adminStats, publicAccount, userIsActive, userPermissions, getUserByUsername, validUsername, FEATURE_KEYS, PRO_PERMISSIONS, PREMIUM_PERMISSIONS } from "./adminPanel.js";
 import { analyzeGold } from "./ai/manager.js";
+import { getTheme, setTheme } from "./theme.js";
 
 const APP_VERSION = "54.0.0"
 const USER_SESSION_HOURS = Math.max(1, Number(process.env.USER_SESSION_HOURS || 72));
@@ -786,6 +787,10 @@ app.post("/api/checkout", async (req, res) => { const url = paymentUrl(req.body?
 app.post("/api/admin/activate", async (req, res) => { if (!(await adminAuth(req,res)) && !validAdminKey(req.headers["x-admin-key"])) return res.status(403).json({ error: "admin session invalid" }); try { res.json({ ok: true, subscription: await activateSubscription(req.body || {}) }); } catch (e) { res.status(400).json({ error: e.message }); } });
 // Commercial administration: user lifecycle, roles, permissions and access control.
 function adminAuth(req,res){ const token=String(req.headers["x-admin-session"]||req.body?.adminSession||req.query?.adminSession||""); return requireAdminToken(token); }
+
+app.get("/api/theme", async (req,res)=>{res.json(await getTheme());});
+app.get("/api/admin/theme", async (req,res)=>{if(!(await adminAuth(req,res)))return;res.json(await getTheme());});
+app.put("/api/admin/theme", async (req,res)=>{if(!(await adminAuth(req,res)))return;try{res.json({ok:true,theme:await setTheme(req.body?.theme)});}catch(e){res.status(400).json({error:e.message});}});
 app.post("/api/admin/login", async (req,res)=>{ try{ const out=await adminLogin(req.body?.username,req.body?.password); res.json({ok:true,...out}); }catch(e){res.status(403).json({error:e.message});} });
 app.post("/api/admin/logout", async (req,res)=>{ await adminLogout(req.headers["x-admin-session"]||req.body?.adminSession); res.json({ok:true}); });
 app.get("/api/admin/stats", async (req,res)=>{ if(!(await adminAuth(req,res)))return res.status(403).json({error:"admin session invalid"}); res.json({ok:true,...await adminStats()}); });

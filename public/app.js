@@ -188,7 +188,7 @@ async function runAIAnalysis(){
 }
 
 window.runAIAnalysis=runAIAnalysis;
-document.addEventListener('DOMContentLoaded',()=>{
+document.addEventListener('DOMContentLoaded',()=>{loadTheme();
  const btn=document.getElementById('aiBtn');
  if(btn) btn.addEventListener('click',runAIAnalysis);
  loadAIHealth();
@@ -207,7 +207,7 @@ async function applyAppUpdate(){
  catch(e){alert('⚠️ '+e.message);if(btn){btn.disabled=false;btn.textContent='🔄 آپدیت';}}
 }
 async function adminCheckUpdate(){const d=await checkForAppUpdate(false);const e=document.getElementById('adminUpdateStatus');if(e)e.textContent=d?.available?`نسخه ${d.version} آماده است`:`نسخه فعلی ${d?.currentVersion||'—'}`;}
-document.addEventListener('DOMContentLoaded',()=>{ updateCommandCenter(); const b=document.getElementById('updateBtn'),later=document.getElementById('updateLaterBtn');if(b)b.addEventListener('click',applyAppUpdate);if(later)later.addEventListener('click',()=>{const x=document.getElementById('updateBanner');if(x)x.style.display='none';});setTimeout(()=>checkForAppUpdate(true),2500);});
+document.addEventListener('DOMContentLoaded',()=>{loadTheme(); updateCommandCenter(); const b=document.getElementById('updateBtn'),later=document.getElementById('updateLaterBtn');if(b)b.addEventListener('click',applyAppUpdate);if(later)later.addEventListener('click',()=>{const x=document.getElementById('updateBanner');if(x)x.style.display='none';});setTimeout(()=>checkForAppUpdate(true),2500);});
 
 // v22: clean professional side menu. The dashboard is the only category shown at first load.
 const categoryLabels={
@@ -257,7 +257,7 @@ function initSideMenu(){
  document.addEventListener('keydown',e=>{if(e.key==='Escape')closeSideMenu()});
  applyCategory('dashboard',false);
 }
-document.addEventListener('DOMContentLoaded',()=>{const u=document.getElementById('adminUsernameInput');const p=document.getElementById('adminPasswordInput');if(u)u.value='';if(p)p.value='';});
+document.addEventListener('DOMContentLoaded',()=>{loadTheme();const u=document.getElementById('adminUsernameInput');const p=document.getElementById('adminPasswordInput');if(u)u.value='';if(p)p.value='';});
 document.addEventListener('DOMContentLoaded',initSideMenu);
 
 // v14: server-backed personal price alerts with background push notifications.
@@ -555,4 +555,7 @@ function scrollToNotifications(){
   applyCategory('dashboard',false);
   setTimeout(()=>document.getElementById('notificationCenter')?.scrollIntoView({behavior:'smooth',block:'start'}),50);
 }
-document.addEventListener('DOMContentLoaded',()=>{setTimeout(()=>loadNotifications(false),900);setInterval(()=>loadNotifications(false),30000);});
+document.addEventListener('DOMContentLoaded',()=>{loadTheme();setTimeout(()=>loadNotifications(false),900);setInterval(()=>loadNotifications(false),30000);});
+
+async function loadTheme(){try{const d=await fetch('/api/theme').then(r=>r.json());document.documentElement.dataset.theme=d.active||'gold-light';}catch(e){}}
+async function adminSaveTheme(){try{const theme=document.getElementById('themeSelect').value;const r=await adminFetch('/api/admin/theme',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({theme})});const d=await r.json();if(!r.ok)throw new Error(d.error||'خطا');document.documentElement.dataset.theme=theme;document.getElementById('themeStatus').textContent='پوسته ذخیره شد';}catch(e){alert('⚠️ '+e.message)}}
