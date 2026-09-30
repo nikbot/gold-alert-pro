@@ -1,11 +1,11 @@
-const TGJU_GOLD_URL = process.env.TGJU_GOLD_URL || "https://gem.tgju.org/profile/geram18";
+const TGJU_GOLD_URL = process.env.TGJU_GOLD_URL || "https://www.tgju.org/profile/geram18";
 const TGJU_GOLD_FALLBACK_URLS = [
   "https://www.tgju.org/profile/geram18/today",
-  "https://www.tgju.org/profile/geram18/technical/today",
-  "https://www.tgju.org/profile/geram18",
-  "https://gem.tgju.org/profile/geram18",
-  "https://www.tgju.org/profile/geram18/history"
+  "https://gem.tgju.org/profile/geram18"
 ];
+// Optional structured TGJU-compatible endpoint. If configured, it is preferred over HTML
+// because structured data is less sensitive to page markup changes.
+const TGJU_JSON_URL = String(process.env.TGJU_JSON_URL || "").trim();
 const SERVIX_GOLD_URL = process.env.SERVIX_GOLD_URL || "https://servix.cc/api/v1/assets/GOLD_18_RLS";
 const SERVIX_API_KEY = String(process.env.SERVIX_API_KEY || "").trim();
 const TINDEX_GOLD_URL = process.env.TINDEX_GOLD_URL || "https://tindex.app/api/public/indicators/precious-metals/GOLD-18K";
@@ -21,7 +21,8 @@ const SERVIX_POLL_MS = Math.max(60_000, Number(process.env.SERVIX_POLL_MS || 1_8
 const TINDEX_POLL_MS = Math.max(30_000, Number(process.env.TINDEX_POLL_MS || 120_000));
 const SOURCE_DIAGNOSTICS_MS = Math.max(10_000, Number(process.env.SOURCE_DIAGNOSTICS_MS || 60_000));
 const SERVIX_429_COOLDOWN_MS = Math.max(5 * 60_000, Number(process.env.SERVIX_429_COOLDOWN_MS || 6 * 60 * 60_000));
-const TGJU_MIN_REQUEST_MS = Math.max(1000, Number(process.env.TGJU_MIN_REQUEST_MS || 5000));
+const TGJU_MIN_REQUEST_MS = Math.max(5000, Number(process.env.TGJU_MIN_REQUEST_MS || 8000));
+const TGJU_PARSE_COOLDOWN_MS = Math.max(15000, Number(process.env.TGJU_PARSE_COOLDOWN_MS || 20000));
 
 let lastValidIran18 = null;
 let lastIran18FetchAt = 0;
@@ -48,8 +49,33 @@ function cleanText(value) {
     .replace(/\s+/g," ").trim();
 }
 function parseNumber(value) {
-  const s=normalizeDigits(value).replace(/\s/g,"").replace(/,/g,"");
+  const s=normalizeDigits(value).replace(/[\u200c\u200f\u200e]/g,"").replace(/\s/g,"").replace(/[٬،,]/g,"").replace(/٫/g,".");
   const n=Number(s.replace(/[^\d.-]/g,"")); return Number.isFinite(n)?n:NaN;
+}
+function plausibleGoldPrice(n){ return Number.isFinite(n) && n >= 10000000 && n <= 10000000000; }
+function collectPriceCandidates(raw) {
+  const text=normalizeDigits(String(raw||""));
+  const out=[];
+  const add=(value,score=0,context="")=>{const n=parseNumber(value);if(plausibleGoldPrice(n))out.push({n,score,context:String(context).slice(0,180)});};
+  const patterns=[
+    /(?:\"(?:p|price|value|current|last)\"\s*:\s*\"?)([\d٬،,]{7,})/gi,
+    /(?:data-(?:value|price|current)\s*=\s*[\"'])([\d٬،,]{7,})/gi,
+    /(?:قیمت\s*(?:فعلی|زنده)|نرخ\s*فعلی)\s*(?:\"?\s*[:：|]\s*)?([\d٬،,]{7,})/gi,
+    /(?:طلای\s*18\s*عیار\s*\/\s*750|طلای\s*۱۸\s*عیار|گرم\s*طلای\s*18)[^\d]{0,400}([\d٬،,]{7,})/gi,
+    /(?:geram18|gold_18|18k)[^\d]{0,500}([\d٬،,]{7,})/gi
+  ];
+  for(const re of patterns){let m;while((m=re.exec(text))){add(m[1],re.source.includes('geram18')?5:3,m[0]);}}
+  // When markup has no useful labels, inspect numbers near the stable geram18 instrument key.
+  for(const key of ['geram18','طلای 18 عیار / 750','طلای ۱۸ عیار']){
+    let pos=0;
+    while((pos=text.indexOf(key,pos))>=0){
+      const window=text.slice(Math.max(0,pos-300),Math.min(text.length,pos+1200));
+      const nums=window.match(/[\d]{2,3}(?:[٬،,][\d]{3}){1,3}/g)||[];
+      for(const v of nums) add(v, key==='geram18'?4:2, window);
+      pos+=key.length;
+    }
+  }
+  return out;
 }
 async function fetchText(url, options = {}) {
   const controller=new AbortController(); const timeout=setTimeout(()=>controller.abort(),HTTP_TIMEOUT);
@@ -88,11 +114,15 @@ function extractFirst(text, patterns){for(const re of patterns){const m=text.mat
 
 export function parseIran18PriceFromText(text){
   const normalized=normalizeDigits(String(text||""));
-  return extractFirst(normalized,[
-    /نرخ\s*فعلی\s*:{1,2}\s*((?:\d{1,3}(?:,\d{3})+)|(?:\d+))/i,
-    /نرخ\s*فعلی[^\d]{0,160}((?:\d{1,3}(?:,\d{3})+)|(?:\d+))/i,
-    /(?:طلای\s*18\s*عیار\s*\/\s*750|Gram\s*Gold\s*18)[^\d]{0,220}((?:\d{1,3}(?:,\d{3})+)|(?:\d+))/i
+  const direct=extractFirst(normalized,[
+    /نرخ\s*فعلی\s*:{1,2}\s*((?:\d{1,3}(?:[,٬،]\d{3})+)|(?:\d{7,}))/i,
+    /نرخ\s*فعلی[^\d]{0,160}((?:\d{1,3}(?:[,٬،]\d{3})+)|(?:\d{7,}))/i,
+    /(?:طلای\s*18\s*عیار\s*\/\s*750|طلای\s*۱۸\s*عیار|Gram\s*Gold\s*18)[^\d]{0,300}((?:\d{1,3}(?:[,٬،]\d{3})+)|(?:\d{7,}))/i
   ]);
+  if(plausibleGoldPrice(direct)) return Math.round(direct);
+  const candidates=collectPriceCandidates(text);
+  candidates.sort((a,b)=>b.score-a.score);
+  return candidates.length ? Math.round(candidates[0].n) : NaN;
 }
 function parseTGJULatestAt(text){
   const n=normalizeDigits(String(text||""));
@@ -110,10 +140,23 @@ function combineTodayTime(time){
   return `${iranDate}T${String(h||0).padStart(2,"0")}:${String(m||0).padStart(2,"0")}:${String(s||0).padStart(2,"0")}.000+03:30`;
 }
 async function tryIran18Html(url){
-  const html=await fetchText(url); const cleaned=cleanText(html); const price=parseIran18PriceFromText(cleaned);
-  if(!Number.isFinite(price)||price<1000000)throw new Error("18k price not found in response");
-  const at=combineTodayTime(parseTGJULatestAt(cleaned));
-  return {priceIRR:Math.round(price),source:`TGJU (${new URL(url).host})`,at,unit:"IRR_PER_GRAM",sourceCode:"TGJU_GERAM18"};
+  const html=await fetchText(url);
+  const cleaned=cleanText(html);
+  const price=parseIran18PriceFromText(html) || parseIran18PriceFromText(cleaned);
+  if(!plausibleGoldPrice(price))throw new Error("18k price not found in response");
+  const time=parseTGJULatestAt(html) || parseTGJULatestAt(cleaned);
+  const fetchedAt=new Date().toISOString();
+  return {priceIRR:Math.round(price),source:`TGJU (${new URL(url).host})`,at:combineTodayTime(time),fetchedAt,unit:"IRR_PER_GRAM",sourceCode:"TGJU_GERAM18",parser:"adaptive-html"};
+}
+async function tryTGJUJson(url){
+  const payload=await fetchJson(url);
+  const data=payload?.data?.geram18 || payload?.data?.gold?.geram18 || payload?.geram18 || payload?.item || payload;
+  const raw=data?.value ?? data?.price?.value ?? data?.price ?? data?.p ?? data?.current ?? data?.data?.value;
+  const price=parseNumber(raw);
+  if(!plausibleGoldPrice(price)) throw new Error("18k price not found in structured response");
+  const time=data?.time || data?.updatedAt || data?.updated_at || payload?.updatedAt || payload?.updated_at || payload?.timestamp || null;
+  const at=time ? (String(time).includes('T') ? new Date(time).toISOString() : combineTodayTime(String(time))) : new Date().toISOString();
+  return {priceIRR:Math.round(price),source:"TGJU structured API",at,fetchedAt:new Date().toISOString(),unit:"IRR_PER_GRAM",sourceCode:"TGJU_GERAM18",parser:"structured"};
 }
 function priceFromJson(payload){
   const rows=Array.isArray(payload)?payload:(Array.isArray(payload?.data)?payload.data:[]);
@@ -138,15 +181,29 @@ async function fetchTindex(){
 
 export async function getIran18(){
   const errors=[]; const now=Date.now();
-  // TGJU is the fast path because its public 18K page exposes second-level market ticks.
-  // Servix is still the structured authority, but it is deliberately rate-limited to avoid burning daily quota.
   let tgjuResult=null;
+
+  // One upstream TGJU request per cycle. The previous build tried five pages on every
+  // failure, which multiplied rate-limit pressure and still returned the same parse error.
   if(providerCanTry("TGJU",TGJU_MIN_REQUEST_MS)){
     providerState.TGJU.lastAttempt=now;
-    const urls=[...new Set([TGJU_GOLD_URL,...TGJU_GOLD_FALLBACK_URLS])];
-    for(const url of urls){
-      try{tgjuResult=await tryIran18Html(url);markProvider("TGJU",tgjuResult);break;}
-      catch(e){markProvider("TGJU",null,e);errors.push(`${new URL(url).host}: ${providerError(e).message}`)}
+    try {
+      if(TGJU_JSON_URL) tgjuResult=await tryTGJUJson(TGJU_JSON_URL);
+      else tgjuResult=await tryIran18Html(TGJU_GOLD_URL);
+      markProvider("TGJU",tgjuResult);
+    } catch(e) {
+      markProvider("TGJU",null,e);
+      errors.push(`TGJU: ${providerError(e).message}`);
+      // Only use one HTML fallback after a failed primary cycle, never all fallbacks in a burst.
+      const fallback=TGJU_GOLD_FALLBACK_URLS[(providerState.TGJU.failures-1) % TGJU_GOLD_FALLBACK_URLS.length];
+      try {
+        tgjuResult=await tryIran18Html(fallback);
+        markProvider("TGJU",tgjuResult);
+      } catch(e2) {
+        markProvider("TGJU",null,e2);
+        errors.push(`TGJU fallback: ${new URL(fallback).host}: ${providerError(e2).message}`);
+        providerState.TGJU.cooldownUntil=Math.max(providerState.TGJU.cooldownUntil,Date.now()+TGJU_PARSE_COOLDOWN_MS);
+      }
     }
   } else if(providerState.TGJU.last?.priceIRR){
     tgjuResult={...providerState.TGJU.last,cached:true};
@@ -157,28 +214,43 @@ export async function getIran18(){
     providerState.Servix.lastAttempt=now;
     try{servixResult=await fetchServix();}
     catch(e){markProvider("Servix",null,e);const pe=providerError(e);errors.push(`Servix: ${pe.message}${pe.status?` (${pe.status})`:""}`)}
-  } else if(providerState.Servix.last?.priceIRR){ servixResult={...providerState.Servix.last,cached:true}; }
+  } else if(providerState.Servix.last?.priceIRR){
+    servixResult={...providerState.Servix.last,cached:true};
+  }
 
-  // Prefer a fresh TGJU tick over an older structured snapshot. Prefer Servix only when its
-  // businessTime is no older than the TGJU tick and the value is within the validation band.
+  // Tindex is a tertiary fallback only when neither fast TGJU nor structured Servix
+  // produced a usable quote.
   const candidates=[tgjuResult,servixResult].filter(Boolean);
   if(TINDEX_API_TOKEN && !candidates.length && providerCanTry("Tindex",TINDEX_POLL_MS)){
-    providerState.Tindex.lastAttempt=now; try{candidates.push(await fetchTindex())}catch(e){markProvider("Tindex",null,e);errors.push(`Tindex: ${providerError(e).message}`)}
+    providerState.Tindex.lastAttempt=now;
+    try{candidates.push(await fetchTindex());}
+    catch(e){markProvider("Tindex",null,e);errors.push(`Tindex: ${providerError(e).message}`)}
   }
-  if(!tgjuResult && providerState.TGJU.lastAttempt===now){ providerState.TGJU.cooldownUntil=Math.max(providerState.TGJU.cooldownUntil,Date.now()+15000); }
   if(!candidates.length && providerState.Tindex.last?.priceIRR)candidates.push({...providerState.Tindex.last,cached:true});
-  if(!candidates.length && lastValidIran18 && Date.now()-lastIran18FetchAt<120000){return {...lastValidIran18,cached:true,warning:errors.join("; ")||"منبع موقتاً در حال بازیابی است"};}
+  if(!candidates.length && lastValidIran18 && Date.now()-lastIran18FetchAt<120000){
+    return {...lastValidIran18,cached:true,warning:errors.join("; ")||"منبع موقتاً در حال بازیابی است"};
+  }
   if(!candidates.length)throw new Error(`Iran 18k gold unavailable — ${errors.join("; ")||"no provider available"}`);
 
   const fresh=candidates.filter(x=>!x.cached);
-  const selected=fresh[0]||candidates[0];
-  if(servixResult && tgjuResult){
-    const spread=Math.abs(servixResult.priceIRR/tgjuResult.priceIRR-1)*100;
-    if(spread<=2 && new Date(servixResult.at).getTime()>=new Date(tgjuResult.at).getTime()){
-      return saveFreshPrice({...servixResult,validation:{peer:"TGJU",spreadPct:spread}});
-    }
+  // Never convert a cached quote into a fresh quote. A cached quote is intentionally surfaced
+  // as STALE by the server so the UI never claims LIVE while upstream polling is paused.
+  if(!fresh.length){
+    const cached=candidates[0];
+    return {...cached,cached:true,fetchedAt:cached.fetchedAt||lastValidIran18?.fetchedAt||new Date().toISOString(),warning:errors.join("; ")||"منبع جدید در دسترس نیست"};
   }
-  return saveFreshPrice({...selected,validation:servixResult&&tgjuResult?{peer:"Servix",spreadPct:Math.abs(servixResult.priceIRR/tgjuResult.priceIRR-1)*100}:null,warning:errors.length?errors.join("; "):undefined});
+  // TGJU is the live display source. Servix is used for validation, not to replace a newer TGJU tick.
+  const selected=tgjuResult?.cached!==true ? tgjuResult : fresh[0];
+  const validation=servixResult&&tgjuResult ? {
+    peer:"Servix",
+    spreadPct:Math.abs(servixResult.priceIRR/tgjuResult.priceIRR-1)*100,
+    peerAt:servixResult.at,
+    peerFresh:!servixResult.cached
+  } : null;
+  const warnings=[];
+  if(validation && validation.spreadPct>2) warnings.push(`اختلاف منبع با Servix: ${validation.spreadPct.toFixed(2)}٪`);
+  if(errors.length) warnings.push(...errors);
+  return saveFreshPrice({...selected,validation,warning:warnings.join("; ")||undefined});
 }
 
 export async function getIran18Sources(force=false){

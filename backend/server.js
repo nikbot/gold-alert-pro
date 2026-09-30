@@ -15,15 +15,15 @@ import { adminLogin, requireAdminToken, adminLogout, listUsers, createManagedUse
 import { analyzeGold } from "./ai/manager.js";
 import { getTheme, setTheme } from "./theme.js";
 
-const APP_VERSION = "59.1.0"
+const APP_VERSION = "59.2.0"
 const USER_SESSION_HOURS = Math.max(1, Number(process.env.USER_SESSION_HOURS || 72));
 const LOGIN_WINDOW_MS = 10 * 60_000;
 const LOGIN_MAX_ATTEMPTS = 12;
 const loginAttempts = new Map();
 const app = express();
 const port = Number.isFinite(Number(process.env.PORT)) ? Number(process.env.PORT) : 3000;
-const pollMs = Math.max(3000, Number(process.env.POLL_MS || 5000));
-const staleThresholdMs = Math.max(10000, Number(process.env.STALE_THRESHOLD_MS || 45000));
+const pollMs = Math.max(5000, Number(process.env.POLL_MS || 8000));
+const staleThresholdMs = Math.max(15000, Number(process.env.STALE_THRESHOLD_MS || 60000));
 const minScore = Math.min(100, Math.max(0, Number(process.env.MIN_SIGNAL_SCORE || 65)));
 const target1 = Math.max(0.1, Number(process.env.TARGET_1_PCT || 1.5));
 const target2 = Math.max(target1, Number(process.env.TARGET_2_PCT || 3));
@@ -511,10 +511,13 @@ async function tick() {
     }
     const previousPrice = Number(state.prices.at(-1) || 0);
     const jumpPct = previousPrice > 0 ? Math.abs((iran.priceIRR / previousPrice - 1) * 100) : 0;
-    const sourceAge = iran.at ? Math.max(0, Date.now() - new Date(iran.at).getTime()) : 0;
-    const sourceStale = sourceAge > staleThresholdMs;
+    const sourceTimestamp = iran.at ? new Date(iran.at).getTime() : 0;
+    const receivedTimestamp = iran.fetchedAt ? new Date(iran.fetchedAt).getTime() : Date.now();
+    const sourceAge = sourceTimestamp > 0 && Number.isFinite(sourceTimestamp) ? Math.max(0, Date.now() - sourceTimestamp) : 0;
+    const transportAge = Math.max(0, Date.now() - receivedTimestamp);
+    const sourceStale = sourceAge > staleThresholdMs || transportAge > staleThresholdMs;
     state.anomaly = { detected: jumpPct > 5 || Boolean(state.sourceDiagnostics?.anomaly), jumpPct, thresholdPct:5, sourceSpreadPct:state.sourceDiagnostics?.spreadPct ?? null, checkedAt:new Date().toISOString() };
-    state.engineStatus = { status: sourceStale ? "STALE" : "LIVE", label: sourceStale ? "قیمت منبع قدیمی است" : "LIVE • قیمت جدید", source: iran.source || null, sourceAgeMs: sourceAge, reason: sourceStale ? `آخرین زمان منبع بیش از ${Math.round(staleThresholdMs/1000)} ثانیه قبل است` : null };
+    state.engineStatus = { status: sourceStale ? "STALE" : "LIVE", label: sourceStale ? "قیمت منبع قدیمی است" : "LIVE • قیمت جدید", source: iran.source || null, sourceAgeMs: sourceAge, transportAgeMs: transportAge, reason: sourceStale ? `آخرین داده بیش از ${Math.round(staleThresholdMs/1000)} ثانیه قبل است` : null };
     pushPrice(iran.priceIRR); pushTick({iran,global,dollar,coins});
     state.marketPressure = calcMarketPressure();
     await emitPressureAlert(state.marketPressure, iran.priceIRR);
@@ -531,6 +534,14 @@ async function tick() {
   } catch (e) {
     state.consecutiveErrors++;
     state.error = e.message;
+    const fetchedAt = state.iran?.fetchedAt ? new Date(state.iran.fetchedAt).getTime() : 0;
+    const age = fetchedAt && Number.isFinite(fetchedAt) ? Math.max(0, Date.now() - fetchedAt) : Infinity;
+    const hasLast = Boolean(state.iran?.priceIRR);
+    state.engineStatus = hasLast && age <= staleThresholdMs
+      ? { status:"STALE", label:"آخرین قیمت معتبر", source:state.iran?.source||null, sourceAgeMs:age, reason:e.message }
+      : { status:"OFFLINE", label:"منبع قیمت در دسترس نیست", source:state.iran?.source||null, sourceAgeMs:Number.isFinite(age)?age:null, reason:e.message };
+    try { state.sourceDiagnostics = await getIran18Sources(false); } catch {}
+    broadcastMarketState(true);
     console.warn("Tick error:", e.message);
   } finally { state.busy = false; }
 }
@@ -914,7 +925,7 @@ app.get("/api/candles", (req,res)=>{
   for(const t of ticks){ const ts=new Date(t.at).getTime(); const key=Math.floor(ts/(seconds*1000))*seconds*1000; let c=buckets.get(key); const p=Number(t.price); if(!c)c={time:new Date(key).toISOString(),open:p,high:p,low:p,close:p,volume:0}; else {c.high=Math.max(c.high,p);c.low=Math.min(c.low,p);c.close=p;} c.volume++; buckets.set(key,c); }
   res.set("Cache-Control","no-store"); res.json({ok:true,intervalSeconds:seconds,candles:[...buckets.values()].slice(-180)});
 });
-app.get("/api/price-engine", (_,res)=>{res.set("Cache-Control","no-store");res.json({ok:true,primary:state.iran?.source||null,price:state.iran?.priceIRR||null,sourceTime:state.iran?.at||null,receivedAt:state.updatedAt,diagnostics:state.sourceDiagnostics,anomaly:state.anomaly,engineStatus:state.engineStatus,clients:sseClients.size,pollMs,staleThresholdMs});});
+app.get("/api/price-engine", (_,res)=>{res.set("Cache-Control","no-store");res.json({ok:true,primary:state.iran?.source||null,price:state.iran?.priceIRR||null,sourceTime:state.iran?.at||null,receivedAt:state.updatedAt,diagnostics:state.sourceDiagnostics,anomaly:state.anomaly,engineStatus:state.engineStatus,clients:sseClients.size,pollMs,staleThresholdMs,sourceReceivedAt:state.iran?.fetchedAt||null});});
 
 app.get("/api/stream", (req, res) => {
   res.status(200);
