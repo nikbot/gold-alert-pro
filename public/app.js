@@ -38,18 +38,6 @@ function renderGoldChart(prices){
  chg.textContent=(delta>=0?'▲ ':'▼ ')+f2(Math.abs(delta))+'٪'; chg.style.color=delta>=0?'var(--green)':'var(--red)';
  const u=document.getElementById('chartUpdated'); if(u&&latest?.updatedAt)u.textContent='آخرین بروزرسانی: '+new Date(latest.updatedAt).toLocaleTimeString('fa-IR')+' • '+fa(raw.length)+' نقطه';
 }
-let cryptoLastFetch=0;
-async function loadCryptoMarkets(force=false){
- const grid=document.getElementById('cryptoMarketGrid');if(!grid)return;
- if(!force&&Date.now()-cryptoLastFetch<60000)return;cryptoLastFetch=Date.now();
- const status=document.getElementById('cryptoStatus'),updated=document.getElementById('cryptoUpdated');
- try{const r=await fetch('/api/crypto-markets',{cache:'no-store'});const data=await r.json();if(!r.ok||!data.ok)throw new Error(data.error||'Crypto data unavailable');
- const names={BTC:'بیت‌کوین',ETH:'اتریوم',BNB:'بایننس‌کوین',SOL:'سولانا',XRP:'ریپل',ADA:'کاردانو',DOGE:'دوج‌کوین',TON:'تون‌کوین'};
- grid.innerHTML=(data.markets||[]).map(x=>{const change=Number(x.changePct),cls=change>=0?'up':'down',sign=change>=0?'▲ ':'▼ ';return `<article class="cryptoAsset"><div class="cryptoAssetTop"><span class="cryptoAssetName">${esc(names[x.base]||x.base)}</span><span class="cryptoSymbol">${esc(x.symbol)}</span></div><div class="cryptoPrice">${Number(x.price).toLocaleString('en-US',{maximumFractionDigits:8})} <small>USDT</small></div><div class="cryptoChange ${cls}">${sign}${Math.abs(change).toFixed(2)}٪</div><div class="cryptoMeta"><span>بیشینه ${Number(x.high24h||0).toLocaleString('en-US',{maximumFractionDigits:5})}</span><span>کمینه ${Number(x.low24h||0).toLocaleString('en-US',{maximumFractionDigits:5})}</span></div></article>`}).join('')||'<div class="small">داده‌ای برای نمایش وجود ندارد.</div>';
- if(status)status.textContent='متصل • '+(data.source||'');if(updated)updated.textContent=new Date(data.at).toLocaleTimeString('fa-IR');
- }catch(e){if(status)status.textContent='داده موقتاً در دسترس نیست';if(grid&&!grid.dataset.loaded)grid.innerHTML='<div class="small">اتصال به منبع رمزارز ناموفق بود. بعداً دوباره تلاش کنید.</div>'; }
-}
-
 function initChartControls(){document.querySelectorAll('[data-range]').forEach(btn=>btn.addEventListener('click',()=>{chartRange=Number(btn.dataset.range)||60;document.querySelectorAll('[data-range]').forEach(x=>x.classList.remove('active'));btn.classList.add('active');renderGoldChart(latest?.prices||[])}))}
 
 function openAccountQuickMenu(){ applyCategory('account'); setTimeout(()=>document.getElementById('account')?.scrollIntoView({behavior:'smooth',block:'start'}),50); }
@@ -219,14 +207,13 @@ async function applyAppUpdate(){
  catch(e){alert('⚠️ '+e.message);if(btn){btn.disabled=false;btn.textContent='🔄 آپدیت';}}
 }
 async function adminCheckUpdate(){const d=await checkForAppUpdate(false);const e=document.getElementById('adminUpdateStatus');if(e)e.textContent=d?.available?`نسخه ${d.version} آماده است`:`نسخه فعلی ${d?.currentVersion||'—'}`;}
-document.addEventListener('DOMContentLoaded',()=>{ loadCryptoMarkets(false);setInterval(()=>loadCryptoMarkets(false),60000); updateCommandCenter(); const b=document.getElementById('updateBtn'),later=document.getElementById('updateLaterBtn');if(b)b.addEventListener('click',applyAppUpdate);if(later)later.addEventListener('click',()=>{const x=document.getElementById('updateBanner');if(x)x.style.display='none';});setTimeout(()=>checkForAppUpdate(true),2500);});
+document.addEventListener('DOMContentLoaded',()=>{ updateCommandCenter(); const b=document.getElementById('updateBtn'),later=document.getElementById('updateLaterBtn');if(b)b.addEventListener('click',applyAppUpdate);if(later)later.addEventListener('click',()=>{const x=document.getElementById('updateBanner');if(x)x.style.display='none';});setTimeout(()=>checkForAppUpdate(true),2500);});
 
 // v22: clean professional side menu. The dashboard is the only category shown at first load.
 const categoryLabels={
- dashboard:'پیشخوان', market:'بازار و نمودار', crypto:'رمزارزها', ai:'هوش و تحلیل', alerts:'هشدارها', tools:'دارایی و ابزار', news:'اخبار بازار', sms:'سرویس SMS', account:'حساب و پشتیبان', decision:'اتاق تصمیم', calendar:'تقویم اقتصادی', admin:'پنل مدیریت'
+ dashboard:'پیشخوان', market:'بازار و نمودار', ai:'هوش و تحلیل', alerts:'هشدارها', tools:'دارایی و ابزار', news:'اخبار بازار', sms:'سرویس SMS', account:'حساب و پشتیبان', decision:'اتاق تصمیم', calendar:'تقویم اقتصادی', admin:'پنل مدیریت'
 };
 function applyCategory(category,scroll=true){
- if(category==='crypto')loadCryptoMarkets(true);
  document.querySelectorAll('.categorySection').forEach(el=>{el.classList.remove('categoryVisible');el.style.display='none';});
  document.body.classList.toggle('categoryView',category!=='dashboard');
  document.querySelectorAll('.menuItem').forEach(b=>b.classList.toggle('active',b.dataset.category===category));
@@ -277,8 +264,6 @@ document.addEventListener('DOMContentLoaded',initSideMenu);
 let serverPriceAlerts=[];
 async function fetchPriceAlerts(){
  try{const r=await fetch('/api/price-alerts?deviceId='+encodeURIComponent(deviceId),{cache:'no-store'});const d=await r.json();if(!r.ok)throw new Error(d.error||'خطای دریافت هشدارها');serverPriceAlerts=Array.isArray(d.alerts)?d.alerts:[];renderPriceAlerts();}catch(e){const box=document.getElementById('alertList');if(box)box.innerHTML='<div class="emptyAlert">⚠️ دریافت هشدارها ناموفق بود.</div>';}}
-async function ensureGold18DefaultAlert(){try{await fetchPriceAlerts();if(serverPriceAlerts.some(a=>a.direction==='above'&&Number(a.price)===15000000&&a.label==='طلای ۱۸ عیار'))return;const r=await fetch('/api/price-alerts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({deviceId,price:15000000,direction:'above',label:'طلای ۱۸ عیار'})});const d=await r.json();if(r.ok){serverPriceAlerts.unshift(d.alert);renderPriceAlerts();}}catch(e){console.warn('Default gold alert setup failed:',e.message)}}
-document.addEventListener('DOMContentLoaded',()=>setTimeout(ensureGold18DefaultAlert,1200));
 function renderPriceAlerts(){
  const box=document.getElementById('alertList'); if(!box)return;
  if(!serverPriceAlerts.length){box.innerHTML='<div class="emptyAlert">هنوز هشداری ثبت نشده است.</div>';return}
@@ -333,6 +318,9 @@ function initBottomNav(){document.querySelectorAll('#bottomNav button').forEach(
 window.removePortfolioHolding=removePortfolioHolding;window.editPortfolioHolding=editPortfolioHolding;window.savePortfolioForm=savePortfolioForm;window.runPortfolioAI=runPortfolioAI;window.addPriceAlert=addPriceAlert;window.removePriceAlert=removePriceAlert;
 
 
+async function loadSmsCommerceInfo(){try{const c=await fetch('/api/commerce-settings',{cache:'no-store'}).then(r=>r.json());const card=document.getElementById('smsCardNumber'),holder=document.getElementById('smsCardHolder');if(card)card.textContent=c.cardNumber||'اطلاعات کارت هنوز توسط مدیریت ثبت نشده است.';if(holder)holder.textContent=c.cardHolder||'';document.querySelectorAll('.smsPrice').forEach(e=>e.textContent=`${fa(Math.round(Number(c.subscriptionPriceIRR||0)/10))} تومان • ${fa(c.subscriptionDays||30)} روز`);}catch{}}
+async function adminLoadCommerceSettings(){try{const r=await adminFetch('/api/admin/commerce-settings');const d=await r.json();if(!r.ok)throw new Error(d.error||'خطا');const s=d.settings||{};for(const [id,v] of [['commerceCardNumber',s.cardNumber],['commerceCardHolder',s.cardHolder],['commercePriceIRR',s.subscriptionPriceIRR],['commerceDays',s.subscriptionDays],['commerceLabel',s.subscriptionLabel]]){const e=document.getElementById(id);if(e)e.value=v??'';}}catch(e){const x=document.getElementById('commerceSettingsStatus');if(x)x.textContent='تنظیمات دریافت نشد: '+e.message;}}
+async function adminSaveCommerceSettings(){try{const body={cardNumber:document.getElementById('commerceCardNumber')?.value||'',cardHolder:document.getElementById('commerceCardHolder')?.value||'',subscriptionPriceIRR:Number(document.getElementById('commercePriceIRR')?.value),subscriptionDays:Number(document.getElementById('commerceDays')?.value),subscriptionLabel:document.getElementById('commerceLabel')?.value||''};const r=await adminFetch('/api/admin/commerce-settings',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const d=await r.json();if(!r.ok)throw new Error(d.error||'ذخیره ناموفق');const x=document.getElementById('commerceSettingsStatus');if(x)x.textContent='تنظیمات ذخیره شد.';await loadSmsCommerceInfo();await loadSmsPremiumStatus();}catch(e){alert('⚠️ '+e.message);}}
 async function loadSmsPremiumStatus(){
  const box=document.getElementById('smsPremiumStatus'); if(!box)return;
  try{
@@ -366,7 +354,7 @@ async function activateSmsPremium(){
 
 const _goldAlertOriginalLoad = load;
 const _goldAlertOriginalInit = typeof initNav === 'function' ? initNav : null;
-window.addEventListener('load',()=>{loadSmsPremiumStatus();});
+window.addEventListener('load',()=>{loadSmsCommerceInfo();loadSmsPremiumStatus();});
 
 // v25: all-in-one portfolio, scenarios, reports, account sync and AI news.
 let accountToken=localStorage.getItem('gold-alert-pro-account-token-v28')||'';
@@ -458,7 +446,7 @@ function runLadderSimulation(){const capital=Number(document.getElementById('lad
 async function saveInvoiceRecord(){const status=document.getElementById('invoiceStatus');const data={deviceId,weight:Number(document.getElementById('invoiceWeight')?.value||0),purity:Number(document.getElementById('invoicePurity')?.value||750),amount:Number(document.getElementById('invoiceAmount')?.value||0),date:document.getElementById('invoiceDate')?.value||''};if(!data.weight||!data.amount)return status.textContent='وزن و مبلغ را وارد کن.';status.textContent='اطلاعات فاکتور آماده ثبت است؛ برای جلوگیری از داده ساختگی، OCR خودکار هنوز فعال نشده است.';}
 async function changePasswordPrompt(){const old=prompt('رمز فعلی را وارد کن:');if(old===null)return;const next=prompt('رمز جدید حداقل ۶ کاراکتر:');if(next===null)return;try{const r=await fetch('/api/account/change-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({oldPassword:old,newPassword:next,accountToken})});const d=await r.json();if(!r.ok)throw new Error(d.error||'خطا');alert('✅ رمز تغییر کرد. دوباره وارد شوید.');await logoutAndRelogin();}catch(e){alert('⚠️ '+e.message);}}
 
-async function adminLogin(){const username=normalizeDigits(document.getElementById('adminUsernameInput')?.value.trim()||''),password=normalizeDigits(document.getElementById('adminPasswordInput')?.value||'');if(!username||!password)return alert('نام کاربری و رمز مدیریت را وارد کن.');try{const r=await fetch('/api/admin/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username,password})});const d=await r.json();if(!r.ok)throw new Error(d.error||'ورود مدیریت ناموفق');adminSession=d.token;localStorage.setItem('gold-alert-pro-admin-session-v38',adminSession);document.getElementById('adminLoginBox').style.display='none';document.getElementById('adminContent').style.display='block';showAdminMenu(true);applyCategory('admin',false);await adminLoadStats();await adminLoadOverview();await adminLoadBusinessDashboard();await adminLoadUsers();await adminLoadTickets();await adminLoadCalendar();}catch(e){alert('⚠️ '+e.message);}}
+async function adminLogin(){const username=normalizeDigits(document.getElementById('adminUsernameInput')?.value.trim()||''),password=normalizeDigits(document.getElementById('adminPasswordInput')?.value||'');if(!username||!password)return alert('نام کاربری و رمز مدیریت را وارد کن.');try{const r=await fetch('/api/admin/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username,password})});const d=await r.json();if(!r.ok)throw new Error(d.error||'ورود مدیریت ناموفق');adminSession=d.token;localStorage.setItem('gold-alert-pro-admin-session-v38',adminSession);document.getElementById('adminLoginBox').style.display='none';document.getElementById('adminContent').style.display='block';showAdminMenu(true);applyCategory('admin',false);await adminLoadStats();await adminLoadOverview();await adminLoadBusinessDashboard();await adminLoadCommerceSettings();await adminLoadUsers();await adminLoadTickets();await adminLoadCalendar();}catch(e){alert('⚠️ '+e.message);}}
 async function adminLoadOverview(){try{const r=await adminFetch('/api/admin/overview');const d=await r.json();if(!r.ok)throw new Error(d.error||'خطا');const el=document.getElementById('adminOverviewGrid');if(el)el.innerHTML=[['تیکت باز',d.openTickets],['پرداخت ثبت‌شده',d.payments],['AI',d.aiConfigured?'فعال':'تنظیم نشده'],['SMS',d.smsConfigured?'فعال':'تنظیم نشده'],['Uptime',d.uptime+'s'],['نسخه',d.version]].map(x=>`<div class="ov"><span>${x[0]}</span><b>${esc(String(x[1]))}</b></div>`).join('');}catch(e){}}
 
 
@@ -514,7 +502,7 @@ async function adminLoadAudit(){try{const r=await adminFetch('/api/admin/audit')
 async function adminDownloadBackup(){try{const r=await adminFetch('/api/admin/backup');const d=await r.json();if(!r.ok)throw new Error(d.error||'خطا');const blob=new Blob([JSON.stringify(d,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='gold-alert-pro-admin-backup.json';a.click();URL.revokeObjectURL(url);}catch(e){alert('⚠️ '+e.message);}}
 async function adminLogout(){if(adminSession)await adminFetch('/api/admin/logout',{method:'POST'}).catch(()=>{});adminForceLogout();}
 function adminForceLogout(keepAdminPage=false){adminSession='';localStorage.removeItem('gold-alert-pro-admin-session-v38');showAdminMenu(false);const box=document.getElementById('adminLoginBox'),content=document.getElementById('adminContent');if(box)box.style.display='block';if(content)content.style.display='none';if(keepAdminPage)applyCategory('admin',false);else applyCategory('dashboard',false);}
-async function restoreAdminSession(){if(!adminSession)return;try{const r=await adminFetch('/api/admin/stats');if(!r.ok)throw new Error('invalid');showAdminMenu(true);document.getElementById('adminLoginBox').style.display='none';document.getElementById('adminContent').style.display='block';await adminLoadStats();await adminLoadTickets();const e=document.getElementById('adminLastSync');if(e)e.textContent=fmtDate(new Date().toISOString());}catch{adminForceLogout();}}
+async function restoreAdminSession(){if(!adminSession)return;try{const r=await adminFetch('/api/admin/stats');if(!r.ok)throw new Error('invalid');showAdminMenu(true);document.getElementById('adminLoginBox').style.display='none';document.getElementById('adminContent').style.display='block';await adminLoadStats();await adminLoadCommerceSettings();await adminLoadTickets();const e=document.getElementById('adminLastSync');if(e)e.textContent=fmtDate(new Date().toISOString());}catch{adminForceLogout();}}
 // Extend category labels without disturbing the original v22 menu behavior.
 Object.assign(categoryLabels,{decision:'اتاق تصمیم',calendar:'تقویم اقتصادی',admin:'پنل مدیریت'});
 const oldApplyCategory=applyCategory;
@@ -527,8 +515,8 @@ setInterval(loadMarketStructure,10000);setInterval(loadEconomicCalendar,180000);
 let appNotifications=[];
 async function loadNotifications(showError=false){
  try{
-  const url=accountToken?'/api/notifications':'/api/notifications?deviceId='+encodeURIComponent(deviceId);
-  const r=await fetch(url,{headers:accountToken?accountHeaders():{},cache:'no-store'});
+  if(!accountToken)return;
+  const r=await fetch('/api/notifications',{headers:accountHeaders(),cache:'no-store'});
   const d=await r.json(); if(!r.ok)throw new Error(d.error||'خطا');
   const next=Array.isArray(d.notifications)?d.notifications:[];
   if(notificationsBootstrapped){
@@ -549,7 +537,7 @@ function renderNotifications(){
 }
 async function readNotification(id){
  const n=appNotifications.find(x=>String(x.id)===String(id));if(!n)return;n.read=true;renderNotifications();
- try{await fetch('/api/notifications/'+encodeURIComponent(id)+'/read'+(accountToken?'':'?deviceId='+encodeURIComponent(deviceId)),{method:'POST',headers:accountToken?accountHeaders():{'Content-Type':'application/json'},body:accountToken?undefined:JSON.stringify({deviceId})});}catch{}
+ try{await fetch('/api/notifications/'+encodeURIComponent(id)+'/read',{method:'POST',headers:accountHeaders()});}catch{}
 }
 function scrollToNotifications(){
   applyCategory('dashboard',false);

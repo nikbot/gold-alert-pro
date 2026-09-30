@@ -7,13 +7,13 @@ import express from "express";
 import { getIran18, getGlobalGold, getCoins, getDollar, getNews, getHistory } from "./provider.js";
 import { runBacktest } from "./backtest.js";
 import { analyze } from "./indicators.js";
-import { riskPositionSize, detectRegime, evaluateAlertRule, createPaperTrade, closePaperTrade, technicalSuite } from "./proFeatures.js";
 import { initAlerts, sendTelegram, sendWebPush, sendWebPushToDevice, addSubscription, removeSubscription, removeDeviceSubscriptions, getPublicVapidKey, subscriptionCount } from "./alerts.js";
 import { plans, getSubscription, activateSubscription, validAdminKey, paymentUrl, supportUrl } from "./subscription.js";
 import { smsConfig, createPaymentRequest, issueActivationCode, activateWithCode, getStatus as getSmsStatus, sendPremiumPriceSMS, adminRequests as getSmsAdminRequests } from "./smsPremium.js";
+import { getCommerceSettings, setCommerceSettings } from "./commerceSettings.js";
 import { adminLogin, requireAdminToken, adminLogout, listUsers, createManagedUser, updateManagedUser, deleteManagedUser, adminStats, publicAccount, userIsActive, userPermissions, getUserByUsername, validUsername, FEATURE_KEYS, PRO_PERMISSIONS, PREMIUM_PERMISSIONS } from "./adminPanel.js";
 
-const APP_VERSION = "47.0.0";
+const APP_VERSION = "48.0.0";
 const USER_SESSION_HOURS = Math.max(1, Number(process.env.USER_SESSION_HOURS || 72));
 const LOGIN_WINDOW_MS = 10 * 60_000;
 const LOGIN_MAX_ATTEMPTS = 12;
@@ -98,18 +98,7 @@ const livePushChangePct = Math.max(0.01, Number(process.env.LIVE_PUSH_CHANGE_PCT
 app.disable("x-powered-by");
 app.use((req,res,next)=>{res.setHeader("X-Content-Type-Options","nosniff");res.setHeader("Referrer-Policy","strict-origin-when-cross-origin");res.setHeader("X-Frame-Options","SAMEORIGIN");next();});
 console.log(`Gold Alert Pro v${APP_VERSION} booting`);
-const allowedOrigins = String(process.env.CORS_ORIGIN || "").split(",").map(x => x.trim()).filter(Boolean);
-app.use((req, res, next) => {
-  const origin = req.headers.origin;
-  if (origin && allowedOrigins.includes(origin)) {
-    res.setHeader("Access-Control-Allow-Origin", origin);
-    res.setHeader("Vary", "Origin");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type, X-Admin-Session, X-Admin-Key, Authorization");
-    res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
-  }
-  if (req.method === "OPTIONS") return origin && !allowedOrigins.includes(origin) ? res.sendStatus(403) : res.sendStatus(204);
-  next();
-});
+app.use((req, res, next) => { res.setHeader("Access-Control-Allow-Origin", process.env.CORS_ORIGIN || "*"); res.setHeader("Access-Control-Allow-Headers", "Content-Type"); res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS"); if (req.method === "OPTIONS") return res.sendStatus(204); next(); });
 app.use(express.json({ limit: "64kb" }));
 app.use(express.static("public", { maxAge: "1h", setHeaders: (res, filePath) => { if (/\/(app|sw)\.js$/.test(filePath) || /\/index\.html$/.test(filePath)) res.setHeader("Cache-Control", "no-store"); } }));
 
@@ -146,7 +135,7 @@ function scheduleSave() {
 
 
 async function audit(action, meta={}){ try{ const a=await readJsonFile(AUDIT_FILE,[]); a.unshift({id:crypto.randomUUID(),action:String(action).slice(0,120),meta,at:new Date().toISOString()}); await writeJsonFile(AUDIT_FILE,a.slice(0,1000)); }catch{} }
-async function addNotification(userId,title,message,type="info"){ const all=await readJsonFile(NOTIFICATIONS_FILE,[]); const item={id:crypto.randomUUID(),userId,deviceId:null,title:String(title).slice(0,120),message:String(message).slice(0,1000),type,read:false,createdAt:new Date().toISOString()}; all.unshift(item); await writeJsonFile(NOTIFICATIONS_FILE,all.slice(0,5000)); try{ const store=await readJsonFile(ACCOUNTS_FILE,{}); const a=Object.values(store).find(x=>x?.id===userId); if(a?.deviceId) await sendWebPushToDevice(a.deviceId,{title:String(title).slice(0,120),body:String(message).slice(0,500),icon:'/icon-192.png',badge:'/icon-192.png',tag:`user-notification-${item.id}`,data:{url:'/#notificationCenter'}},`NOTIF_${item.id}`,Date.now()); }catch(e){ console.warn('User notification push failed:',e.message); } return item; }
+async function addNotification(userId,title,message,type="info"){ const all=await readJsonFile(NOTIFICATIONS_FILE,[]); const item={id:crypto.randomUUID(),userId,title:String(title).slice(0,120),message:String(message).slice(0,1000),type,read:false,createdAt:new Date().toISOString()}; all.unshift(item); await writeJsonFile(NOTIFICATIONS_FILE,all.slice(0,5000)); try{ const store=await readJsonFile(ACCOUNTS_FILE,{}); const a=Object.values(store).find(x=>x?.id===userId); if(a?.deviceId) await sendWebPushToDevice(a.deviceId,{title:String(title).slice(0,120),body:String(message).slice(0,500),icon:'/icon-192.png',badge:'/icon-192.png',tag:`user-notification-${item.id}`,data:{url:'/#notificationCenter'}},`NOTIF_${item.id}`,Date.now()); }catch(e){ console.warn('User notification push failed:',e.message); } return item; }
 async function readJsonFile(file, fallback) { try { return JSON.parse(await fs.readFile(file, "utf8")); } catch { return fallback; } }
 async function writeJsonFile(file, value) { await fs.mkdir(DATA_DIR, { recursive: true }); await fs.writeFile(file, JSON.stringify(value), "utf8"); }
 function normalizePhone(v) { return String(v || "").replace(/\s+/g, "").replace(/-/g, "").trim(); }
@@ -303,7 +292,6 @@ async function checkPersonalPriceAlerts(price) {
     changed = true;
     const direction = a.direction === "above" ? "⬆️ قیمت از هدف شما عبور کرد" : "⬇️ قیمت به زیر هدف شما رسید";
     const body = `${a.label} به ${rial(price)} ریال رسید. هدف شما: ${rial(a.price)} ریال`;
-    try { const all=await readJsonFile(NOTIFICATIONS_FILE,[]); all.unshift({id:crypto.randomUUID(),userId:null,deviceId:a.deviceId,title:'هشدار قیمت فعال شد',message:body,type:'price-alert',read:false,createdAt:new Date().toISOString(),alertId:a.id}); await writeJsonFile(NOTIFICATIONS_FILE,all.slice(0,5000)); } catch(e) { console.warn('In-app alert persistence failed:',e.message); }
     await safeAlert(() => sendWebPushToDevice(a.deviceId, { title: `🎯 ${direction}`, body, icon: "/icon-192.png", badge: "/icon-192.png", tag: `personal-price-${a.id}`, data: { url: "/#priceAlerts" } }, `PERSONAL_${a.id}`, price));
   }
   if (changed) schedulePersonalAlertSave();
@@ -660,8 +648,6 @@ app.get("/api/update", async (req,res)=>{try{const m=await fetchUpdateManifest()
 app.post("/api/update/apply", async (req,res)=>{try{const token=String(req.headers["x-account-token"]||req.body?.accountToken||"");const account=await publicAccount(token);if(!account) return res.status(401).json({error:"ابتدا وارد حساب شوید."});const m=await fetchUpdateManifest();if(!m.available)return res.json({ok:true,updated:false,version:APP_VERSION,message:"نسخه جدیدی موجود نیست."});if(m.mandatory===false && req.body?.confirm!==true)return res.status(409).json({ok:false,needsConfirm:true,...m});const result=await applySelfUpdate(m);res.json(result);setTimeout(()=>process.exit(0),1200);}catch(e){res.status(500).json({ok:false,error:e.message});}});
 
 app.get("/health", (_, res) => res.json({ ok: true, status: "running", uptime: Math.round(process.uptime()), updatedAt: state.updatedAt, error: state.error, dataReady: state.dataReady, subscriptions: subscriptionCount(), personalAlerts: state.personalAlerts.length, smsPremium: smsConfig(), ai: { provider: "GapGPT", configured: Boolean(process.env.GAPGPT_API_KEY), model: AI_MODEL, baseUrl: AI_BASE_URL } }));
-// Platform readiness probe: process availability is independent of external market/AI providers.
-app.get("/healthz", (_req, res) => res.status(200).json({ ok: true, status: "ready", version: APP_VERSION, uptime: Math.round(process.uptime()) }));
 app.get("/api/push/status", (_, res) => res.json({ configured: Boolean(getPublicVapidKey()), publicKey: getPublicVapidKey() ? "ready" : "missing", subscriptions: subscriptionCount() }));
 app.get("/api/push/public-key", (_, res) => res.json({ publicKey: getPublicVapidKey() }));
 app.post("/api/push/reset-device", async (req, res) => { try { const deviceId = cleanDeviceId(req.body?.deviceId); if (!deviceId) return res.status(400).json({ ok:false, error:"deviceId required" }); const removed = await removeDeviceSubscriptions(deviceId); res.json({ ok:true, removed }); } catch (e) { res.status(400).json({ ok:false, error:e.message }); } });
@@ -756,8 +742,8 @@ app.put("/api/user-settings", async (req,res)=>{
   all[a.id]={investorProfile,storageLocations,householdPortfolios,updatedAt:new Date().toISOString()}; await writeJsonFile(USER_SETTINGS_FILE,all); res.json({ok:true,settings:all[a.id]});
 });
 
-app.get("/api/notifications", async (req,res)=>{ const a=await accountFromReq(req); const deviceId=cleanDeviceId(req.query.deviceId); if(!a&&!deviceId)return res.status(401).json({error:'ابتدا وارد حساب شوید یا شناسه دستگاه را ارسال کنید.'}); const all=await readJsonFile(NOTIFICATIONS_FILE,[]); const notifications=all.filter(x=>a?x.userId===a.id:(x.deviceId===deviceId&&x.type==='price-alert')).slice(0,100); res.json({ok:true,notifications}); });
-app.post("/api/notifications/:id/read", async (req,res)=>{ const a=await accountFromReq(req); const deviceId=cleanDeviceId(req.body?.deviceId||req.query.deviceId); if(!a&&!deviceId)return res.status(401).json({error:'ابتدا وارد حساب شوید یا شناسه دستگاه را ارسال کنید.'}); const all=await readJsonFile(NOTIFICATIONS_FILE,[]),n=all.find(x=>x.id===req.params.id&&(a?x.userId===a.id:(x.deviceId===deviceId&&x.type==='price-alert'))); if(n)n.read=true; await writeJsonFile(NOTIFICATIONS_FILE,all); res.json({ok:true}); });
+app.get("/api/notifications", async (req,res)=>{ const a=await accountFromReq(req); if(!a)return res.status(401).json({error:'ابتدا وارد حساب شوید.'}); const all=await readJsonFile(NOTIFICATIONS_FILE,[]); res.json({ok:true,notifications:all.filter(x=>x.userId===a.id).slice(0,100)}); });
+app.post("/api/notifications/:id/read", async (req,res)=>{ const a=await accountFromReq(req); if(!a)return res.status(401).json({error:'ابتدا وارد حساب شوید.'}); const all=await readJsonFile(NOTIFICATIONS_FILE,[]),n=all.find(x=>x.id===req.params.id&&x.userId===a.id); if(n)n.read=true; await writeJsonFile(NOTIFICATIONS_FILE,all); res.json({ok:true}); });
 app.post("/api/account/change-password", async (req,res)=>{ const a=await accountFromReq(req); if(!a)return res.status(401).json({error:'ابتدا وارد حساب شوید.'}); const old=String(req.body?.oldPassword||''),next=String(req.body?.newPassword||''); if(next.length<6)return res.status(400).json({error:'رمز جدید حداقل ۶ کاراکتر باشد.'}); if(!verifyPassword(old,a.salt,a.hash))return res.status(403).json({error:'رمز فعلی صحیح نیست.'}); const store=await readJsonFile(ACCOUNTS_FILE,{}),key=Object.keys(store).find(k=>store[k]===a); Object.assign(a,hashPassword(next)); a.token=''; store[key]=a; await writeJsonFile(ACCOUNTS_FILE,store); await audit('user_password_changed',{userId:a.id}); res.json({ok:true,message:'رمز تغییر کرد؛ دوباره وارد شوید.'}); });
 app.post("/api/account/register", async (req,res)=>{ try { if(String(process.env.SELF_REGISTER_ENABLED||'true').toLowerCase()==='false') return res.status(403).json({error:'ثبت‌نام عمومی غیرفعال است؛ با مدیریت تماس بگیرید.'}); const phone=normalizePhone(req.body?.phone||req.body?.username); const username=phone; const password=String(req.body?.password||''); const deviceId=cleanDeviceId(req.body?.deviceId); if(!/^09\d{9}$/.test(phone)||password.length<6||!deviceId) return res.status(400).json({error:'شماره موبایل معتبر و رمز عبور حداقل ۶ کاراکتری لازم است.'}); const store=await readJsonFile(ACCOUNTS_FILE,{}); if(Object.values(store).some(x=>String(x.username||'').toLowerCase()===username || normalizePhone(x.phone)===phone)) return res.status(409).json({error:'این شماره موبایل قبلاً ثبت شده است.'}); const hp=hashPassword(password); const account={id:crypto.randomUUID(),username,phone,...hp,token:crypto.randomBytes(32).toString('hex'),createdAt:new Date().toISOString(),deviceId,role:'user',permissions:['dashboard','market','portfolio','alerts','account'],active:true}; store[account.id]=account; await writeJsonFile(ACCOUNTS_FILE,store); res.json({ok:true,token:account.token,username,user:userView(account)}); } catch(e){res.status(500).json({error:e.message});} });
 app.post("/api/account/login", async (req,res)=>{ try { const username=normalizePhone(req.body?.username||req.body?.phone); const password=String(req.body?.password||''); const attemptKey=`user:${req.ip}:${username}`; if(!loginAllowed(attemptKey)) return res.status(429).json({error:'تلاش‌های ورود زیاد است؛ چند دقیقه بعد دوباره امتحان کنید.'}); const store=await readJsonFile(ACCOUNTS_FILE,{}); const a=Object.values(store).find(x=>normalizePhone(x.phone)===username || String(x.username||'').toLowerCase()===username.toLowerCase()) || store[username]; if(!a||!verifyPassword(password,a.salt,a.hash)) return res.status(401).json({error:'نام کاربری یا رمز عبور اشتباه است.'}); if(!userIsActive(a)) return res.status(403).json({error:'دسترسی این حساب غیرفعال یا منقضی شده است.'}); clearLoginAttempts(attemptKey); a.token=crypto.randomBytes(32).toString('hex'); a.tokenExpiresAt=new Date(Date.now()+USER_SESSION_HOURS*3600000).toISOString(); a.lastLoginAt=new Date().toISOString(); if(req.body?.deviceId)a.deviceId=cleanDeviceId(req.body.deviceId); if(!a.role)a.role='user'; if(!Array.isArray(a.permissions))a.permissions=['dashboard','market','portfolio','alerts','account']; const key=Object.keys(store).find(k=>store[k]===a); store[key]=a; await writeJsonFile(ACCOUNTS_FILE,store); await audit('user_login',{userId:a.id}); res.json({ok:true,token:a.token,expiresAt:a.tokenExpiresAt,username:a.username||username,user:userView(a)}); } catch(e){res.status(500).json({error:e.message});} });
@@ -780,7 +766,10 @@ app.post("/api/news-ai", async (req,res)=>{
   } catch(e){ res.status(502).json({error:e.message}); }
 });
 
-app.get("/api/plans", (_, res) => res.json({ plans: plans(), supportUrl: supportUrl(), currency: "IRR", smsPremium: smsConfig() }));
+app.get("/api/plans", async (_, res) => { const commerce=await getCommerceSettings(); res.json({ plans: plans(), supportUrl: supportUrl(), currency: "IRR", smsPremium: {...smsConfig(),priceIRR:commerce.subscriptionPriceIRR,days:commerce.subscriptionDays} }); });
+app.get("/api/commerce-settings", async (_,res)=>{ const c=await getCommerceSettings(); res.json({cardNumber:c.cardNumber,cardHolder:c.cardHolder,subscriptionPriceIRR:c.subscriptionPriceIRR,subscriptionDays:c.subscriptionDays,subscriptionLabel:c.subscriptionLabel}); });
+app.get("/api/admin/commerce-settings", async (req,res)=>{ if(!(await adminAuth(req,res)))return res.status(403).json({error:"admin session invalid"}); res.json({ok:true,settings:await getCommerceSettings()}); });
+app.put("/api/admin/commerce-settings", async (req,res)=>{ if(!(await adminAuth(req,res)))return res.status(403).json({error:"admin session invalid"}); try { const settings=await setCommerceSettings(req.body||{}); await audit("commerce_settings_updated",{subscriptionPriceIRR:settings.subscriptionPriceIRR,subscriptionDays:settings.subscriptionDays}); res.json({ok:true,settings}); } catch(e){res.status(400).json({ok:false,error:e.message});} });
 app.get("/api/sms-premium/status", async (req, res) => { try { res.json(await getSmsStatus(req.query.deviceId)); } catch (e) { res.status(400).json({ error: e.message }); } });
 app.post("/api/sms-premium/request", async (req, res) => { try { if(!(await requireFeature(req,'sms',req.body?.deviceId))) return res.status(403).json({error:"سرویس SMS برای این حساب فعال نیست."}); res.json({ ok: true, ...(await createPaymentRequest(req.body || {})) }); } catch (e) { res.status(400).json({ ok: false, error: e.message }); } });
 app.post("/api/sms-premium/activate", async (req, res) => { try { if(!(await requireFeature(req,'sms',req.body?.deviceId))) return res.status(403).json({error:"سرویس SMS برای این حساب فعال نیست."}); res.json({ ok: true, ...(await activateWithCode(req.body || {})) }); } catch (e) { res.status(400).json({ ok: false, error: e.message }); } });
@@ -847,20 +836,6 @@ ${JSON.stringify(ctx)}
 سؤال کاربر:
 ${q}`}],temperature:.2,max_tokens:900})}); const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d?.error?.message||`GapGPT HTTP ${r.status}`);const text=d?.choices?.[0]?.message?.content||d?.choices?.[0]?.text;if(!text)throw new Error('پاسخ AI خالی است.');res.json({ok:true,text,at:new Date().toISOString()}); }catch(e){res.status(502).json({error:e.message});} });
 
-app.get("/api/crypto-markets", async (_req,res)=>{
-  const symbols=["BTCUSDT","ETHUSDT","BNBUSDT","SOLUSDT","XRPUSDT","ADAUSDT","DOGEUSDT","TONUSDT"];
-  const controller=new AbortController(); const timeout=setTimeout(()=>controller.abort(),9000);
-  try{
-    const response=await fetch("https://api.binance.com/api/v3/ticker/24hr",{signal:controller.signal,headers:{Accept:"application/json"}});
-    if(!response.ok) throw new Error(`Crypto provider HTTP ${response.status}`);
-    const rows=await response.json(); const bySymbol=new Map((Array.isArray(rows)?rows:[]).map(x=>[x.symbol,x]));
-    const markets=symbols.map(symbol=>{const x=bySymbol.get(symbol);if(!x)return null;const price=Number(x.lastPrice),change=Number(x.priceChangePercent),quoteVolume=Number(x.quoteVolume);if(!Number.isFinite(price)||price<=0||!Number.isFinite(change))return null;return {symbol,base:symbol.replace("USDT",""),quote:"USDT",price,changePct:change,high24h:Number(x.highPrice)||null,low24h:Number(x.lowPrice)||null,quoteVolume:Number.isFinite(quoteVolume)?quoteVolume:null,source:"Binance Spot",at:new Date().toISOString()};}).filter(Boolean);
-    if(!markets.length) throw new Error("No valid crypto tickers returned");
-    res.set("Cache-Control","public, max-age=15");res.json({ok:true,source:"Binance Spot 24h ticker",at:new Date().toISOString(),markets});
-  }catch(e){res.status(503).json({ok:false,error:"داده رمزارز موقتاً در دسترس نیست.",detail:process.env.NODE_ENV==="development"?e.message:undefined});}
-  finally{clearTimeout(timeout);}
-});
-
 app.get("/api/state", (_, res) => res.json({
   ...state,
   config: { pollMs, minScore, target1, target2, stopPct, appVersion: APP_VERSION },
@@ -869,41 +844,17 @@ app.get("/api/state", (_, res) => res.json({
 }));
 app.get("/api/news", async (req, res) => { const news = await getNews(); if (news.length) state.news = news; const sub = await getSubscription(req.query.deviceId); res.json(sub.active ? (state.news || []) : (state.news || []).slice(0, 5)); });
 app.get("/api/backtest", async (req, res) => { try { if(!(await requireFeature(req,'backtest',req.query.deviceId))) return res.status(403).json({error:"دسترسی بک‌تست برای این حساب فعال نیست."}); const sub = await getSubscription(req.query.deviceId); if (!sub.active) return res.status(402).json({ error: "این قابلیت مخصوص Gold Alert Pro+ است." }); const h = await getHistory(); if (!h.length) return res.status(503).json({ error: "history unavailable" }); res.json(await runBacktest(h)); } catch (e) { res.status(500).json({ error: e.message }); } });
-app.post("/api/reset", async (req, res) => { if (!(await adminAuth(req,res))) return res.status(403).json({error:"admin session invalid"}); state.events = []; state.targetEvents = []; state.activeTrade = null; state.lastSignal = "WAIT"; scheduleSave(); await audit("state_reset",{}); res.json({ ok: true }); });
+app.post("/api/reset", async (_, res) => { state.events = []; state.targetEvents = []; state.activeTrade = null; state.lastSignal = "WAIT"; scheduleSave(); res.json({ ok: true }); });
 
-// v43 professional feature APIs. Personal records are keyed to authenticated account IDs.
-const PAPER_TRADES_FILE = path.join(DATA_DIR, "paper-trades.json");
-async function requireSignedIn(req,res){const a=await accountFromReq(req);if(!a||!userIsActive(a)){res.status(401).json({ok:false,error:"ابتدا وارد حساب معتبر شوید."});return null;}return a;}
-app.get("/api/pro/market-intelligence", async (req,res)=>{
-  const a=await requireSignedIn(req,res);if(!a)return;
-  const prices=state.prices.map(Number).filter(x=>Number.isFinite(x)&&x>0);
-  const regime=detectRegime(prices);
-  const recent=prices.slice(-30);
-  res.json({ok:true,version:APP_VERSION,regime,market:{price:recent.at(-1)??null,changePct:recent.length>1?(recent.at(-1)/recent[0]-1)*100:null,samples:recent.length},indicators:state.analysis||null,updatedAt:state.updatedAt||null,stale:!state.updatedAt||Date.now()-Date.parse(state.updatedAt)>Math.max(60000,pollMs*3),notice:"اطلاعات تحلیلی و سناریویی است و تضمین‌کننده نتیجه آینده نیست."});
-});
-app.get("/api/pro/technical-suite", async (req,res)=>{const a=await requireSignedIn(req,res);if(!a)return;try{const h=await getHistory();const prices=(Array.isArray(h)?h:[]).map(x=>Number(x.priceIRR ?? x.price ?? x.iran)).filter(x=>Number.isFinite(x)&&x>0);res.json({ok:true,asset:"gold18/local-history",...technicalSuite(prices),updatedAt:state.updatedAt||null});}catch(e){res.status(503).json({ok:false,error:"تاریخچه برای تحلیل تکنیکال در دسترس نیست."});}});
-app.post("/api/pro/risk-size", async (req,res)=>{const a=await requireSignedIn(req,res);if(!a)return;try{res.json({ok:true,...riskPositionSize(req.body||{})});}catch(e){res.status(400).json({ok:false,error:e.message});}});
-app.post("/api/pro/evaluate-alert", async (req,res)=>{const a=await requireSignedIn(req,res);if(!a)return;const result=evaluateAlertRule(req.body?.rule,req.body?.snapshot);if(!result.valid)return res.status(400).json({ok:false,error:"قاعده یا داده هشدار نامعتبر است."});res.json({ok:true,...result,evaluatedAt:new Date().toISOString()});});
-app.get("/api/pro/paper-trades", async (req,res)=>{const a=await requireSignedIn(req,res);if(!a)return;const all=await readJsonFile(PAPER_TRADES_FILE,{});res.json({ok:true,trades:Array.isArray(all[a.id])?all[a.id]:[]});});
-app.post("/api/pro/paper-trades", async (req,res)=>{const a=await requireSignedIn(req,res);if(!a)return;try{const all=await readJsonFile(PAPER_TRADES_FILE,{}),trades=Array.isArray(all[a.id])?all[a.id]:[];const trade=createPaperTrade(req.body||{});trades.unshift(trade);all[a.id]=trades.slice(0,1000);await writeJsonFile(PAPER_TRADES_FILE,all);await audit("paper_trade_opened",{userId:a.id,tradeId:trade.id});res.status(201).json({ok:true,trade});}catch(e){res.status(400).json({ok:false,error:e.message});}});
-app.post("/api/pro/paper-trades/:id/close", async (req,res)=>{const a=await requireSignedIn(req,res);if(!a)return;try{const all=await readJsonFile(PAPER_TRADES_FILE,{}),trades=Array.isArray(all[a.id])?all[a.id]:[],i=trades.findIndex(t=>t.id===req.params.id);if(i<0)return res.status(404).json({ok:false,error:"معامله پیدا نشد."});trades[i]=closePaperTrade(trades[i],req.body?.exit);all[a.id]=trades;await writeJsonFile(PAPER_TRADES_FILE,all);await audit("paper_trade_closed",{userId:a.id,tradeId:req.params.id});res.json({ok:true,trade:trades[i]});}catch(e){res.status(400).json({ok:false,error:e.message});}});
-
-const server = app.listen(port, "0.0.0.0", () => {
+const server = app.listen(port, "0.0.0.0", async () => {
   console.log(`Gold Alert Pro listening on 0.0.0.0:${port}`);
-  // Do not let a provider, push, or persistence initialization failure prevent the
-  // HTTP process from becoming reachable by the hosting platform's health probe.
-  void (async () => {
-    try { await fs.mkdir(DATA_DIR, { recursive: true }); }
-    catch (e) { console.error("Data directory initialization failed:", e.message); }
-    for (const [name, task] of [["state", loadState], ["personal alerts", loadPersonalAlerts], ["push", initAlerts], ["history", loadHistorySeed]]) {
-      try { await task(); console.log(`${name} initialization complete`); }
-      catch (e) { console.error(`${name} initialization failed:`, e?.stack || e); }
-    }
-    // Start polling even if optional integrations or seed history are unavailable.
-    try { await tick(); } catch (e) { console.warn("Initial market tick failed:", e?.stack || e); }
-    setInterval(() => tick().catch(e => console.warn("Interval tick error:", e?.stack || e)), pollMs);
-  })();
+  await loadState();
+  await loadPersonalAlerts();
+  await initAlerts();
+  try { await loadHistorySeed(); console.log(`History seed: ${state.prices.length} points`); } catch (e) { console.warn("History seed error:", e.message); }
+  await tick();
+  setInterval(() => tick().catch(e => console.warn("Interval tick error:", e.message)), pollMs);
 });
-server.on("error", e => { console.error("Server error:", e); });
+server.on("error", e => console.error("Server error:", e));
 process.on("unhandledRejection", e => console.error("Unhandled rejection:", e));
-process.on("uncaughtException", e => { console.error("Uncaught exception:", e); process.exit(1); });
+process.on("uncaughtException", e => console.error("Uncaught exception:", e));

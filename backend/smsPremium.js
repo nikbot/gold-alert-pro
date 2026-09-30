@@ -4,8 +4,13 @@ import crypto from "node:crypto";
 
 const DATA_DIR = process.env.DATA_DIR || "/data/gold-alert-pro";
 const FILE = path.join(DATA_DIR, "sms-premium.json");
-const PRICE_IRR = Number(process.env.SMS_PLAN_PRICE_IRR || 500000);
-const DAYS = Number(process.env.SMS_PLAN_DAYS || 30);
+let PRICE_IRR = Number(process.env.SMS_PLAN_PRICE_IRR || 500000);
+let DAYS = Number(process.env.SMS_PLAN_DAYS || 30);
+export function updateSmsPlan({ priceIRR, days } = {}) {
+  if (priceIRR !== undefined) { const n = Number(priceIRR); if (!Number.isSafeInteger(n) || n < 0 || n > 100000000000) throw new Error("مبلغ اشتراک نامعتبر است."); PRICE_IRR = n; }
+  if (days !== undefined) { const n = Number(days); if (!Number.isInteger(n) || n < 1 || n > 3650) throw new Error("مدت اشتراک نامعتبر است."); DAYS = n; }
+  return { priceIRR: PRICE_IRR, days: DAYS };
+}
 const INTERVAL_MS = Math.max(60000, Number(process.env.SMS_ALERT_INTERVAL_MIN || 10) * 60000);
 const CHANGE_THRESHOLD = Math.max(0, Number(process.env.SMS_CHANGE_THRESHOLD_PCT || 0.25));
 const ADMIN_PHONE = String(process.env.IPPANEL_ADMIN_PHONE || "").trim();
