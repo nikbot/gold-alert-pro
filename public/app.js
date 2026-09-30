@@ -567,3 +567,44 @@ document.addEventListener('DOMContentLoaded',()=>{loadTheme();setTimeout(()=>loa
 
 async function loadTheme(){try{const d=await fetch('/api/theme').then(r=>r.json());document.documentElement.dataset.theme=d.active||'gold-light';}catch(e){}}
 async function adminSaveTheme(){try{const theme=document.getElementById('themeSelect').value;const r=await adminFetch('/api/admin/theme',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({theme})});const d=await r.json();if(!r.ok)throw new Error(d.error||'خطا');document.documentElement.dataset.theme=theme;document.getElementById('themeStatus').textContent='پوسته ذخیره شد';}catch(e){alert('⚠️ '+e.message)}}
+
+
+// v59: seven professional live-market capabilities — multi-source, anomaly detection,
+// SSE live updates, alerts (existing engine), candlestick chart, gold calculator, portfolio.
+let g59CandleInterval=60;
+async function g59LoadEngine(){
+ try{
+  const r=await fetch('/api/price-engine',{cache:'no-store'}); const d=await r.json(); if(!d.ok)throw new Error(d.error||'engine');
+  const set=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v};
+  set('g59Price',moneyIRR(d.price));
+  set('g59SourceTime',d.sourceTime?new Date(d.sourceTime).toLocaleTimeString('fa-IR'):'—');
+  set('g59Received',d.receivedAt?new Date(d.receivedAt).toLocaleTimeString('fa-IR'):'—');
+  set('g59Clients',d.clients!=null?fa(d.clients):'—');
+  const sources=d.diagnostics?.sources||[]; const box=document.getElementById('g59Sources');
+  if(box)box.innerHTML=sources.length?sources.map(x=>`<div class="g59Source"><span><b>${esc(x.name)}</b><small> ${x.at?new Date(x.at).toLocaleTimeString('fa-IR'):''}</small></span><span class="${x.ok?'g59Ok':'g59Bad'}">${x.ok?moneyIRR(x.priceIRR):'✕ '+esc(x.error||'خطا')}</span></div>`).join(''):'اطلاعات منابع موجود نیست.';
+  const a=d.anomaly||{}; const n=document.getElementById('g59Anomaly');
+  if(n){n.className='g59Notice '+(a.detected?'g59Warn':'g59Ok');n.innerHTML=a.detected?`⚠️ <b>ناهنجاری شناسایی شد</b> • جهش ${f2(a.jumpPct)}٪ • اختلاف منابع ${a.sourceSpreadPct==null?'—':f2(a.sourceSpreadPct)+'٪'}`:`✅ قیمت در محدوده عادی است • اختلاف منابع ${a.sourceSpreadPct==null?'—':f2(a.sourceSpreadPct)+'٪'}`;}
+ }catch(e){}
+}
+async function g59LoadCandles(){
+ const box=document.getElementById('g59Candles');if(!box)return;
+ try{const r=await fetch('/api/candles?interval='+g59CandleInterval,{cache:'no-store'});const d=await r.json();const cs=d.candles||[];if(cs.length<2){box.innerHTML='<div class="chartEmpty">برای نمودار کندلی هنوز داده کافی جمع نشده است.</div>';return;}
+ const w=1000,h=260,pad=22,min=Math.min(...cs.map(x=>x.low)),max=Math.max(...cs.map(x=>x.high)),range=max-min||1,step=(w-pad*2)/cs.length,body=Math.max(3,step*.58);
+ const y=v=>h-pad-(v-min)/range*(h-pad*2); const items=cs.map((c,i)=>{const x=pad+i*step+step/2,up=c.close>=c.open,yt=y(Math.max(c.open,c.close)),yb=y(Math.min(c.open,c.close));return `<line x1="${x}" y1="${y(c.high)}" x2="${x}" y2="${y(c.low)}" class="g59Wick"/><rect x="${x-body/2}" y="${yt}" width="${body}" height="${Math.max(2,yb-yt)}" class="${up?'g59Bull':'g59Bear'}"/>`;}).join('');
+ box.innerHTML=`<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none"><line x1="${pad}" y1="${pad}" x2="${w-pad}" y2="${pad}" class="chartGrid"/><line x1="${pad}" y1="${h/2}" x2="${w-pad}" y2="${h/2}" class="chartGrid"/><line x1="${pad}" y1="${h-pad}" x2="${w-pad}" y2="${h-pad}" class="chartGrid"/>${items}<text x="${w-pad}" y="14" text-anchor="end" class="chartAxis">${chartMoney(max)}</text><text x="${w-pad}" y="${h-4}" text-anchor="end" class="chartAxis">${chartMoney(min)}</text></svg>`;
+ }catch(e){box.innerHTML='<div class="chartEmpty">نمودار کندلی موقتاً در دسترس نیست.</div>';}
+}
+function g59CalculateGold(){
+ const w=Number(document.getElementById('g59Weight')?.value),purity=Number(document.getElementById('g59Purity')?.value||750),wage=Number(document.getElementById('g59Wage')?.value||0),profit=Number(document.getElementById('g59Profit')?.value||0),tax=Number(document.getElementById('g59Tax')?.value||0),base=Number(latest?.iran?.priceIRR||0);const out=document.getElementById('g59CalcResult');
+ if(!out||!w||w<=0||!base||purity<=0||purity>1000){if(out)out.textContent='⚠️ قیمت زنده، وزن و عیار را بررسی کنید.';return}
+ const pure=base*w*(purity/750),withWage=pure*(1+wage/100),withProfit=withWage*(1+profit/100),taxValue=withProfit*(tax/100),total=withProfit+taxValue;
+ out.innerHTML=`قیمت پایه: <b>${moneyIRR(pure)}</b><br>اجرت: <b>${moneyIRR(withWage-pure)}</b> • سود: <b>${moneyIRR(withProfit-withWage)}</b> • مالیات: <b>${moneyIRR(taxValue)}</b><br><strong>قیمت نهایی تقریبی: ${moneyIRR(total)}</strong>`;
+}
+function g59RenderPortfolio(){
+ const e=document.getElementById('g59PortfolioSummary');if(!e)return;const items=portfolioItems||[];const price=Number(latest?.iran?.priceIRR||0);if(!items.length){e.textContent='هنوز دارایی‌ای ثبت نشده است. از بخش «دارایی» اضافه کنید.';return}const cost=items.reduce((a,x)=>a+Number(x.weight||0)*Number(x.buyPrice||0),0),value=items.reduce((a,x)=>a+Number(x.weight||0)*price*(Number(x.purity||750)/750),0),pnl=value-cost; e.innerHTML=`${fa(items.length)} دارایی • ارزش فعلی <b>${moneyIRR(value)}</b> • بهای خرید ${moneyIRR(cost)} • سود/زیان <b class="${pnl>=0?'upTxt':'downTxt'}">${pnl>=0?'▲':'▼'} ${moneyIRR(Math.abs(pnl))}</b> • بروزرسانی زنده`;
+}
+function initG59(){
+ document.querySelectorAll('.g59CandleBtn').forEach(b=>b.addEventListener('click',()=>{g59CandleInterval=Number(b.dataset.candle)||60;document.querySelectorAll('.g59CandleBtn').forEach(x=>x.classList.remove('active'));b.classList.add('active');g59LoadCandles();}));
+ g59LoadEngine();g59LoadCandles();g59RenderPortfolio();setInterval(g59LoadEngine,10000);setInterval(g59LoadCandles,15000);setInterval(g59RenderPortfolio,5000);
+}
+window.addEventListener('load',initG59);

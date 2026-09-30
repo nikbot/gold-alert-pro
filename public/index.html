@@ -131,7 +131,9 @@ body.authLocked .floatingMenuBtn,body.authLocked .menuBackdrop,body.authLocked .
 .bizBars{height:150px;display:flex;align-items:end;gap:8px}.bizBar{height:100%;flex:1;display:flex;flex-direction:column;justify-content:end;align-items:center;gap:4px}.bizBarTrack{height:110px;width:100%;display:flex;align-items:end;justify-content:center;background:#111a24;border-radius:8px 8px 3px 3px}.bizBarTrack i{display:block;width:70%;background:linear-gradient(180deg,#e5c56d,#8c6825);border-radius:7px 7px 2px 2px;min-height:4px}.bizBar b{font-size:8px;color:#cbd5e1;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.bizBar small{font-size:8px;color:#718096}.mixRow{display:flex;justify-content:space-between;padding:10px 2px;border-bottom:1px solid #1d2936;font-size:10px}.mixRow:last-child{border-bottom:0}.mixRow b{color:#e5c56d}
 @media(max-width:900px){.bizCards{grid-template-columns:repeat(3,1fr)}.bizLower{grid-template-columns:1fr}}
 @media(max-width:500px){.bizCards{grid-template-columns:repeat(2,1fr)}.bizCard b{font-size:13px}.bizBars{gap:4px}}
-</style><style>[data-theme="gold-dark"] body{background:#111;color:#eee}[data-theme="gold-dark"] .card{background:#171717;color:#eee}[data-theme="enterprise"] .card{border-color:#2563eb}</style></head>
+</style><style>[data-theme="gold-dark"] body{background:#111;color:#eee}[data-theme="gold-dark"] .card{background:#171717;color:#eee}[data-theme="enterprise"] .card{border-color:#2563eb}</style><style>
+.g59ProPanel{margin-top:12px}.g59Grid{display:grid;grid-template-columns:1.2fr .8fr;gap:10px}.g59Box{background:#0a1017;border:1px solid #26313d;border-radius:16px;padding:12px}.g59Box h4{margin:0 0 9px;font-size:13px}.g59Sources{display:grid;gap:6px}.g59Source{display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border-radius:11px;background:#0d141d;border:1px solid #202c39}.g59Source small{color:#91a0b1}.g59Ok{color:#67e6aa}.g59Bad{color:#ff8e9a}.g59Warn{color:#f1d17b}.g59Notice{margin-top:9px;padding:8px 10px;border-radius:10px;font-size:10px;background:#111a24;color:#aeb9c7}.g59Metrics{display:grid;grid-template-columns:1fr 1fr;gap:8px}.g59Metrics div{padding:8px;border-radius:11px;background:#0d141d}.g59Metrics span{display:block;color:#8996a6;font-size:9px}.g59Metrics b{display:block;margin-top:4px;font-size:11px}.g59ChartHead{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:12px;padding-top:10px;border-top:1px solid #202b37}.g59ChartHead span{display:block;margin-top:3px}.g59Btns{display:flex;gap:5px;flex-wrap:wrap}.g59CandleBtn{font-size:10px;padding:7px 9px}.g59Candles{margin-top:9px;min-height:240px;background:#080d13;border:1px solid #202b37;border-radius:14px;overflow:hidden}.g59Candles svg{width:100%;height:260px;display:block}.g59CalcGrid{display:grid;grid-template-columns:repeat(5,1fr) auto;gap:8px}.g59CalcResult{margin-top:10px;padding:12px;border-radius:14px;background:#0a1017;border:1px solid #2b3542;line-height:2}.g59PortfolioSummary{padding:12px;border-radius:14px;background:#0a1017;border:1px solid #25313e;line-height:2}.g59PortfolioSummary b{color:#f4d77f}@media(max-width:800px){.g59Grid{grid-template-columns:1fr}.g59CalcGrid{grid-template-columns:1fr 1fr}.g59CalcGrid button{grid-column:1/-1}.g59ChartHead{align-items:flex-start;flex-direction:column}}
+</style></head>
 <body>
 <div id="updateBanner" style="display:none;position:sticky;top:0;z-index:900;background:#17140d;border-bottom:1px solid #4a3a19;padding:10px 14px;text-align:center">
   <span id="updateText">نسخه جدید آماده است.</span>
@@ -362,7 +364,36 @@ body.authLocked .floatingMenuBtn,body.authLocked .menuBackdrop,body.authLocked .
 
 <section class="card categorySection category-tools" id="proToolsPanel"><div class="sectionTitle"><h3>🧰 مرکز ابزارهای حرفه‌ای سرمایه</h3><span>اطلاعات واقعی و ذخیره‌شده برای حساب شما</span></div><div class="professionalToolGrid"><div class="toolPanel"><h4>🎯 پروفایل سرمایه‌گذاری</h4><div class="accountGrid"><select id="investorRisk"><option value="low">ریسک کم</option><option value="medium" selected>ریسک متوسط</option><option value="high">ریسک بالا</option></select><select id="investorHorizon"><option value="short">کوتاه‌مدت</option><option value="medium" selected>میان‌مدت</option><option value="long">بلندمدت</option></select><input id="investorGoal" placeholder="هدف، مثلاً حفظ ارزش پول"><textarea id="investorNotes" placeholder="توضیحات شخصی" style="min-height:65px;grid-column:1/-1"></textarea></div><button class="secondary" onclick="saveInvestorSettings()">💾 ذخیره پروفایل</button></div><div class="toolPanel"><h4>🏦 محل نگهداری</h4><div class="accountGrid"><input id="storageName" placeholder="مثلاً صندوق امانات"><input id="storageNote" placeholder="یادداشت"></div><button class="secondary" onclick="addStorageLocation()">+ افزودن محل</button><div id="storageList" class="small"></div></div><div class="toolPanel"><h4>👨‍👩‍👧 سبد خانوادگی</h4><div class="accountGrid"><input id="householdName" placeholder="نام سبد"><input id="householdOwner" placeholder="مالک"></div><button class="secondary" onclick="addHouseholdPortfolio()">+ افزودن سبد</button><div id="householdList" class="small"></div></div><div class="toolPanel"><h4>🧮 شبیه‌ساز خرید پله‌ای</h4><div class="accountGrid"><input id="ladderCapital" type="number" placeholder="سرمایه ریال"><input id="ladderSteps" type="number" value="3" min="2" max="10" placeholder="تعداد پله"><input id="ladderStepPct" type="number" value="2" step="0.1" placeholder="فاصله هر پله ٪"></div><button class="secondary" onclick="runLadderSimulation()">محاسبه</button><div id="ladderResult" class="result"></div></div><div class="toolPanel"><h4>🧾 ثبت اطلاعات فاکتور</h4><input id="invoiceFile" type="file" accept="image/*,.pdf"><div class="small">فایل برای استخراج خودکار به سرویس OCR خارجی ارسال نمی‌شود. فعلاً اطلاعات فاکتور را دستی وارد کنید تا عدد ساختگی ایجاد نشود.</div><div class="accountGrid"><input id="invoiceWeight" type="number" step="0.001" placeholder="وزن گرم"><input id="invoicePurity" type="number" value="750" placeholder="عیار"><input id="invoiceAmount" type="number" placeholder="مبلغ ریال"><input id="invoiceDate" type="date"></div><button class="secondary" onclick="saveInvoiceRecord()">💾 ثبت فاکتور</button><div id="invoiceStatus" class="small"></div></div><div class="toolPanel"><h4>🛡️ امنیت حساب</h4><button class="secondary" onclick="logoutAndRelogin()">🚪 خروج از حساب</button><button class="secondary" onclick="changePasswordPrompt()">🔑 تغییر رمز</button><div class="small">برای امنیت، رمز ذخیره‌شده هرگز در پنل نمایش داده نمی‌شود.</div></div></div></section>
 
+
+<section class="card categorySection category-market g59ProPanel" id="proLiveTerminal">
+<div class="sectionTitle"><div><h3>⚡ ترمینال حرفه‌ای Live Gold</h3><span>۷ قابلیت حرفه‌ای نسخه 59.0</span></div><div id="g59EngineBadge" class="smartBadge">● موتور زنده</div></div>
+<div class="g59Grid">
+ <div class="g59Box"><h4>🌐 منابع قیمت</h4><div id="g59Sources" class="g59Sources">در حال بررسی منابع...</div><div id="g59Anomaly" class="g59Notice">در حال کنترل ناهنجاری...</div></div>
+ <div class="g59Box"><h4>⏱ وضعیت موتور</h4><div class="g59Metrics"><div><span>قیمت</span><b id="g59Price">—</b></div><div><span>زمان منبع</span><b id="g59SourceTime">—</b></div><div><span>دریافت</span><b id="g59Received">—</b></div><div><span>SSE Client</span><b id="g59Clients">—</b></div></div></div>
+</div>
+<div class="g59ChartHead"><div><b>🕯 نمودار کندلی</b><span class="small">OHLC از تیک‌های زنده همین سامانه</span></div><div class="g59Btns"><button class="secondary g59CandleBtn active" data-candle="60">۱ دقیقه</button><button class="secondary g59CandleBtn" data-candle="300">۵ دقیقه</button><button class="secondary g59CandleBtn" data-candle="900">۱۵ دقیقه</button></div></div>
+<div id="g59Candles" class="g59Candles"><div class="chartEmpty">در حال جمع‌آوری تیک...</div></div>
+</section>
+
+<section class="card categorySection category-tools g59ProPanel" id="goldCalculator">
+<div class="sectionTitle"><div><h3>🧮 محاسبه‌گر حرفه‌ای طلا</h3><span>خرید، فروش، اجرت و عیار</span></div></div>
+<div class="g59CalcGrid">
+ <input id="g59Weight" type="number" step="0.001" placeholder="وزن (گرم)">
+ <input id="g59Purity" type="number" value="750" placeholder="عیار (مثلاً 750)">
+ <input id="g59Wage" type="number" step="0.1" value="0" placeholder="اجرت ٪">
+ <input id="g59Profit" type="number" step="0.1" value="7" placeholder="سود فروشنده ٪">
+ <input id="g59Tax" type="number" step="0.1" value="10" placeholder="مالیات ٪">
+ <button onclick="g59CalculateGold()">محاسبه قیمت</button>
+</div>
+<div id="g59CalcResult" class="g59CalcResult">وزن و عیار را وارد کنید.</div>
+</section>
+
+<section class="card categorySection category-tools g59ProPanel" id="g59PortfolioAdvanced">
+<div class="sectionTitle"><div><h3>💼 پرتفوی زنده</h3><span>ارزش‌گذاری لحظه‌ای و سود/زیان</span></div><button class="secondary" onclick="loadPortfolio()">↻ بروزرسانی</button></div>
+<div id="g59PortfolioSummary" class="g59PortfolioSummary">اطلاعات سبد از بخش دارایی خوانده می‌شود.</div>
+</section>
+
 <footer class="footer">Gold Alert Pro © 2026<br><strong>طراح و توسعه: عباس صدیق آرانی</strong><br>۰۹۱۳۰۱۱۵۹۲۰<br>این سامانه ابزار پایش و تحلیل است؛ سیگنال‌ها قطعی و تضمین‌کننده سود نیستند.</footer>
 </div>
-<script src="/app.js?v=40.0.0" defer></script>
+<script src="/app.js?v=59.0.0" defer></script>
 </body></html>

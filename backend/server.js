@@ -4,7 +4,7 @@ import path from "node:path";
 import crypto from "node:crypto";
 import { spawn } from "node:child_process";
 import express from "express";
-import { getIran18, getGlobalGold, getCoins, getDollar, getNews, getHistory } from "./provider.js";
+import { getIran18, getIran18Sources, getGlobalGold, getCoins, getDollar, getNews, getHistory } from "./provider.js";
 import { runBacktest } from "./backtest.js";
 import { analyze } from "./indicators.js";
 import { initAlerts, sendTelegram, sendWebPush, sendWebPushToDevice, addSubscription, removeSubscription, removeDeviceSubscriptions, getPublicVapidKey, subscriptionCount } from "./alerts.js";
@@ -15,7 +15,7 @@ import { adminLogin, requireAdminToken, adminLogout, listUsers, createManagedUse
 import { analyzeGold } from "./ai/manager.js";
 import { getTheme, setTheme } from "./theme.js";
 
-const APP_VERSION = "58.2.0"
+const APP_VERSION = "59.0.0"
 const USER_SESSION_HOURS = Math.max(1, Number(process.env.USER_SESSION_HOURS || 72));
 const LOGIN_WINDOW_MS = 10 * 60_000;
 const LOGIN_MAX_ATTEMPTS = 12;
@@ -108,6 +108,7 @@ const state = {
   iran: null, global: null, dollar: null, coins: null, marketPressure: null, analysis: null, prices: [], ticks: [], events: [], news: [], lastSignal: "WAIT", lastPressureAlert: "NEUTRAL",
   updatedAt: null, error: null, startedAt: new Date().toISOString(), dataReady: false,
   livePush: { lastAt: 0, lastPrice: 0 },
+  sourceDiagnostics: null,
   portfolioRisk: { lastKey: "", lastAt: 0 },
   historyLoaded: false, activeTrade: null, targetEvents: [], personalAlerts: [], busy: false, consecutiveErrors: 0
 };
@@ -119,6 +120,8 @@ function publicStatePayload(){
     ...state,
     config: { pollMs, minScore, target1, target2, stopPct, appVersion: APP_VERSION },
     marketStructure: marketStructure(state.prices),
+    sourceDiagnostics: state.sourceDiagnostics,
+    anomaly: state.anomaly || null,
     units: { gold18: "IRR_PER_GRAM", dollar: "IRR_PER_USD", coins: "IRR" }
   };
 }
@@ -493,6 +496,12 @@ async function tick() {
       throw new Error(results[0].reason?.message || "Iran gold price unavailable");
     }
     state.iran = iran; state.global = global; state.dollar = dollar; state.coins = coins;
+    if (!state.sourceDiagnostics || Date.now() - new Date(state.sourceDiagnostics.checkedAt || 0).getTime() > 30000) {
+      try { state.sourceDiagnostics = await getIran18Sources(false); } catch (e) { state.sourceDiagnostics = { checkedAt:new Date().toISOString(), primary:iran.source || null, sources:[{name:iran.source||"active",priceIRR:iran.priceIRR,ok:true}], anomaly:false, error:e.message }; }
+    }
+    const previousPrice = Number(state.prices.at(-1) || 0);
+    const jumpPct = previousPrice > 0 ? Math.abs((iran.priceIRR / previousPrice - 1) * 100) : 0;
+    state.anomaly = { detected: jumpPct > 5 || Boolean(state.sourceDiagnostics?.anomaly), jumpPct, thresholdPct:5, sourceSpreadPct:state.sourceDiagnostics?.spreadPct ?? null, checkedAt:new Date().toISOString() };
     pushPrice(iran.priceIRR); pushTick({iran,global,dollar,coins});
     state.marketPressure = calcMarketPressure();
     await emitPressureAlert(state.marketPressure, iran.priceIRR);
@@ -880,6 +889,19 @@ ${JSON.stringify(ctx)}
 
 سؤال کاربر:
 ${q}`}],temperature:.2,max_tokens:900})}); const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d?.error?.message||`GapGPT HTTP ${r.status}`);const text=d?.choices?.[0]?.message?.content||d?.choices?.[0]?.text;if(!text)throw new Error('پاسخ AI خالی است.');res.json({ok:true,text,at:new Date().toISOString()}); }catch(e){res.status(502).json({error:e.message});} });
+
+app.get("/api/source-diagnostics", async (req,res)=>{
+  try { const d=await getIran18Sources(true); state.sourceDiagnostics=d; res.set("Cache-Control","no-store"); res.json({ok:true,...d}); }
+  catch(e){res.status(503).json({ok:false,error:e.message});}
+});
+app.get("/api/candles", (req,res)=>{
+  const seconds=Math.min(3600,Math.max(5,Number(req.query.interval||60)));
+  const ticks=state.ticks.filter(x=>Number.isFinite(Number(x.price)));
+  const buckets=new Map();
+  for(const t of ticks){ const ts=new Date(t.at).getTime(); const key=Math.floor(ts/(seconds*1000))*seconds*1000; let c=buckets.get(key); const p=Number(t.price); if(!c)c={time:new Date(key).toISOString(),open:p,high:p,low:p,close:p,volume:0}; else {c.high=Math.max(c.high,p);c.low=Math.min(c.low,p);c.close=p;} c.volume++; buckets.set(key,c); }
+  res.set("Cache-Control","no-store"); res.json({ok:true,intervalSeconds:seconds,candles:[...buckets.values()].slice(-180)});
+});
+app.get("/api/price-engine", (_,res)=>{res.set("Cache-Control","no-store");res.json({ok:true,primary:state.iran?.source||null,price:state.iran?.priceIRR||null,sourceTime:state.iran?.at||null,receivedAt:state.updatedAt,diagnostics:state.sourceDiagnostics,anomaly:state.anomaly,clients:sseClients.size,pollMs});});
 
 app.get("/api/stream", (req, res) => {
   res.status(200);

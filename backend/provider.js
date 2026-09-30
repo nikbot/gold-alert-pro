@@ -123,9 +123,48 @@ async function tryIran18Html(url) {
   const price = parseIran18PriceFromText(cleanText(html));
   if (!Number.isFinite(price) || price < 1000000) throw new Error("18k price not found in response");
   const result = { priceIRR: Math.round(price), source: `TGJU (${new URL(url).host})`, at: new Date().toISOString(), unit: "IRR_PER_GRAM" };
-  lastValidIran18 = result;
   return result;
 }
+
+let sourceComparisonCache = { at: 0, data: null };
+export async function getIran18Sources(force = false) {
+  if (!force && sourceComparisonCache.data && Date.now() - sourceComparisonCache.at < 30000) return sourceComparisonCache.data;
+  const sources = [];
+  const jobs = [];
+  if (SERVIX_API_KEY) jobs.push((async()=>{
+    try {
+      const payload = await fetchJson(SERVIX_GOLD_URL, {"X-API-Key": SERVIX_API_KEY});
+      const price = priceFromJson(payload);
+      if (!price) throw new Error("قیمت معتبر پیدا نشد");
+      return {name:"Servix", priceIRR:Math.round(price), at:payload?.businessTime || new Date().toISOString(), ok:true};
+    } catch(e) { return {name:"Servix", ok:false, error:e.name === "AbortError" ? "timeout" : e.message}; }
+  })());
+  jobs.push((async()=>{
+    try {
+      const r = await tryIran18Html(TGJU_GOLD_URL);
+      return {name:"TGJU", priceIRR:r.priceIRR, at:r.at, ok:true};
+    } catch(e) { return {name:"TGJU", ok:false, error:e.name === "AbortError" ? "timeout" : e.message}; }
+  })());
+  if (TINDEX_API_TOKEN) jobs.push((async()=>{
+    try {
+      const payload=await fetchJson(TINDEX_GOLD_URL,{Authorization:`Bearer ${TINDEX_API_TOKEN}`});
+      const value=priceFromJson(payload);
+      if(!value) throw new Error("قیمت معتبر پیدا نشد");
+      return {name:"Tindex",priceIRR:Math.round(value*10),at:payload?.data?.updated_at||new Date().toISOString(),ok:true};
+    }catch(e){return {name:"Tindex",ok:false,error:e.name === "AbortError" ? "timeout" : e.message};}
+  })());
+  const results=await Promise.all(jobs);
+  const valid=results.filter(x=>x.ok&&Number.isFinite(x.priceIRR));
+  const primary=valid.find(x=>x.name==="Servix")||valid[0]||null;
+  let spreadPct=null, anomaly=false;
+  if(primary&&valid.length>1){
+    const max=Math.max(...valid.map(x=>x.priceIRR)), min=Math.min(...valid.map(x=>x.priceIRR));
+    spreadPct=min?(max/min-1)*100:null; anomaly=spreadPct!=null&&spreadPct>2;
+  }
+  const data={checkedAt:new Date().toISOString(),primary:primary?.name||null,sources:results,spreadPct,anomaly,thresholdPct:2};
+  sourceComparisonCache={at:Date.now(),data}; return data;
+}
+
 export async function getIran18() {
   const errors = [];
 
