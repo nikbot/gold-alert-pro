@@ -1,0 +1,3 @@
+import gemini from './gemini.js'; import openai from './openai.js'; import groq from './groq.js'; import fallback from './fallback.js';
+const providers=[['Gemini',gemini],['OpenAI',openai],['Groq',groq]];
+export async function analyzeGold(data){for(const [n,f] of providers){try{return {provider:n,analysis:await Promise.race([f(data),new Promise((_,r)=>setTimeout(()=>r(Error('timeout')),15000))])}}catch(e){console.error(n,e.message)}}return {provider:'local',analysis:fallback(data)}}

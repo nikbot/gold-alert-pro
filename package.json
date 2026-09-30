@@ -11,7 +11,10 @@
   "dependencies": {
     "express": "^5.1.0",
     "dotenv": "^17.2.2",
-    "web-push": "^3.6.7"
+    "web-push": "^3.6.7",
+    "@google/generative-ai": "latest",
+    "openai": "latest",
+    "groq-sdk": "latest"
   },
   "engines": {
     "node": ">=20"

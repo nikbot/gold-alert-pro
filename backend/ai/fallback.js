@@ -1,0 +1,1 @@
+export default d=>`تحلیل داخلی قیمت ${d.price??'-'}`; 
