@@ -795,6 +795,23 @@ app.get("/api/admin/overview", async (req,res)=>{
   res.json({ok:true,version:APP_VERSION,users:users.length,active:users.filter(x=>x.active).length,expired:users.filter(x=>x.expiresAt&&Date.parse(x.expiresAt)<Date.now()).length,pro:users.filter(x=>x.role==='pro').length,premium:users.filter(x=>x.role==='premium').length,openTickets:tickets.filter(x=>x.status==='open'||x.status==='pending').length,payments:payments.length,auditEvents:auditLog.length,aiConfigured:Boolean(process.env.GAPGPT_API_KEY),smsConfigured:Boolean(process.env.IPPANEL_API_KEY&&process.env.IPPANEL_FROM),uptime:Math.round(process.uptime()),generatedAt:new Date().toISOString()});
 });
 
+app.get("/api/admin/business-dashboard", async (req,res)=>{
+  if(!(await adminAuth(req,res)))return res.status(403).json({error:"admin session invalid"});
+  const users=await listUsers();
+  const payments=await readJsonFile(PAYMENTS_FILE,[]);
+  const tickets=await ticketStore();
+  const now=Date.now(), day=86400000, monthStart=new Date(); monthStart.setDate(1); monthStart.setHours(0,0,0,0);
+  const confirmed=payments.filter(p=>String(p.status||'confirmed').toLowerCase()==='confirmed' && Number(p.amount)>0);
+  const totalRevenue=confirmed.reduce((s,p)=>s+Number(p.amount||0),0);
+  const monthRevenue=confirmed.filter(p=>Date.parse(p.at||0)>=monthStart.getTime()).reduce((s,p)=>s+Number(p.amount||0),0);
+  const last7Revenue=confirmed.filter(p=>Date.parse(p.at||0)>=now-7*day).reduce((s,p)=>s+Number(p.amount||0),0);
+  const expiring7=users.filter(u=>u.expiresAt&&Date.parse(u.expiresAt)>=now&&Date.parse(u.expiresAt)<=now+7*day).length;
+  const new7=users.filter(u=>Date.parse(u.createdAt||0)>=now-7*day).length;
+  const new30=users.filter(u=>Date.parse(u.createdAt||0)>=now-30*day).length;
+  const active=users.filter(u=>u.active&&(!u.expiresAt||Date.parse(u.expiresAt)>=now)).length;
+  const daily=Array.from({length:7},(_,i)=>{const d=new Date(now-(6-i)*day);const key=d.toISOString().slice(0,10);return {date:key,users:users.filter(u=>String(u.createdAt||'').slice(0,10)===key).length,revenue:confirmed.filter(p=>String(p.at||'').slice(0,10)===key).reduce((s,p)=>s+Number(p.amount||0),0)};});
+  res.json({ok:true,currency:"IRR",users:{total:users.length,active,pro:users.filter(u=>u.role==='pro').length,premium:users.filter(u=>u.role==='premium').length,new7,new30,expiring7},revenue:{total:totalRevenue,month:monthRevenue,last7:last7Revenue,confirmedCount:confirmed.length,average:confirmed.length?Math.round(totalRevenue/confirmed.length):0},support:{open:tickets.filter(t=>['open','pending'].includes(t.status)).length,answered:tickets.filter(t=>t.status==='answered').length,total:tickets.length},daily,generatedAt:new Date().toISOString()});
+});
 app.get("/api/admin/features", async (req,res)=>{ if(!(await adminAuth(req,res)))return res.status(403).json({error:"admin session invalid"}); res.json({ok:true,features:FEATURE_KEYS,roles:{user:['dashboard','market','portfolio','alerts','account'],pro:PRO_PERMISSIONS,premium:PREMIUM_PERMISSIONS,admin:FEATURE_KEYS}}); });
 app.get("/api/admin/users", async (req,res)=>{ if(!(await adminAuth(req,res)))return res.status(403).json({error:"admin session invalid"}); res.json({ok:true,users:await listUsers()}); });
 app.post("/api/admin/users", async (req,res)=>{ if(!(await adminAuth(req,res)))return res.status(403).json({error:"admin session invalid"}); try{res.json({ok:true,...await createManagedUser(req.body||{})});}catch(e){res.status(400).json({error:e.message});} });
