@@ -599,64 +599,48 @@ app.post("/api/ai-professional", async (req,res)=>{
 });
 
 app.post("/api/ai-analysis", async (req,res)=>{
-  if(!(await requireFeature(req,'ai',req.body?.deviceId))) return res.status(403).json({error:"دسترسی تحلیل AI برای این حساب فعال نیست."});
-  const ip=req.headers["x-forwarded-for"]?.split(",")[0]?.trim() || req.socket.remoteAddress || "unknown";
-  if(!aiAllowed(ip)) return res.status(429).json({error:"تعداد درخواست‌های تحلیل هوشمند زیاد است. کمی بعد دوباره امتحان کن."});
-  const key=process.env.GAPGPT_API_KEY;
-  if(!key) return res.status(503).json({error:"کلید GapGPT روی سرور تنظیم نشده است."});
-  const context=buildAIContext();
-  const userPrompt=`از داده‌های واقعی فعلی بازار طلا و سری زمانی نمودار استفاده کن و برای یک کاربر ایرانی، خیلی ساده و محاوره‌ای توضیح بده الان شرایط طلا چطور است. حتماً بخش «تحلیل لحظه‌ای نمودار» را بر اساس روند نقاط اخیر، سقف/کف، تغییر درصدی و نوسان محاسبه‌شده بررسی کن؛ از روی یک نقطه به‌تنهایی نتیجه‌گیری نکن.
-
-داده‌ها:
-${JSON.stringify(context,null,2)}
-
-خروجی را فارسی و کوتاه بده و دقیقاً این ساختار را رعایت کن:
-1) جمع‌بندی: یک جمله
-2) تحلیل لحظه‌ای نمودار: روند کوتاه‌مدت، قدرت حرکت، نوسان و نزدیک‌ترین ناحیه حمایت/مقاومت قابل استنباط از داده‌ها.
-3) الان چه کار کنم؟ یکی از «خرید پله‌ای»، «نگهداری»، «صبر»، «فروش/کاهش موقعیت» را با توجه به داده‌ها انتخاب کن و دلیل کوتاه بده.
-4) ریسک: یک جمله
-5) عددهای مهم: حمایت، مقاومت، حدضرر/هدف اگر از داده‌ها قابل استخراج است.
-هرگز سود قطعی یا تضمین نده. اگر داده کافی نیست، صریح بگو داده کافی نیست و چه چیزی باید تأیید شود.`;
-  try{
-    const r=await fetchWithTimeout(`${AI_BASE_URL}/chat/completions`,{
-      method:"POST",
-      headers:{"Authorization":`Bearer ${key}`,"Content-Type":"application/json"},
-      body:JSON.stringify({
-        model:AI_MODEL,
-        messages:[
-          {role:"system",content:"تو تحلیلگر فارسی‌زبان بازار طلا هستی. فقط بر اساس داده‌های ارائه‌شده تحلیل کن. لحن ساده، محاوره‌ای، دقیق و محتاط باشد. تصمیم مالی را به کاربر تحمیل نکن و هیچ سود قطعی یا تضمینی وعده نده."},
-          {role:"user",content:userPrompt}
-        ],
-        temperature:0.2,
-        max_tokens:700
-      })
+  res.set("Cache-Control","no-store");
+  try {
+    const context = buildAIContext();
+    const result = await analyzeGold({
+      ...context,
+      userPrompt: req.body?.question || "تحلیل وضعیت فعلی بازار طلا"
     });
-    let data=await r.json().catch(()=>({}));
-    if(!r.ok && (r.status===400 || r.status===404) && AI_MODEL !== "auto") {
-      const retry=await fetchWithTimeout(`${AI_BASE_URL}/chat/completions`,{
-        method:"POST",
-        headers:{"Authorization":`Bearer ${key}`,"Content-Type":"application/json"},
-        body:JSON.stringify({model:"auto",messages:[
-          {role:"system",content:"تو تحلیلگر فارسی‌زبان بازار طلا هستی. فقط بر اساس داده‌های ارائه‌شده تحلیل کن. لحن ساده، محاوره‌ای، دقیق و محتاط باشد. سود قطعی یا تضمین نده."},
-          {role:"user",content:userPrompt}
-        ],temperature:0.2,max_tokens:700})
-      });
-      data=await retry.json().catch(()=>({}));
-      if(retry.ok) {
-        const text=data?.choices?.[0]?.message?.content || data?.choices?.[0]?.text || data?.output_text || data?.message?.content;
-        if(text) return res.json({ok:true,provider:"GapGPT",model:data?.model||"auto",text,at:new Date().toISOString(),dataAt:state.updatedAt});
-      }
-      throw new Error(data?.error?.message || data?.message || `GapGPT HTTP ${retry.status}`);
-    }
-    if(!r.ok) throw new Error(data?.error?.message || data?.message || `GapGPT HTTP ${r.status}`);
-    const text=data?.choices?.[0]?.message?.content || data?.choices?.[0]?.text || data?.output_text || data?.message?.content;
-    if(!text) throw new Error("پاسخ متنی معتبری از GapGPT دریافت نشد.");
-    res.json({ok:true,provider:"GapGPT",model:AI_MODEL,text,at:new Date().toISOString(),dataAt:state.updatedAt});
-  }catch(e){ console.warn("GapGPT analysis error:",e.message); res.status(502).json({error:"تحلیل هوشمند فعلاً در دسترس نیست: "+e.message});}
+    return res.json({
+      ok:true,
+      provider: result.provider,
+      text: typeof result.analysis === "string" ? result.analysis : JSON.stringify(result.analysis),
+      at:new Date().toISOString(),
+      dataAt:state.updatedAt || null
+    });
+  } catch (e) {
+    return res.status(502).json({
+      ok:false,
+      error:"AI analysis failed",
+      detail:String(e.message || e)
+    });
+  }
 });
 
-app.get("/api/version", (req, res) => res.json({ version: APP_VERSION, startedAt: state.startedAt }));
-app.get("/api/update", async (req,res)=>{try{const m=await fetchUpdateManifest();res.json({ok:true,currentVersion:APP_VERSION,...m});}catch(e){res.status(503).json({ok:false,currentVersion:APP_VERSION,available:false,error:e.message});}});
+app.get("/api/ai-health", async (req,res)=>{
+  try {
+    const {aiHealth}=await import("./ai/manager.js");
+    res.json(await aiHealth());
+  } catch(e) {
+    res.status(500).json({ok:false,error:String(e.message||e)});
+  }
+});
+
+app.post("/api/ai-test", async (req,res)=>{
+  try {
+    const {analyzeGold}=await import("./ai/manager.js");
+    const r=await analyzeGold({price:"test",symbol:"XAU"});
+    res.json({ok:true,provider:r.provider,response:r.analysis});
+  } catch(e) {
+    res.status(502).json({ok:false,error:String(e.message||e)});
+  }
+});
+
 app.post("/api/update/apply", async (req,res)=>{try{const token=String(req.headers["x-account-token"]||req.body?.accountToken||"");const account=await publicAccount(token);if(!account) return res.status(401).json({error:"ابتدا وارد حساب شوید."});const m=await fetchUpdateManifest();if(!m.available)return res.json({ok:true,updated:false,version:APP_VERSION,message:"نسخه جدیدی موجود نیست."});if(m.mandatory===false && req.body?.confirm!==true)return res.status(409).json({ok:false,needsConfirm:true,...m});const result=await applySelfUpdate(m);res.json(result);setTimeout(()=>process.exit(0),1200);}catch(e){res.status(500).json({ok:false,error:e.message});}});
 
 app.get("/health", (_, res) => res.json({ ok: true, status: "running", uptime: Math.round(process.uptime()), updatedAt: state.updatedAt, error: state.error, dataReady: state.dataReady, subscriptions: subscriptionCount(), personalAlerts: state.personalAlerts.length, smsPremium: smsConfig(), ai: { provider: "GapGPT", configured: Boolean(process.env.GAPGPT_API_KEY), model: AI_MODEL, baseUrl: AI_BASE_URL } }));
