@@ -7,12 +7,13 @@ import express from "express";
 import { getIran18, getGlobalGold, getCoins, getDollar, getNews, getHistory } from "./provider.js";
 import { runBacktest } from "./backtest.js";
 import { analyze } from "./indicators.js";
+import { riskPositionSize, detectRegime, evaluateAlertRule, createPaperTrade, closePaperTrade } from "./proFeatures.js";
 import { initAlerts, sendTelegram, sendWebPush, sendWebPushToDevice, addSubscription, removeSubscription, removeDeviceSubscriptions, getPublicVapidKey, subscriptionCount } from "./alerts.js";
 import { plans, getSubscription, activateSubscription, validAdminKey, paymentUrl, supportUrl } from "./subscription.js";
 import { smsConfig, createPaymentRequest, issueActivationCode, activateWithCode, getStatus as getSmsStatus, sendPremiumPriceSMS, adminRequests as getSmsAdminRequests } from "./smsPremium.js";
 import { adminLogin, requireAdminToken, adminLogout, listUsers, createManagedUser, updateManagedUser, deleteManagedUser, adminStats, publicAccount, userIsActive, userPermissions, getUserByUsername, validUsername, FEATURE_KEYS, PRO_PERMISSIONS, PREMIUM_PERMISSIONS } from "./adminPanel.js";
 
-const APP_VERSION = "42.0.0";
+const APP_VERSION = "43.0.0";
 const USER_SESSION_HOURS = Math.max(1, Number(process.env.USER_SESSION_HOURS || 72));
 const LOGIN_WINDOW_MS = 10 * 60_000;
 const LOGIN_MAX_ATTEMPTS = 12;
@@ -852,6 +853,22 @@ app.get("/api/state", (_, res) => res.json({
 app.get("/api/news", async (req, res) => { const news = await getNews(); if (news.length) state.news = news; const sub = await getSubscription(req.query.deviceId); res.json(sub.active ? (state.news || []) : (state.news || []).slice(0, 5)); });
 app.get("/api/backtest", async (req, res) => { try { if(!(await requireFeature(req,'backtest',req.query.deviceId))) return res.status(403).json({error:"دسترسی بک‌تست برای این حساب فعال نیست."}); const sub = await getSubscription(req.query.deviceId); if (!sub.active) return res.status(402).json({ error: "این قابلیت مخصوص Gold Alert Pro+ است." }); const h = await getHistory(); if (!h.length) return res.status(503).json({ error: "history unavailable" }); res.json(await runBacktest(h)); } catch (e) { res.status(500).json({ error: e.message }); } });
 app.post("/api/reset", async (req, res) => { if (!(await adminAuth(req,res))) return res.status(403).json({error:"admin session invalid"}); state.events = []; state.targetEvents = []; state.activeTrade = null; state.lastSignal = "WAIT"; scheduleSave(); await audit("state_reset",{}); res.json({ ok: true }); });
+
+// v43 professional feature APIs. Personal records are keyed to authenticated account IDs.
+const PAPER_TRADES_FILE = path.join(DATA_DIR, "paper-trades.json");
+async function requireSignedIn(req,res){const a=await accountFromReq(req);if(!a||!userIsActive(a)){res.status(401).json({ok:false,error:"ابتدا وارد حساب معتبر شوید."});return null;}return a;}
+app.get("/api/pro/market-intelligence", async (req,res)=>{
+  const a=await requireSignedIn(req,res);if(!a)return;
+  const prices=state.prices.map(Number).filter(x=>Number.isFinite(x)&&x>0);
+  const regime=detectRegime(prices);
+  const recent=prices.slice(-30);
+  res.json({ok:true,version:APP_VERSION,regime,market:{price:recent.at(-1)??null,changePct:recent.length>1?(recent.at(-1)/recent[0]-1)*100:null,samples:recent.length},indicators:state.analysis||null,updatedAt:state.updatedAt||null,stale:!state.updatedAt||Date.now()-Date.parse(state.updatedAt)>Math.max(60000,pollMs*3),notice:"اطلاعات تحلیلی و سناریویی است و تضمین‌کننده نتیجه آینده نیست."});
+});
+app.post("/api/pro/risk-size", async (req,res)=>{const a=await requireSignedIn(req,res);if(!a)return;try{res.json({ok:true,...riskPositionSize(req.body||{})});}catch(e){res.status(400).json({ok:false,error:e.message});}});
+app.post("/api/pro/evaluate-alert", async (req,res)=>{const a=await requireSignedIn(req,res);if(!a)return;const result=evaluateAlertRule(req.body?.rule,req.body?.snapshot);if(!result.valid)return res.status(400).json({ok:false,error:"قاعده یا داده هشدار نامعتبر است."});res.json({ok:true,...result,evaluatedAt:new Date().toISOString()});});
+app.get("/api/pro/paper-trades", async (req,res)=>{const a=await requireSignedIn(req,res);if(!a)return;const all=await readJsonFile(PAPER_TRADES_FILE,{});res.json({ok:true,trades:Array.isArray(all[a.id])?all[a.id]:[]});});
+app.post("/api/pro/paper-trades", async (req,res)=>{const a=await requireSignedIn(req,res);if(!a)return;try{const all=await readJsonFile(PAPER_TRADES_FILE,{}),trades=Array.isArray(all[a.id])?all[a.id]:[];const trade=createPaperTrade(req.body||{});trades.unshift(trade);all[a.id]=trades.slice(0,1000);await writeJsonFile(PAPER_TRADES_FILE,all);await audit("paper_trade_opened",{userId:a.id,tradeId:trade.id});res.status(201).json({ok:true,trade});}catch(e){res.status(400).json({ok:false,error:e.message});}});
+app.post("/api/pro/paper-trades/:id/close", async (req,res)=>{const a=await requireSignedIn(req,res);if(!a)return;try{const all=await readJsonFile(PAPER_TRADES_FILE,{}),trades=Array.isArray(all[a.id])?all[a.id]:[],i=trades.findIndex(t=>t.id===req.params.id);if(i<0)return res.status(404).json({ok:false,error:"معامله پیدا نشد."});trades[i]=closePaperTrade(trades[i],req.body?.exit);all[a.id]=trades;await writeJsonFile(PAPER_TRADES_FILE,all);await audit("paper_trade_closed",{userId:a.id,tradeId:req.params.id});res.json({ok:true,trade:trades[i]});}catch(e){res.status(400).json({ok:false,error:e.message});}});
 
 const server = app.listen(port, "0.0.0.0", async () => {
   console.log(`Gold Alert Pro listening on 0.0.0.0:${port}`);

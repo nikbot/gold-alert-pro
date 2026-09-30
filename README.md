@@ -56,3 +56,6 @@ The updater downloads to the persistent data directory, verifies SHA-256 when pr
 This project is prepared for repository-based deployment. See `GITHUB_DEPLOY.md` for the exact GitHub/Deplexo flow.
 
 Secrets must stay in Deplexo Environment Variables; never commit a real `.env` file or API key.
+
+## v43 Professional APIs
+See `V43_CHANGELOG.md` for the newly added authenticated market-intelligence, risk-sizing, alert-rule evaluation, and paper-trading APIs. Run `npm test` for unit tests.
