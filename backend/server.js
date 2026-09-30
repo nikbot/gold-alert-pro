@@ -13,7 +13,7 @@ import { smsConfig, createPaymentRequest, issueActivationCode, activateWithCode,
 import { getCommerceSettings, setCommerceSettings } from "./commerceSettings.js";
 import { adminLogin, requireAdminToken, adminLogout, listUsers, createManagedUser, updateManagedUser, deleteManagedUser, adminStats, publicAccount, userIsActive, userPermissions, getUserByUsername, validUsername, FEATURE_KEYS, PRO_PERMISSIONS, PREMIUM_PERMISSIONS } from "./adminPanel.js";
 
-const APP_VERSION = "48.0.0";
+const APP_VERSION = "49.0.0"
 const USER_SESSION_HOURS = Math.max(1, Number(process.env.USER_SESSION_HOURS || 72));
 const LOGIN_WINDOW_MS = 10 * 60_000;
 const LOGIN_MAX_ATTEMPTS = 12;
@@ -445,7 +445,11 @@ async function tick() {
   if (state.busy) return;
   state.busy = true;
   try {
+    const providerNames = ["Iran18", "GlobalGold", "Dollar", "Coins"];
     const results = await Promise.allSettled([getIran18(), getGlobalGold(), getDollar(), getCoins()]);
+    for (let i = 0; i < results.length; i++) {
+      if (results[i].status === "rejected") console.warn(`Provider ${providerNames[i]} failed:`, results[i].reason?.message || "unknown error");
+    }
     const iran = results[0].status === "fulfilled" ? results[0].value : null;
     const global = results[1].status === "fulfilled" ? results[1].value : null;
     const dollar = results[2].status === "fulfilled" ? results[2].value : null;

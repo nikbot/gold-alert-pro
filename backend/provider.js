@@ -1,4 +1,5 @@
-const TGJU_GOLD_URL = process.env.TGJU_GOLD_URL || "https://gem.tgju.org/profile/geram18";
+const TGJU_GOLD_URL = process.env.TGJU_GOLD_URL || "https://www.tgju.org/profile/geram18";
+const TGJU_GOLD_FALLBACK_URL = "https://gem.tgju.org/profile/geram18";
 const TGJU_COIN_URL = process.env.TGJU_COIN_URL || "https://www.tgju.org/coin";
 const TGJU_DOLLAR_URL = process.env.TGJU_DOLLAR_URL || "https://www.tgju.org/profile/price_dollar_rl/today";
 const TGJU_WORLD_URL = process.env.TGJU_WORLD_URL || "https://www.tgju.org/world-market/currency/profile/geram18";
@@ -56,10 +57,22 @@ export function parseIran18PriceFromText(text) {
   ]);
 }
 export async function getIran18() {
-  const html = await fetchText(TGJU_GOLD_URL);
-  const price = parseIran18PriceFromText(cleanText(html));
-  if (!Number.isFinite(price) || price < 1000000) throw new Error("TGJU 18k price unavailable");
-  return { priceIRR: Math.round(price), source:"TGJU", at:new Date().toISOString(), unit:"IRR_PER_GRAM" };
+  const urls = [...new Set([TGJU_GOLD_URL, TGJU_GOLD_FALLBACK_URL])];
+  const errors = [];
+  for (const url of urls) {
+    try {
+      const html = await fetchText(url);
+      const price = parseIran18PriceFromText(cleanText(html));
+      if (!Number.isFinite(price) || price < 1000000) {
+        errors.push(`${new URL(url).host}: 18k price not found in response`);
+        continue;
+      }
+      return { priceIRR: Math.round(price), source: `TGJU (${new URL(url).host})`, at: new Date().toISOString(), unit: "IRR_PER_GRAM" };
+    } catch (error) {
+      errors.push(`${new URL(url).host}: ${error.name === "AbortError" ? "request timeout" : error.message}`);
+    }
+  }
+  throw new Error(`Iran 18k gold unavailable — ${errors.join("; ")}`);
 }
 function parseLabelPrice(text, label) {
   const re = new RegExp(label.replace(/[.*+?^${}()|[\]\\]/g,"\\$&") + "\\s*\\|?\\s*((?:\\d{1,3}(?:,\\d{3})+)|(?:\\d+))", "i");
