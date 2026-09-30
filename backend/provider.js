@@ -16,10 +16,10 @@ const TGJU_WORLD_URL = process.env.TGJU_WORLD_URL || "https://www.tgju.org/world
 const GOLDPRICE_URL = process.env.GOLDPRICE_URL || "https://api.goldprice.dev/v1/prices?symbol=XAU-USD-SPOT";
 const GDELT_URL = process.env.GDELT_URL || "https://api.gdeltproject.org/api/v2/doc/doc";
 const configuredTimeout = Number(process.env.HTTP_TIMEOUT || 12000);
-const HTTP_TIMEOUT = Number.isFinite(configuredTimeout) ? Math.max(5000, configuredTimeout) : 8000;
+const HTTP_TIMEOUT = Number.isFinite(configuredTimeout) ? Math.max(3000, configuredTimeout) : 5000;
 let lastValidIran18 = null;
 let lastIran18FetchAt = 0;
-const CACHE_MAX_AGE = 60000; // 60 seconds
+const CACHE_MAX_AGE = 30000; // 30 seconds
 
 function isValidPrice(price){
   return Number.isFinite(price) && price > 1000000 && price < 10000000000;
@@ -30,7 +30,7 @@ function saveFreshPrice(result){
   lastValidIran18 = {
     ...result,
     cached:false,
-    at:new Date().toISOString()
+    fetchedAt:new Date().toISOString()
   };
   lastIran18FetchAt = Date.now();
   return lastValidIran18;
@@ -127,10 +127,31 @@ async function tryIran18Html(url) {
   return result;
 }
 export async function getIran18() {
-  const urls = [...new Set([TGJU_GOLD_URL, ...TGJU_GOLD_FALLBACK_URLS])];
   const errors = [];
-  // Try the primary TGJU endpoints concurrently so a slow/dead mirror cannot
-  // block the 30-second market tick and abort unrelated providers such as Dollar.
+
+  // Primary: authenticated structured Servix feed. This avoids HTML scraping
+  // and gives us businessTime so the UI can distinguish source time from fetch time.
+  if (SERVIX_API_KEY) {
+    try {
+      const payload = await fetchJson(SERVIX_GOLD_URL, {"X-API-Key": SERVIX_API_KEY});
+      const quote = priceFromJson(payload);
+      if (!quote) throw new Error("valid GOLD_18_RLS value missing");
+      return saveFreshPrice({
+        priceIRR: Math.round(quote),
+        source: "Servix API",
+        at: payload?.businessTime || new Date().toISOString(),
+        unit: "IRR_PER_GRAM",
+        sourceCode: "GOLD_18_RLS"
+      });
+    } catch (error) {
+      errors.push(`Servix: ${error.name === "AbortError" ? "request timeout" : error.message}`);
+    }
+  } else {
+    errors.push("Servix: API key not configured");
+  }
+
+  // Secondary: TGJU HTML fallbacks. Only used when Servix is unavailable.
+  const urls = [...new Set([TGJU_GOLD_URL, ...TGJU_GOLD_FALLBACK_URLS])];
   const primaryUrls = urls.slice(0, 4);
   const attempts = await Promise.allSettled(primaryUrls.map(url => tryIran18Html(url)));
   for (let i = 0; i < attempts.length; i++) {
@@ -139,8 +160,6 @@ export async function getIran18() {
     const error = result.reason;
     errors.push(`${new URL(primaryUrls[i]).host}: ${error?.name === "AbortError" ? "request timeout" : error?.message || "request failed"}`);
   }
-  // The site root mirrors are lower-priority fallbacks; keep them sequential to
-  // avoid unnecessary load when the profile endpoints are healthy.
   for (const url of urls.slice(4)) {
     try {
       const fresh = await tryIran18Html(url);
@@ -149,32 +168,25 @@ export async function getIran18() {
       errors.push(`${new URL(url).host}: ${error?.name === "AbortError" ? "request timeout" : error?.message || "request failed"}`);
     }
   }
-  // Authenticated structured feeds are optional; configure keys in deployment secrets only.
-  if (SERVIX_API_KEY) {
-    try {
-      const payload = await fetchJson(SERVIX_GOLD_URL, {"X-API-Key": SERVIX_API_KEY});
-      const quote = priceFromJson(payload);
-      if (!quote) throw new Error("valid GOLD_18_RLS value missing");
-      return { priceIRR: quote, source: "Servix API", at: payload?.businessTime || new Date().toISOString(), unit: "IRR_PER_GRAM" };
-    } catch (error) { errors.push(`Servix: ${error.name === "AbortError" ? "request timeout" : error.message}`); }
-  }
+
   if (TINDEX_API_TOKEN) {
     try {
       const payload = await fetchJson(TINDEX_GOLD_URL, {Authorization: `Bearer ${TINDEX_API_TOKEN}`});
       const value = priceFromJson(payload);
       if (!value) throw new Error("valid GOLD-18K value missing");
-      // Tindex's documented GOLD-18K quote is Toman per gram; app state stores Rial.
-      return { priceIRR: Math.round(value * 10), source: "Tindex API", at: payload?.data?.updated_at || new Date().toISOString(), unit: "IRR_PER_GRAM" };
-    } catch (error) { errors.push(`Tindex: ${error.name === "AbortError" ? "request timeout" : error.message}`); }
+      return saveFreshPrice({
+        priceIRR: Math.round(value * 10),
+        source: "Tindex API",
+        at: payload?.data?.updated_at || new Date().toISOString(),
+        unit: "IRR_PER_GRAM"
+      });
+    } catch (error) {
+      errors.push(`Tindex: ${error.name === "AbortError" ? "request timeout" : error.message}`);
+    }
   }
-  if (lastValidIran18 && (Date.now() - lastIran18FetchAt) < CACHE_MAX_AGE) {
-    return {
 
-      ...lastValidIran18,
-      source: `${lastValidIran18.source} (CACHE)`,
-      cached: true,
-      warning: errors.join("; ")
-    };
+  if (lastValidIran18 && (Date.now() - lastIran18FetchAt) < CACHE_MAX_AGE) {
+    return { ...lastValidIran18, source: `${lastValidIran18.source} (CACHE)`, cached: true, warning: errors.join("; ") };
   }
   throw new Error(`Iran 18k gold unavailable — ${errors.join("; ")}`);
 }

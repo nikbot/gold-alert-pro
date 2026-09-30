@@ -53,9 +53,9 @@ function updateCommandCenter(){
  set('ccAlerts',String(document.querySelectorAll('.alertItem,.alertRow').length||0));
  const q=document.getElementById('quickAccountStatus'); if(q) q.textContent=accountToken?'🟢 وارد شده':'🔒 نیاز به ورود';
 }
-async function load(){
+async function load(streamState=null){
  try{
-  const oldLatest=latest; const s=await fetch('/api/state',{cache:'no-store'}).then(r=>r.json());latest=s;pollMs=s.config?.pollMs||10000;renderGoldChart(s.prices||[]);
+  const oldLatest=latest; const s=streamState || await fetch('/api/state',{cache:'no-store'}).then(r=>r.json());latest=s;pollMs=s.config?.pollMs||10000;renderGoldChart(s.prices||[]);
   document.getElementById('status').textContent=s.error?'خطا در یک منبع داده':'🟢 آنلاین';document.getElementById('dot').className='dot'+(s.error?' off':'');
   if(s.iran){const livePrice=Number(s.iran.priceIRR||0);const prevPrice=Number(oldLatest?.iran?.priceIRR||0);document.getElementById('price').textContent=moneyIRR(livePrice);document.getElementById('updated').textContent='آخرین دریافت: '+new Date(s.updatedAt||s.iran.at).toLocaleTimeString('fa-IR');const tp=document.getElementById('tickerPrice');if(tp)tp.textContent=moneyIRR(livePrice);const lp=document.getElementById('livePriceBig');if(lp)lp.textContent=fa(livePrice);const tm=document.getElementById('tickerTime');if(tm)tm.textContent='اکنون • '+new Date(s.updatedAt||s.iran.at).toLocaleTimeString('fa-IR');const ls=document.getElementById('liveStatus');if(ls)ls.innerHTML='<span class=\"pushDot\"></span> آنلاین • بروزرسانی خودکار';const lc=document.getElementById('liveChange'),tc=document.getElementById('tickerChange');if(prevPrice>0){const d=(livePrice/prevPrice-1)*100;const txt=(d>=0?'▲ ':'▼ ')+f2(Math.abs(d))+'٪';if(lc){lc.textContent=txt;lc.className='change '+(d>=0?'up':'down')}if(tc){tc.textContent=txt;tc.className='tickerChange '+(d>=0?'upTxt':'downTxt')}}else{if(lc)lc.textContent='—';if(tc)tc.textContent='—'}}
   if(s.global?.xauUsd){const x='$'+Number(s.global.xauUsd).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});document.getElementById('xau').textContent=x;const lx=document.getElementById('liveXau');if(lx)lx.textContent=x;}
@@ -150,7 +150,15 @@ async function runBacktest(){const el=document.getElementById('bt');el.textConte
 async function installApp(){if(deferredPrompt){deferredPrompt.prompt();await deferredPrompt.userChoice;deferredPrompt=null;document.getElementById('installBtn').style.display='none';const h=document.getElementById('installBtnHero');if(h)h.style.display='none'}else alert('در Chrome اندروید: منوی ⋮ → افزودن به صفحه اصلی / Install app')}
 function registerSW(){if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js')}
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;document.getElementById('installBtn').style.display='inline-block';const h=document.getElementById('installBtnHero');if(h)h.style.display='inline-block'});window.addEventListener('appinstalled',()=>{document.getElementById('installBtn').style.display='none';const h=document.getElementById('installBtnHero');if(h)h.style.display='none'});
-registerSW();load();loadPortfolio();loadUserSettings();news();initChartControls();setInterval(load,10000);setInterval(loadPortfolio,10000);setInterval(news,180000);
+let liveStream=null, streamFallbackTimer=null;
+function connectLiveStream(){
+  if(!('EventSource' in window)){ streamFallbackTimer=setInterval(()=>load(),10000); return; }
+  liveStream=new EventSource('/api/stream');
+  liveStream.addEventListener('market',e=>{ try{ load(JSON.parse(e.data)); }catch{} });
+  liveStream.onopen=()=>{ const s=document.getElementById('liveStatus'); if(s)s.innerHTML='<span class="pushDot"></span> آنلاین • اتصال زنده'; if(streamFallbackTimer){clearInterval(streamFallbackTimer);streamFallbackTimer=null;} };
+  liveStream.onerror=()=>{ const s=document.getElementById('liveStatus'); if(s)s.innerHTML='<span class="pushDot"></span> در حال اتصال مجدد…'; if(!streamFallbackTimer)streamFallbackTimer=setInterval(()=>load(),10000); };
+}
+registerSW();load();connectLiveStream();loadPortfolio();loadUserSettings();news();initChartControls();setInterval(loadPortfolio,10000);setInterval(news,180000);
 
 async function loadAIHealth(){
  const status=document.getElementById('aiStatus');

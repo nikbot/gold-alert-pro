@@ -15,14 +15,14 @@ import { adminLogin, requireAdminToken, adminLogout, listUsers, createManagedUse
 import { analyzeGold } from "./ai/manager.js";
 import { getTheme, setTheme } from "./theme.js";
 
-const APP_VERSION = "58.1.0"
+const APP_VERSION = "58.2.0"
 const USER_SESSION_HOURS = Math.max(1, Number(process.env.USER_SESSION_HOURS || 72));
 const LOGIN_WINDOW_MS = 10 * 60_000;
 const LOGIN_MAX_ATTEMPTS = 12;
 const loginAttempts = new Map();
 const app = express();
 const port = Number.isFinite(Number(process.env.PORT)) ? Number(process.env.PORT) : 3000;
-const pollMs = Math.max(5000, Number(process.env.POLL_MS || 10000));
+const pollMs = Math.max(3000, Number(process.env.POLL_MS || 5000));
 const minScore = Math.min(100, Math.max(0, Number(process.env.MIN_SIGNAL_SCORE || 65)));
 const target1 = Math.max(0.1, Number(process.env.TARGET_1_PCT || 1.5));
 const target2 = Math.max(target1, Number(process.env.TARGET_2_PCT || 3));
@@ -111,6 +111,34 @@ const state = {
   portfolioRisk: { lastKey: "", lastAt: 0 },
   historyLoaded: false, activeTrade: null, targetEvents: [], personalAlerts: [], busy: false, consecutiveErrors: 0
 };
+
+const sseClients = new Set();
+let lastSseMarketKey = "";
+function publicStatePayload(){
+  return {
+    ...state,
+    config: { pollMs, minScore, target1, target2, stopPct, appVersion: APP_VERSION },
+    marketStructure: marketStructure(state.prices),
+    units: { gold18: "IRR_PER_GRAM", dollar: "IRR_PER_USD", coins: "IRR" }
+  };
+}
+function broadcastMarketState(force = false){
+  if (!state.iran) return;
+  const key = [state.iran.priceIRR, state.iran.at, state.global?.xauUsd, state.dollar?.priceIRR].join("|");
+  if (!force && key === lastSseMarketKey) return;
+  lastSseMarketKey = key;
+  const payload = `event: market\ndata: ${JSON.stringify(publicStatePayload())}\n\n`;
+  for (const client of sseClients) {
+    try { client.write(payload); } catch { sseClients.delete(client); }
+  }
+}
+function startSseHeartbeat(res){
+  const timer = setInterval(() => {
+    try { res.write(`: heartbeat ${Date.now()}\n\n`); } catch { clearInterval(timer); }
+  }, 15000);
+  res.on("close", () => clearInterval(timer));
+}
+
 
 let saveTimer = null;
 async function loadState() {
@@ -469,7 +497,7 @@ async function tick() {
     state.marketPressure = calcMarketPressure();
     await emitPressureAlert(state.marketPressure, iran.priceIRR);
     state.analysis = analyze(state.prices); state.dataReady = state.prices.length >= 30;
-    state.updatedAt = new Date().toISOString(); state.error = null; state.consecutiveErrors = 0;
+    state.updatedAt = new Date().toISOString(); state.error = null; state.consecutiveErrors = 0; broadcastMarketState();
     await safeAlert(() => checkPortfolioRiskAlerts());
     await safeAlert(() => emitLivePricePush(iran, global, dollar));
     await safeAlert(() => checkTargets(iran.priceIRR));
@@ -853,12 +881,23 @@ ${JSON.stringify(ctx)}
 سؤال کاربر:
 ${q}`}],temperature:.2,max_tokens:900})}); const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d?.error?.message||`GapGPT HTTP ${r.status}`);const text=d?.choices?.[0]?.message?.content||d?.choices?.[0]?.text;if(!text)throw new Error('پاسخ AI خالی است.');res.json({ok:true,text,at:new Date().toISOString()}); }catch(e){res.status(502).json({error:e.message});} });
 
-app.get("/api/state", (_, res) => res.json({
-  ...state,
-  config: { pollMs, minScore, target1, target2, stopPct, appVersion: APP_VERSION },
-  marketStructure: marketStructure(state.prices),
-  units: { gold18: "IRR_PER_GRAM", dollar: "IRR_PER_USD", coins: "IRR" }
-}));
+app.get("/api/stream", (req, res) => {
+  res.status(200);
+  res.set({
+    "Content-Type": "text/event-stream; charset=utf-8",
+    "Cache-Control": "no-cache, no-store, must-revalidate",
+    "Connection": "keep-alive",
+    "X-Accel-Buffering": "no"
+  });
+  res.flushHeaders?.();
+  sseClients.add(res);
+  res.write(`retry: 3000\n\n`);
+  res.write(`event: market\ndata: ${JSON.stringify(publicStatePayload())}\n\n`);
+  startSseHeartbeat(res);
+  req.on("close", () => sseClients.delete(res));
+});
+
+app.get("/api/state", (_, res) => { res.set("Cache-Control","no-store"); res.json(publicStatePayload()); });
 app.get("/api/news", async (req, res) => { const news = await getNews(); if (news.length) state.news = news; const sub = await getSubscription(req.query.deviceId); res.json(sub.active ? (state.news || []) : (state.news || []).slice(0, 5)); });
 app.get("/api/backtest", async (req, res) => { try { if(!(await requireFeature(req,'backtest',req.query.deviceId))) return res.status(403).json({error:"دسترسی بک‌تست برای این حساب فعال نیست."}); const sub = await getSubscription(req.query.deviceId); if (!sub.active) return res.status(402).json({ error: "این قابلیت مخصوص Gold Alert Pro+ است." }); const h = await getHistory(); if (!h.length) return res.status(503).json({ error: "history unavailable" }); res.json(await runBacktest(h)); } catch (e) { res.status(500).json({ error: e.message }); } });
 app.post("/api/reset", async (_, res) => { state.events = []; state.targetEvents = []; state.activeTrade = null; state.lastSignal = "WAIT"; scheduleSave(); res.json({ ok: true }); });
