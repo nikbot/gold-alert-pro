@@ -1,6 +1,4 @@
-Gold Alert Pro v56 Deployment Guide
+Commit message:
+Gold Alert Pro v57 MultiTenant Edition
 
-Commit:
-Gold Alert Pro v56 Branding Edition
-
-Then push and redeploy.
+After push redeploy in Deplexo.
