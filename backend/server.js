@@ -15,7 +15,7 @@ import { adminLogin, requireAdminToken, adminLogout, listUsers, createManagedUse
 import { analyzeGold } from "./ai/manager.js";
 import { getTheme, setTheme } from "./theme.js";
 
-const APP_VERSION = "59.2.0"
+const APP_VERSION = "59.3.0"
 const USER_SESSION_HOURS = Math.max(1, Number(process.env.USER_SESSION_HOURS || 72));
 const LOGIN_WINDOW_MS = 10 * 60_000;
 const LOGIN_MAX_ATTEMPTS = 12;
@@ -913,6 +913,55 @@ ${JSON.stringify(ctx)}
 
 سؤال کاربر:
 ${q}`}],temperature:.2,max_tokens:900})}); const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d?.error?.message||`GapGPT HTTP ${r.status}`);const text=d?.choices?.[0]?.message?.content||d?.choices?.[0]?.text;if(!text)throw new Error('پاسخ AI خالی است.');res.json({ok:true,text,at:new Date().toISOString()}); }catch(e){res.status(502).json({error:e.message});} });
+
+
+app.post("/api/ai-assistant", async (req,res)=>{
+  try {
+    const a=state.analysis||{}, mp=state.marketPressure||{};
+    const price=Number(state.iran?.priceIRR||0), source=state.iran?.source||null;
+    const sourceAgeMs=state.engineStatus?.sourceAgeMs ?? null;
+    const question=String(req.body?.question||'').trim().slice(0,1200);
+    const page=String(req.body?.page||'dashboard').slice(0,40);
+    const data={
+      page, price, source, sourceAgeMs,
+      engineStatus:state.engineStatus||null,
+      trend:a.trendFa||a.signal||'نامشخص', signal:a.signal||'WAIT', score:Number(a.score||0),
+      rsi:a.rsi??null, macd:a.macd??null, ema9:a.ema9??null, ema21:a.ema21??null,
+      support:a.bollinger?.lower??null, resistance:a.bollinger?.upper??null,
+      buyPressure:Number(mp.buy||0), sellPressure:Number(mp.sell||0),
+      recentPrices:(state.prices||[]).slice(-30), xauUsd:state.global?.xauUsd??null,
+      dollarIRR:state.dollar?.priceIRR??null, question
+    };
+    const ruleFallback=()=>{
+      if(!price) return {greeting:'سلام 👋',summary:'فعلاً قیمت معتبر نداریم؛ برای تصمیم‌گیری صبر کن تا داده تازه برسد.',action:'صبر کن',why:'داده کافی نیست.',watch:'زمان آخرین قیمت و وضعیت منبع را چک کن.',alert:'قیمت معتبر بازار فعلاً در دسترس نیست.',tone:'neutral',confidence:20};
+      const fresh=sourceAgeMs==null || sourceAgeMs<60000;
+      const trend=data.trend;
+      let action='فعلاً صبر و زیرنظر گرفتن بازار', tone='neutral';
+      if(data.signal==='BUY' && data.score>=70){action='سناریوی خرید پله‌ای را بررسی کن، نه خرید یکجایی'; tone='positive';}
+      else if(data.signal==='SELL' && data.score>=70){action='سناریوی کاهش ریسک یا فروش پله‌ای را بررسی کن'; tone='negative';}
+      else if(data.signal==='WATCH_BUY'){action='فعلاً صبر کن و دنبال تأیید ادامه رشد باش'; tone='positive';}
+      else if(data.signal==='WATCH_SELL'){action='فعلاً عجله نکن و دنبال تأیید ضعف باش'; tone='negative';}
+      return {greeting:'سلام 👋',summary:`بازار فعلاً ${trend==='صعودی'?'کمی رو به بالاست':trend==='نزولی'?'کمی ضعیف و رو به پایینه':'رفت‌وبرگشتی و بدون جهت روشنه'}.`,action,why:`امتیاز تکنیکال فعلی ${Math.round(data.score)} از 100 است و فشار خرید/فروش از حرکت قیمت تخمین زده شده.`,watch:`اگر روند از ${trend} به جهت مخالف برگردد یا سطح مهم شکسته شود، سناریو را دوباره بررسی کن.`,alert:fresh?null:'قیمت فعلاً Live نیست؛ قبل از تصمیم زمان منبع را ببین.',tone,confidence:Math.min(90, fresh?Math.max(35,data.score||45):35)};
+    };
+    const fallback=ruleFallback();
+    const key=process.env.GAPGPT_API_KEY;
+    if(!key) return res.json({ok:true,provider:'rule-engine',dataAt:state.updatedAt,assistant:{...fallback,simpleData:data}});
+    const prompt=`تو «دستیار بازار طلا» برای کاربر عادی ایرانی هستی. خیلی ساده و خودمانی حرف بزن، کوتاه و کاربردی. فقط از داده زیر استفاده کن. سود را تضمین نکن و به جای دستور قطعی، سناریوی عملی بده: صبر، خرید پله‌ای، یا کاهش موقعیت/فروش پله‌ای. اگر داده قدیمی است صریح بگو «این قیمت فعلاً Live نیست». در انتها یک هشدار عددی یا شرطی بده اگر لازم بود. خروجی فقط JSON معتبر با کلیدهای greeting,summary,action,why,watch,alert,tone,confidence باشد. confidence از 90 بیشتر نباشد.
+
+داده بازار:\n${JSON.stringify(data,null,2)}`;
+    const r=await fetchWithTimeout(`${AI_BASE_URL}/chat/completions`,{method:'POST',headers:{Authorization:`Bearer ${key}`,'Content-Type':'application/json'},body:JSON.stringify({model:AI_MODEL,messages:[{role:'system',content:'دستیار فارسی ساده و داده‌محور بازار طلا.'},{role:'user',content:prompt}],temperature:.15,max_tokens:650})},25000);
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok) throw new Error(d?.error?.message||`GapGPT HTTP ${r.status}`);
+    const raw=d?.choices?.[0]?.message?.content||d?.choices?.[0]?.text||'';
+    let parsed;
+    try { parsed=JSON.parse(raw.replace(/^```json\s*|\s*```$/g,'')); }
+    catch { parsed={...fallback,summary:raw||fallback.summary}; }
+    res.json({ok:true,provider:'GapGPT',model:d?.model||AI_MODEL,dataAt:state.updatedAt,assistant:{...parsed,simpleData:data}});
+  } catch(e) {
+    const fb=(state.analysis?.signal==='BUY'?'سناریوی خرید پله‌ای را بررسی کن':state.analysis?.signal==='SELL'?'سناریوی کاهش ریسک یا فروش پله‌ای را بررسی کن':'صبر کن');
+    res.json({ok:true,provider:'rule-engine',dataAt:state.updatedAt,assistant:{greeting:'سلام 👋',summary:'هوش مصنوعی الان پاسخ نداد، اما موتور داخلی بازار را بررسی کردم.',action:fb,why:'پاسخ جایگزین از قواعد داخلی سامانه تولید شد.',watch:'قبل از تصمیم، نمودار و زمان آخرین قیمت را بررسی کن.',alert:'اتصال AI موقتاً در دسترس نیست.',tone:'neutral',confidence:40}});
+  }
+});
 
 app.get("/api/source-diagnostics", async (req,res)=>{
   try { const d=await getIran18Sources(true); state.sourceDiagnostics=d; res.set("Cache-Control","no-store"); res.json({ok:true,...d}); }

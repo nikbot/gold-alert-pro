@@ -2,6 +2,7 @@ const fa=n=>Number(n||0).toLocaleString('fa-IR',{maximumFractionDigits:0});
 const f2=n=>Number(n||0).toLocaleString('fa-IR',{maximumFractionDigits:2});
 const pct=n=>Number(n||0).toLocaleString('fa-IR',{maximumFractionDigits:1})+'٪';
 let latest=null,timer=null,deferredPrompt=null,pollMs=10000,nextAt=0;
+let aiCopilotCache={}; let aiCopilotLastCall=0; let aiCopilotPage='dashboard'; let aiCopilotOpen=true; let aiCopilotLastAlert='';
 const DEVICE_KEY='gold-alert-pro-device-id-v10';
 let lastNotificationIds=new Set();
 let notificationsBootstrapped=false;
@@ -154,7 +155,7 @@ let liveStream=null, streamFallbackTimer=null;
 function connectLiveStream(){
   if(!('EventSource' in window)){ streamFallbackTimer=setInterval(()=>load(),10000); return; }
   liveStream=new EventSource('/api/stream');
-  liveStream.addEventListener('market',e=>{ try{ load(JSON.parse(e.data)); }catch{} });
+  liveStream.addEventListener('market',e=>{ try{ load(JSON.parse(e.data)); if(Date.now()-aiCopilotLastCall>60000) refreshAICopilot(false,aiCopilotPage); }catch{} });
   liveStream.onopen=()=>{ const s=document.getElementById('liveStatus'); if(s)s.innerHTML='<span class="pushDot"></span> آنلاین • اتصال زنده'; if(streamFallbackTimer){clearInterval(streamFallbackTimer);streamFallbackTimer=null;} };
   liveStream.onerror=()=>{ const s=document.getElementById('liveStatus'); if(s)s.innerHTML='<span class="pushDot"></span> در حال اتصال مجدد…'; if(!streamFallbackTimer)streamFallbackTimer=setInterval(()=>load(),10000); };
 }
@@ -236,6 +237,7 @@ function applyCategory(category,scroll=true){
    else window.scrollTo({top:0,behavior:'smooth'});
  }
 }
+ aiCopilotPage=category; if(typeof refreshAICopilot==='function') refreshAICopilot(false,category);
 function closeSideMenu(){
  const menu=document.getElementById('sideMenu'),back=document.getElementById('menuBackdrop'),btn=document.getElementById('floatingMenuBtn');
  if(menu)menu.classList.remove('open'); if(back)back.classList.remove('open');
@@ -432,6 +434,40 @@ async function replyTicket(id){const e=document.getElementById('reply-'+id),mess
 function adminHeaders(){return adminSession?{'x-admin-session':adminSession}:{};}
 async function adminFetch(url,opts={}){const headers={...(opts.headers||{}),...adminHeaders()};return fetch(url,{...opts,headers});}
 function showAdminMenu(show){document.querySelectorAll('.adminOnly').forEach(e=>e.style.display=show?'flex':'none');}
+
+function renderAICopilot(a,meta={}){
+ const g=document.getElementById('aiCopilotGreeting'),s=document.getElementById('aiCopilotSummary'),ac=document.getElementById('aiCopilotAction'),m=document.getElementById('aiCopilotMeta'),al=document.getElementById('aiCopilotAlert'),live=document.getElementById('aiCopilotLive'),ctx=document.getElementById('aiCopilotContext');
+ if(!a)return;
+ if(g)g.textContent=a.greeting||'سلام 👋';
+ if(s)s.textContent=a.summary||'—';
+ if(ac){ac.textContent=a.action||'فعلاً صبر کن.';ac.className='aiCopilotAction '+(a.tone||'neutral');}
+ if(ctx)ctx.textContent=`${categoryLabels[aiCopilotPage]||'پیشخوان'} • دستیار ساده بازار`;
+ if(live)live.textContent=(meta.provider==='GapGPT'?'🟢 AI فعال':'🟡 موتور داخلی');
+ if(m)m.innerHTML=`<span class="aiChip">منبع: ${esc(a.simpleData?.source||'—')}</span><span class="aiChip">روند: ${esc(a.simpleData?.trend||'—')}</span><span class="aiChip">اعتماد: ${fa(a.confidence||0)}٪</span>`;
+ if(al){if(a.alert){al.textContent='⚠️ '+a.alert;al.classList.remove('aiHide');}else{al.textContent='';al.classList.add('aiHide');}}
+ if(a.alert && a.alert!==aiCopilotLastAlert){ aiCopilotLastAlert=a.alert; const top=document.getElementById('topNotifBadge'); if(top){top.style.display='inline-grid';top.textContent='!';setTimeout(()=>{top.style.display='none'},5000);} }
+}
+async function refreshAICopilot(force=false,page=aiCopilotPage,question=''){
+ const now=Date.now(), key=`${page}|${question}`; if(!force && !question && aiCopilotCache[key] && now-aiCopilotCache[key].at<45000){renderAICopilot(aiCopilotCache[key].data,aiCopilotCache[key].meta);return;}
+ const summary=document.getElementById('aiCopilotSummary'); if(summary)summary.textContent='دارم قیمت، نمودار و روند را ساده بررسی می‌کنم...';
+ try{
+  const r=await fetch('/api/ai-assistant',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({deviceId,accountToken,page,question})});
+  const d=await r.json(); if(!r.ok)throw new Error(d.error||'دستیار در دسترس نیست');
+  const data=d.assistant||{}; aiCopilotCache[key]={at:Date.now(),data,meta:d}; aiCopilotLastCall=Date.now(); renderAICopilot(data,d);
+ }catch(e){renderAICopilot({greeting:'سلام 👋',summary:'فعلاً نتوانستم تحلیل تازه بگیرم.',action:'صبر کن و وضعیت Live بودن قیمت را چک کن.',why:'خطای ارتباط با دستیار.',watch:'نمودار و زمان آخرین دریافت را بررسی کن.',alert:e.message,tone:'neutral',confidence:30},{provider:'rule-engine'});}
+}
+function initAICopilot(){
+ const close=document.getElementById('aiCopilotClose'),open=document.getElementById('aiCopilotOpen'),dock=document.getElementById('aiCopilotDock'),collapsed=document.getElementById('aiCopilotCollapsed'),ask=document.getElementById('aiCopilotAsk'),input=document.getElementById('aiCopilotQuestion');
+ close?.addEventListener('click',()=>{aiCopilotOpen=false;dock?.classList.add('aiHide');collapsed?.classList.remove('aiHide');});
+ open?.addEventListener('click',()=>{aiCopilotOpen=true;collapsed?.classList.add('aiHide');dock?.classList.remove('aiHide');refreshAICopilot(true,aiCopilotPage);});
+ ask?.addEventListener('click',()=>{const q=input?.value.trim();if(q){refreshAICopilot(true,aiCopilotPage,q);if(input)input.value='';}});
+ input?.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();ask?.click();}});
+ document.querySelectorAll('.aiQuick').forEach(b=>b.addEventListener('click',()=>refreshAICopilot(true,aiCopilotPage,b.dataset.q||'')));
+ setTimeout(()=>refreshAICopilot(true,'dashboard'),900);
+}
+window.refreshAICopilot=refreshAICopilot;
+document.addEventListener('DOMContentLoaded',initAICopilot);
+
 async function testAIConnection(){
  const box=document.getElementById('aiStatus'); if(box)box.textContent='⏳ در حال تست واقعی اتصال به GapGPT...';
  try{const r=await fetch('/api/ai-diagnostic',{method:'POST',headers:{'Content-Type':'application/json'}});const d=await r.json();if(!r.ok)throw new Error(d.error||'اتصال ناموفق');if(box)box.textContent='🟢 AI متصل است • مدل: '+(d.model||'auto');return true;}catch(e){if(box)box.textContent='🔴 AI متصل نیست: '+e.message;return false;}
