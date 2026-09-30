@@ -430,6 +430,18 @@ async function testAIConnection(){
 }
 window.testAIConnection=testAIConnection;
 
+async function loadMarketOutlook(){
+ const box=document.getElementById('marketOutlook');if(!box)return;box.textContent='در حال محاسبه بر پایه تاریخچه...';
+ try{const r=await fetch('/api/market-outlook',{cache:'no-store'});const d=await r.json();if(!r.ok)throw new Error(d.error||'تاریخچه کافی نیست');
+ box.innerHTML=`<b>نمونه:</b> ${fa(d.sampleSize)} نقطه / ${fa(d.observations)} بازه پنج‌روزه<br><b>بازه‌های مثبت تاریخی:</b> ${f2(d.frequency.upPct)}٪<br><b>بازه‌های منفی تاریخی:</b> ${f2(d.frequency.downPct)}٪<br><b>تقریب دامنه نوسان ۹۵٪:</b> ${moneyIRR(d.illustrativeRange.low)} تا ${moneyIRR(d.illustrativeRange.high)}<br><b>نوسان روزانه نمونه:</b> ${f2(d.dailyVolatilityPct)}٪<br><small>${esc(d.warning)}</small>`;
+ }catch(e){box.textContent='⚠️ '+e.message;}
+}
+async function generateDailyAIReport(){
+ const box=document.getElementById('dailyAIReport');if(!box)return;box.style.display='block';box.textContent='در حال تولید گزارش روزانه...';
+ try{const r=await fetch('/api/ai-professional',{method:'POST',headers:{'Content-Type':'application/json',...accountHeaders()},body:JSON.stringify({deviceId,accountToken,question:'یک گزارش روزانه بازار تهیه کن: قیمت و زمان داده، روند کوتاه‌مدت، RSI/MACD/EMA در صورت موجود بودن، حمایت و مقاومت قابل استنباط، وضعیت دلار و اونس، اخبار و رویدادهای موجود، سناریوهای صعودی/پایه/نزولی و ریسک‌ها. داده مفقود را صریح مشخص کن و هیچ دستور قطعی خرید یا فروش نده.'})});const d=await r.json();if(!r.ok)throw new Error(d.error||'گزارش ناموفق');box.textContent=d.text||'گزارشی دریافت نشد.';}catch(e){box.textContent='⚠️ '+e.message;}
+}
+window.loadMarketOutlook=loadMarketOutlook;window.generateDailyAIReport=generateDailyAIReport;
+
 async function runProfessionalAI(){
  const box=document.getElementById('aiProfessionalResult'),q=document.getElementById('aiProfessionalQuestion')?.value||''; if(!box)return;
  box.style.display='block';box.textContent='⏳ در حال تحلیل بازار، سبد و پروفایل شخصی...';

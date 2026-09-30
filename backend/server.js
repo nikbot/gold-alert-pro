@@ -13,7 +13,7 @@ import { smsConfig, createPaymentRequest, issueActivationCode, activateWithCode,
 import { getCommerceSettings, setCommerceSettings } from "./commerceSettings.js";
 import { adminLogin, requireAdminToken, adminLogout, listUsers, createManagedUser, updateManagedUser, deleteManagedUser, adminStats, publicAccount, userIsActive, userPermissions, getUserByUsername, validUsername, FEATURE_KEYS, PRO_PERMISSIONS, PREMIUM_PERMISSIONS } from "./adminPanel.js";
 
-const APP_VERSION = "51.1.0"
+const APP_VERSION = "52.0.0"
 const USER_SESSION_HOURS = Math.max(1, Number(process.env.USER_SESSION_HOURS || 72));
 const LOGIN_WINDOW_MS = 10 * 60_000;
 const LOGIN_MAX_ATTEMPTS = 12;
@@ -833,6 +833,22 @@ app.get("/api/admin/backup", async (req,res)=>{ if(!(await adminAuth(req,res)))r
 app.get("/api/admin/economic-events", async (req,res)=>{ if(!(await adminAuth(req,res)))return res.status(403).json({error:"admin session invalid"}); res.json({ok:true,events:await economicEvents()}); });
 app.put("/api/admin/economic-events", async (req,res)=>{ if(!(await adminAuth(req,res)))return res.status(403).json({error:"admin session invalid"}); try{const events=Array.isArray(req.body?.events)?req.body.events.slice(0,100):[];await writeJsonFile(ECONOMIC_EVENTS_FILE,events);res.json({ok:true,events});}catch(e){res.status(400).json({error:e.message});} });
 app.get("/api/economic-calendar", async (_,res)=>{res.json({ok:true,events:await economicEvents(),liveSource:Boolean(process.env.ECONOMIC_EVENTS_JSON)});});
+app.get("/api/market-outlook", async (_,res)=>{
+  try {
+    const rows=await getHistory();
+    const closes=(Array.isArray(rows)?rows:[]).map(x=>Number(x.close)).filter(x=>Number.isFinite(x)&&x>0).slice(-180);
+    const daily=[]; for(let i=1;i<closes.length;i++) daily.push((closes[i]/closes[i-1]-1)*100);
+    if(daily.length<5) return res.status(503).json({ok:false,error:"برای برآورد آماری حداقل ۶ نقطه تاریخچه معتبر لازم است.",sampleSize:closes.length});
+    const horizon=5, observations=[];
+    for(let i=0;i<=daily.length-horizon;i++) { const segment=daily.slice(i,i+horizon); observations.push(segment.reduce((a,b)=>a+b,0)); }
+    const up=observations.filter(x=>x>0).length, down=observations.filter(x=>x<0).length, flat=observations.length-up-down;
+    const mean=daily.reduce((a,b)=>a+b,0)/daily.length;
+    const variance=daily.reduce((a,b)=>a+(b-mean)**2,0)/Math.max(1,daily.length-1), sigma=Math.sqrt(variance);
+    const current=closes.at(-1), bandPct=Math.min(25,1.96*sigma*Math.sqrt(horizon));
+    res.set("Cache-Control","no-store");
+    res.json({ok:true,method:"historical-frequency-and-volatility",horizonDays:horizon,sampleSize:closes.length,observations:observations.length,frequency:{upPct:up/observations.length*100,downPct:down/observations.length*100,flatPct:flat/observations.length*100},dailyMeanPct:mean,dailyVolatilityPct:sigma,illustrativeRange:{low:current*(1-bandPct/100),high:current*(1+bandPct/100),bandPct},current,asOf:rows.at(-1)?.date||null,warning:"این خروجی فراوانی و نوسان تاریخی است، نه احتمال تضمین‌شده یا پیش‌بینی قطعی آینده؛ کیفیت آن به تاریخچه منبع وابسته است."});
+  } catch(e) { res.status(503).json({ok:false,error:"برآورد بازار فعلاً در دسترس نیست."}); }
+});
 app.get("/api/market-structure", (_,res)=>res.json({ok:true,...marketStructure(state.prices)}));
 app.post("/api/ai-chat", async (req,res)=>{ try{ if(!(await requireFeature(req,'chat',req.body?.deviceId)))return res.status(403).json({error:'دسترسی AI Chat برای این حساب فعال نیست.'}); const key=process.env.GAPGPT_API_KEY;if(!key)return res.status(503).json({error:'کلید GapGPT تنظیم نشده است.'}); const q=String(req.body?.question||'').trim().slice(0,2000);if(!q)return res.status(400).json({error:'سؤال خالی است.'}); const ctx=buildAIContext(); const r=await fetchWithTimeout(`${AI_BASE_URL}/chat/completions`,{method:'POST',headers:{Authorization:`Bearer ${key}`,'Content-Type':'application/json'},body:JSON.stringify({model:AI_MODEL,messages:[{role:'system',content:'تو دستیار فارسی Gold Alert Pro هستی. پاسخ را بر اساس داده بازار ارائه کن، عدم قطعیت را روشن کن و از تضمین سود یا دستور قطعی خرید/فروش خودداری کن.'},{role:'user',content:`داده بازار فعلی:
 ${JSON.stringify(ctx)}
