@@ -1,233 +1,212 @@
-const TGJU_GOLD_URL = process.env.TGJU_GOLD_URL || "https://www.tgju.org/profile/geram18/today";
+const TGJU_GOLD_URL = process.env.TGJU_GOLD_URL || "https://gem.tgju.org/profile/geram18";
 const TGJU_GOLD_FALLBACK_URLS = [
+  "https://www.tgju.org/profile/geram18/today",
+  "https://www.tgju.org/profile/geram18/technical/today",
   "https://www.tgju.org/profile/geram18",
-  "https://www.tgju.org/profile/geram18/history",
-  "https://gem.tgju.org/profile/geram18/history",
-  "https://www.tgju.org/",
-  "https://tgju.org/"
+  "https://gem.tgju.org/profile/geram18",
+  "https://www.tgju.org/profile/geram18/history"
 ];
 const SERVIX_GOLD_URL = process.env.SERVIX_GOLD_URL || "https://servix.cc/api/v1/assets/GOLD_18_RLS";
-const SERVIX_API_KEY = process.env.SERVIX_API_KEY || "";
+const SERVIX_API_KEY = String(process.env.SERVIX_API_KEY || "").trim();
 const TINDEX_GOLD_URL = process.env.TINDEX_GOLD_URL || "https://tindex.app/api/public/indicators/precious-metals/GOLD-18K";
-const TINDEX_API_TOKEN = process.env.TINDEX_API_TOKEN || "";
+const TINDEX_API_TOKEN = String(process.env.TINDEX_API_TOKEN || "").trim();
 const TGJU_COIN_URL = process.env.TGJU_COIN_URL || "https://www.tgju.org/coin";
 const TGJU_DOLLAR_URL = process.env.TGJU_DOLLAR_URL || "https://www.tgju.org/profile/price_dollar_rl/today";
 const TGJU_WORLD_URL = process.env.TGJU_WORLD_URL || "https://www.tgju.org/world-market/currency/profile/geram18";
 const GOLDPRICE_URL = process.env.GOLDPRICE_URL || "https://api.goldprice.dev/v1/prices?symbol=XAU-USD-SPOT";
 const GDELT_URL = process.env.GDELT_URL || "https://api.gdeltproject.org/api/v2/doc/doc";
-const configuredTimeout = Number(process.env.HTTP_TIMEOUT || 12000);
-const HTTP_TIMEOUT = Number.isFinite(configuredTimeout) ? Math.max(3000, configuredTimeout) : 5000;
+const configuredTimeout = Number(process.env.HTTP_TIMEOUT || 7000);
+const HTTP_TIMEOUT = Number.isFinite(configuredTimeout) ? Math.max(2500, configuredTimeout) : 7000;
+const SERVIX_POLL_MS = Math.max(60_000, Number(process.env.SERVIX_POLL_MS || 1_800_000)); // 30 min by default: protects daily quota.
+const TINDEX_POLL_MS = Math.max(30_000, Number(process.env.TINDEX_POLL_MS || 120_000));
+const SOURCE_DIAGNOSTICS_MS = Math.max(10_000, Number(process.env.SOURCE_DIAGNOSTICS_MS || 60_000));
+const SERVIX_429_COOLDOWN_MS = Math.max(5 * 60_000, Number(process.env.SERVIX_429_COOLDOWN_MS || 6 * 60 * 60_000));
+const TGJU_MIN_REQUEST_MS = Math.max(1000, Number(process.env.TGJU_MIN_REQUEST_MS || 5000));
+
 let lastValidIran18 = null;
 let lastIran18FetchAt = 0;
-const CACHE_MAX_AGE = 30000; // 30 seconds
+let sourceComparisonCache = { at: 0, data: null };
+const providerState = {
+  Servix: { lastAttempt: 0, lastSuccess: 0, cooldownUntil: 0, failures: 0, last: null },
+  TGJU: { lastAttempt: 0, lastSuccess: 0, cooldownUntil: 0, failures: 0, last: null },
+  Tindex: { lastAttempt: 0, lastSuccess: 0, cooldownUntil: 0, failures: 0, last: null, lastError: null }
+};
 
-function isValidPrice(price){
-  return Number.isFinite(price) && price > 1000000 && price < 10000000000;
-}
-
+function isValidPrice(price){ return Number.isFinite(price) && price > 1000000 && price < 10000000000; }
 function saveFreshPrice(result){
   if(!isValidPrice(result.priceIRR)) throw new Error("Invalid price rejected");
-  lastValidIran18 = {
-    ...result,
-    cached:false,
-    fetchedAt:new Date().toISOString()
-  };
+  lastValidIran18 = {...result, cached:false, fetchedAt:new Date().toISOString()};
   lastIran18FetchAt = Date.now();
   return lastValidIran18;
 }
-
 function normalizeDigits(value) {
-  return String(value ?? "")
-    .replace(/[۰-۹]/g, d => String("۰۱۲۳۴۵۶۷۸۹".indexOf(d)))
-    .replace(/[٠-٩]/g, d => String("٠١٢٣٤٥٦٧٨٩".indexOf(d)));
+  return String(value ?? "").replace(/[۰-۹]/g, d => String("۰۱۲۳۴۵۶۷۸۹".indexOf(d))).replace(/[٠-٩]/g, d => String("٠١٢٣٤٥٦٧٨٩".indexOf(d)));
 }
 function cleanText(value) {
-  return String(value ?? "")
-    .replace(/<script[\s\S]*?<\/script>/gi, " ")
-    .replace(/<style[\s\S]*?<\/style>/gi, " ")
-    .replace(/<[^>]+>/g, " ")
-    .replace(/&nbsp;/gi, " ")
-    .replace(/&amp;/gi, "&")
-    .replace(/&quot;/gi, '"')
-    .replace(/&#39;/gi, "'")
-    .replace(/\s+/g, " ")
-    .trim();
+  return String(value ?? "").replace(/<script[\s\S]*?<\/script>/gi," ").replace(/<style[\s\S]*?<\/style>/gi," ")
+    .replace(/<[^>]+>/g," ").replace(/&nbsp;/gi," ").replace(/&amp;/gi,"&").replace(/&quot;/gi,'"').replace(/&#39;/gi,"'")
+    .replace(/\s+/g," ").trim();
 }
 function parseNumber(value) {
-  const s = normalizeDigits(value).replace(/\s/g, "").replace(/,/g, "");
-  const n = Number(s.replace(/[^\d.-]/g, ""));
-  return Number.isFinite(n) ? n : NaN;
+  const s=normalizeDigits(value).replace(/\s/g,"").replace(/,/g,"");
+  const n=Number(s.replace(/[^\d.-]/g,"")); return Number.isFinite(n)?n:NaN;
 }
 async function fetchText(url, options = {}) {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), HTTP_TIMEOUT);
+  const controller=new AbortController(); const timeout=setTimeout(()=>controller.abort(),HTTP_TIMEOUT);
   try {
-    const response = await fetch(url, {
-      ...options, signal: controller.signal,
-      headers: { "User-Agent": "Mozilla/5.0 GoldAlertPro/7.0", "Accept": options.headers?.Accept || "text/html,application/json;q=0.9,*/*;q=0.8", ...options.headers }
-    });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const response=await fetch(url,{...options,signal:controller.signal,redirect:"follow",headers:{"User-Agent":"Mozilla/5.0 GoldAlertPro/59.1","Accept":options.headers?.Accept||"text/html,application/json;q=0.9,*/*;q=0.8",...options.headers}});
+    if(!response.ok){ const err=new Error(`HTTP ${response.status}`); err.status=response.status; err.requestId=response.headers.get("x-request-id")||""; throw err; }
     return await response.text();
   } finally { clearTimeout(timeout); }
 }
-async function fetchTextWithRetry(url, options = {}, attempts = 1) {
-  let lastError;
-  for (let attempt = 1; attempt <= attempts; attempt++) {
-    try {
-      return await fetchText(url, options);
-    } catch (error) {
-      lastError = error;
-      const statusMatch = String(error?.message || "").match(/^HTTP (\d{3})$/);
-      const status = statusMatch ? Number(statusMatch[1]) : null;
-      const retryable = error?.name === "AbortError" || error?.name === "TypeError" ||
-        status === 408 || status === 425 || status === 429 || (status !== null && status >= 500);
-      if (!retryable || attempt === attempts) break;
-      await new Promise(resolve => setTimeout(resolve, 500 * attempt));
-    }
-  }
-  throw lastError || new Error("Request failed");
-}
 async function fetchJson(url, headers = {}) {
-  const text = await fetchText(url, {headers:{Accept:"application/json", ...headers}});
-  try { return JSON.parse(text); } catch { throw new Error("Invalid JSON response"); }
+  const text=await fetchText(url,{headers:{Accept:"application/json",...headers}});
+  try{return JSON.parse(text)}catch{throw new Error("Invalid JSON response")}
 }
-function extractFirst(text, patterns) {
-  for (const re of patterns) { const m = text.match(re); if (m) { const n = parseNumber(m[1]); if (Number.isFinite(n)) return n; } }
-  return NaN;
+function providerError(error){
+  const status=Number(error?.status || String(error?.message||"").match(/^HTTP (\d{3})$/)?.[1] || 0);
+  const code=error?.payload?.code;
+  return {status,code,message:error?.name==="AbortError"?"timeout":String(error?.message||"request failed"),requestId:error?.requestId||""};
 }
-export function parseIran18PriceFromText(text) {
-  const normalized = normalizeDigits(text);
-  // TGJU currently exposes the live quote as «نرخ فعلی:: 250,877,000».
-  // The old parser required the product label to be immediately adjacent to the
-  // number, which breaks as soon as TGJU changes its surrounding markup.
-  const currentRate = extractFirst(normalized, [
+function markProvider(name, result, error=null){
+  const s=providerState[name]; if(!s)return;
+  if(result){s.last=result;s.lastSuccess=Date.now();s.failures=0;s.cooldownUntil=0;s.lastError=null;}
+  else {s.failures++;const e=providerError(error);s.lastError=e;if(e.status===429 && name==="Servix")s.cooldownUntil=Date.now()+SERVIX_429_COOLDOWN_MS; if(e.status===401||e.status===403)s.cooldownUntil=Date.now()+6*60*60_000;}
+}
+function providerCanTry(name, interval){
+  const s=providerState[name]; if(!s)return true;
+  const now=Date.now(); return now>=s.cooldownUntil && now-s.lastAttempt>=interval;
+}
+function providerStatus(name){
+  const s=providerState[name]; const now=Date.now();
+  if(!s.lastAttempt)return {state:"idle",cooldownMs:0,failures:0};
+  if(now<s.cooldownUntil)return {state:"cooldown",cooldownMs:s.cooldownUntil-now,failures:s.failures};
+  if(s.lastSuccess)return {state:"ready",cooldownMs:0,failures:s.failures,lastSuccess:new Date(s.lastSuccess).toISOString()};
+  return {state:"error",cooldownMs:0,failures:s.failures};
+}
+function extractFirst(text, patterns){for(const re of patterns){const m=text.match(re);if(m){const n=parseNumber(m[1]);if(Number.isFinite(n))return n;}}return NaN;}
+
+export function parseIran18PriceFromText(text){
+  const normalized=normalizeDigits(String(text||""));
+  return extractFirst(normalized,[
     /نرخ\s*فعلی\s*:{1,2}\s*((?:\d{1,3}(?:,\d{3})+)|(?:\d+))/i,
-    /نرخ\s*فعلی[^\d]{0,120}((?:\d{1,3}(?:,\d{3})+)|(?:\d+))/i,
-    /طلای\s*18\s*عیار(?:\s*\/\s*750)?[^\d]{0,220}((?:\d{1,3}(?:,\d{3})+)|(?:\d+))/i,
-    /طلا\s*18\s*عیار[^\d]{0,220}((?:\d{1,3}(?:,\d{3})+)|(?:\d+))/i,
-    /طلا\s*18\s*\|?\s*((?:\d{1,3}(?:,\d{3})+)|(?:\d+))/i
+    /نرخ\s*فعلی[^\d]{0,160}((?:\d{1,3}(?:,\d{3})+)|(?:\d+))/i,
+    /(?:طلای\s*18\s*عیار\s*\/\s*750|Gram\s*Gold\s*18)[^\d]{0,220}((?:\d{1,3}(?:,\d{3})+)|(?:\d+))/i
   ]);
-  return Number.isFinite(currentRate) ? currentRate : NaN;
 }
-function priceFromJson(payload) {
-  const candidates = [payload?.value, payload?.price, payload?.data?.value, payload?.data?.price,
-    payload?.data?.indicator?.price, ...(Array.isArray(payload?.data?.rows) ? payload.data.rows.filter(x => /GOLD-18K|18.?k|18 عیار/i.test(`${x.slug||""} ${x.name||""}`)).map(x => x.price) : [])];
-  for (const candidate of candidates) {
-    const n = typeof candidate === "string" ? parseNumber(candidate) : Number(candidate);
-    if (Number.isFinite(n) && n > 100000) return Math.round(n);
-  }
+function parseTGJULatestAt(text){
+  const n=normalizeDigits(String(text||""));
+  const m=n.match(/(?:زمان\s*ثبت\s*آخرین\s*نرخ|در\s*یک\s*نگاه\s*[^\d]{0,80})[^\d]{0,100}(\d{1,2}:\d{2}:\d{2})/i);
+  if(m)return m[1];
+  const row=n.match(/(?:^|\s)((?:\d{1,3}(?:,\d{3})+)|(?:\d{7,9}))\s+(\d{1,2}:\d{2}:\d{2})\s+/);
+  if(row)return row[2];
   return null;
 }
-async function tryIran18Html(url) {
-  const html = await fetchTextWithRetry(url);
-  const price = parseIran18PriceFromText(cleanText(html));
-  if (!Number.isFinite(price) || price < 1000000) throw new Error("18k price not found in response");
-  const result = { priceIRR: Math.round(price), source: `TGJU (${new URL(url).host})`, at: new Date().toISOString(), unit: "IRR_PER_GRAM" };
-  return result;
+function combineTodayTime(time){
+  if(!time)return new Date().toISOString();
+  const now=new Date();
+  const iranDate=new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Tehran",year:"numeric",month:"2-digit",day:"2-digit"}).format(now);
+  const [h,m,s]=time.split(":").map(Number);
+  return `${iranDate}T${String(h||0).padStart(2,"0")}:${String(m||0).padStart(2,"0")}:${String(s||0).padStart(2,"0")}.000+03:30`;
+}
+async function tryIran18Html(url){
+  const html=await fetchText(url); const cleaned=cleanText(html); const price=parseIran18PriceFromText(cleaned);
+  if(!Number.isFinite(price)||price<1000000)throw new Error("18k price not found in response");
+  const at=combineTodayTime(parseTGJULatestAt(cleaned));
+  return {priceIRR:Math.round(price),source:`TGJU (${new URL(url).host})`,at,unit:"IRR_PER_GRAM",sourceCode:"TGJU_GERAM18"};
+}
+function priceFromJson(payload){
+  const rows=Array.isArray(payload)?payload:(Array.isArray(payload?.data)?payload.data:[]);
+  const candidates=[payload?.value,payload?.price,payload?.data?.value,payload?.data?.price,payload?.data?.indicator?.price,
+    ...rows.filter(x=>/GOLD_18_RLS|GOLD-18K|18.?k|18 عیار/i.test(`${x?.code||""} ${x?.slug||""} ${x?.name||""}`)).map(x=>x?.value??x?.price)];
+  for(const candidate of candidates){const n=typeof candidate==="string"?parseNumber(candidate):Number(candidate);if(Number.isFinite(n)&&n>100000)return Math.round(n);} return null;
+}
+async function fetchServix(){
+  if(!SERVIX_API_KEY)throw Object.assign(new Error("API key not configured"),{status:401});
+  const payload=await fetchJson(SERVIX_GOLD_URL,{"X-API-Key":SERVIX_API_KEY});
+  const quote=priceFromJson(payload); if(!quote)throw new Error("valid GOLD_18_RLS value missing");
+  const result={priceIRR:quote,source:"Servix API",at:payload?.businessTime||new Date().toISOString(),unit:"IRR_PER_GRAM",sourceCode:"GOLD_18_RLS",fresh:payload?.fresh??null,stale:Boolean(payload?.stale)};
+  markProvider("Servix",result); return result;
+}
+async function fetchTindex(){
+  if(!TINDEX_API_TOKEN)throw Object.assign(new Error("API token not configured"),{status:401});
+  const payload=await fetchJson(TINDEX_GOLD_URL,{Authorization:`Bearer ${TINDEX_API_TOKEN}`});
+  const value=priceFromJson(payload); if(!value)throw new Error("valid GOLD-18K value missing");
+  const result={priceIRR:Math.round(value*10),source:"Tindex API",at:payload?.data?.updated_at||new Date().toISOString(),unit:"IRR_PER_GRAM"};
+  markProvider("Tindex",result); return result;
 }
 
-let sourceComparisonCache = { at: 0, data: null };
-export async function getIran18Sources(force = false) {
-  if (!force && sourceComparisonCache.data && Date.now() - sourceComparisonCache.at < 30000) return sourceComparisonCache.data;
-  const sources = [];
-  const jobs = [];
-  if (SERVIX_API_KEY) jobs.push((async()=>{
-    try {
-      const payload = await fetchJson(SERVIX_GOLD_URL, {"X-API-Key": SERVIX_API_KEY});
-      const price = priceFromJson(payload);
-      if (!price) throw new Error("قیمت معتبر پیدا نشد");
-      return {name:"Servix", priceIRR:Math.round(price), at:payload?.businessTime || new Date().toISOString(), ok:true};
-    } catch(e) { return {name:"Servix", ok:false, error:e.name === "AbortError" ? "timeout" : e.message}; }
-  })());
-  jobs.push((async()=>{
-    try {
-      const r = await tryIran18Html(TGJU_GOLD_URL);
-      return {name:"TGJU", priceIRR:r.priceIRR, at:r.at, ok:true};
-    } catch(e) { return {name:"TGJU", ok:false, error:e.name === "AbortError" ? "timeout" : e.message}; }
-  })());
-  if (TINDEX_API_TOKEN) jobs.push((async()=>{
-    try {
-      const payload=await fetchJson(TINDEX_GOLD_URL,{Authorization:`Bearer ${TINDEX_API_TOKEN}`});
-      const value=priceFromJson(payload);
-      if(!value) throw new Error("قیمت معتبر پیدا نشد");
-      return {name:"Tindex",priceIRR:Math.round(value*10),at:payload?.data?.updated_at||new Date().toISOString(),ok:true};
-    }catch(e){return {name:"Tindex",ok:false,error:e.name === "AbortError" ? "timeout" : e.message};}
-  })());
-  const results=await Promise.all(jobs);
+export async function getIran18(){
+  const errors=[]; const now=Date.now();
+  // TGJU is the fast path because its public 18K page exposes second-level market ticks.
+  // Servix is still the structured authority, but it is deliberately rate-limited to avoid burning daily quota.
+  let tgjuResult=null;
+  if(providerCanTry("TGJU",TGJU_MIN_REQUEST_MS)){
+    providerState.TGJU.lastAttempt=now;
+    const urls=[...new Set([TGJU_GOLD_URL,...TGJU_GOLD_FALLBACK_URLS])];
+    for(const url of urls){
+      try{tgjuResult=await tryIran18Html(url);markProvider("TGJU",tgjuResult);break;}
+      catch(e){markProvider("TGJU",null,e);errors.push(`${new URL(url).host}: ${providerError(e).message}`)}
+    }
+  } else if(providerState.TGJU.last?.priceIRR){
+    tgjuResult={...providerState.TGJU.last,cached:true};
+  }
+
+  let servixResult=null;
+  if(providerCanTry("Servix",SERVIX_POLL_MS)){
+    providerState.Servix.lastAttempt=now;
+    try{servixResult=await fetchServix();}
+    catch(e){markProvider("Servix",null,e);const pe=providerError(e);errors.push(`Servix: ${pe.message}${pe.status?` (${pe.status})`:""}`)}
+  } else if(providerState.Servix.last?.priceIRR){ servixResult={...providerState.Servix.last,cached:true}; }
+
+  // Prefer a fresh TGJU tick over an older structured snapshot. Prefer Servix only when its
+  // businessTime is no older than the TGJU tick and the value is within the validation band.
+  const candidates=[tgjuResult,servixResult].filter(Boolean);
+  if(TINDEX_API_TOKEN && !candidates.length && providerCanTry("Tindex",TINDEX_POLL_MS)){
+    providerState.Tindex.lastAttempt=now; try{candidates.push(await fetchTindex())}catch(e){markProvider("Tindex",null,e);errors.push(`Tindex: ${providerError(e).message}`)}
+  }
+  if(!tgjuResult && providerState.TGJU.lastAttempt===now){ providerState.TGJU.cooldownUntil=Math.max(providerState.TGJU.cooldownUntil,Date.now()+15000); }
+  if(!candidates.length && providerState.Tindex.last?.priceIRR)candidates.push({...providerState.Tindex.last,cached:true});
+  if(!candidates.length && lastValidIran18 && Date.now()-lastIran18FetchAt<120000){return {...lastValidIran18,cached:true,warning:errors.join("; ")||"منبع موقتاً در حال بازیابی است"};}
+  if(!candidates.length)throw new Error(`Iran 18k gold unavailable — ${errors.join("; ")||"no provider available"}`);
+
+  const fresh=candidates.filter(x=>!x.cached);
+  const selected=fresh[0]||candidates[0];
+  if(servixResult && tgjuResult){
+    const spread=Math.abs(servixResult.priceIRR/tgjuResult.priceIRR-1)*100;
+    if(spread<=2 && new Date(servixResult.at).getTime()>=new Date(tgjuResult.at).getTime()){
+      return saveFreshPrice({...servixResult,validation:{peer:"TGJU",spreadPct:spread}});
+    }
+  }
+  return saveFreshPrice({...selected,validation:servixResult&&tgjuResult?{peer:"Servix",spreadPct:Math.abs(servixResult.priceIRR/tgjuResult.priceIRR-1)*100}:null,warning:errors.length?errors.join("; "):undefined});
+}
+
+export async function getIran18Sources(force=false){
+  if(!force&&sourceComparisonCache.data&&Date.now()-sourceComparisonCache.at<SOURCE_DIAGNOSTICS_MS)return sourceComparisonCache.data;
+  const results=[];
+  const add=(name,result,error)=>{
+    const s=providerState[name]||{};
+    const cooldownMs=Math.max(0,(s.cooldownUntil||0)-Date.now());
+    if(cooldownMs>0){
+      const pe=s.lastError||providerError(error||new Error("cooldown"));
+      results.push({name,priceIRR:result?.priceIRR??s.last?.priceIRR??null,at:result?.at||s.last?.at||null,ok:false,cached:true,error:pe.status===429?"HTTP 429 • در Backoff؛ سهمیه محافظت شده است":pe.message,cooldownMs,status:pe.status||undefined});
+      return;
+    }
+    if(result)results.push({name,priceIRR:result.priceIRR,at:result.at,ok:true,cached:Boolean(result.cached),stale:Boolean(result.stale)});
+    else {const pe=s.lastError||providerError(error||new Error("unavailable"));results.push({name,priceIRR:s.last?.priceIRR??null,at:s.last?.at||null,ok:false,error:pe.message,cooldownMs:0,status:pe.status||undefined});}
+  };
+  // Diagnostics never forces a quota-burning request when a provider is in cooldown.
+  let servix=null,tgju=null,tindex=null;
+  try{if(providerState.Servix.last?.priceIRR)servix=providerState.Servix.last; else if(providerCanTry("Servix",SERVIX_POLL_MS)){providerState.Servix.lastAttempt=Date.now();servix=await fetchServix();}}catch(e){markProvider("Servix",null,e);add("Servix",null,e)}
+  try{if(providerState.TGJU.last?.priceIRR)tgju=providerState.TGJU.last; else if(providerCanTry("TGJU",TGJU_MIN_REQUEST_MS)){providerState.TGJU.lastAttempt=Date.now();tgju=await tryIran18Html(TGJU_GOLD_URL);markProvider("TGJU",tgju);}}catch(e){markProvider("TGJU",null,e);add("TGJU",null,e)}
+  if(TINDEX_API_TOKEN){try{if(providerState.Tindex.last?.priceIRR)tindex=providerState.Tindex.last;else if(providerCanTry("Tindex",TINDEX_POLL_MS)){providerState.Tindex.lastAttempt=Date.now();tindex=await fetchTindex();}}catch(e){markProvider("Tindex",null,e);add("Tindex",null,e)}}
+  add("Servix",servix); add("TGJU",tgju); if(TINDEX_API_TOKEN)add("Tindex",tindex);
   const valid=results.filter(x=>x.ok&&Number.isFinite(x.priceIRR));
-  const primary=valid.find(x=>x.name==="Servix")||valid[0]||null;
-  let spreadPct=null, anomaly=false;
-  if(primary&&valid.length>1){
-    const max=Math.max(...valid.map(x=>x.priceIRR)), min=Math.min(...valid.map(x=>x.priceIRR));
-    spreadPct=min?(max/min-1)*100:null; anomaly=spreadPct!=null&&spreadPct>2;
-  }
-  const data={checkedAt:new Date().toISOString(),primary:primary?.name||null,sources:results,spreadPct,anomaly,thresholdPct:2};
+  const max=valid.length?Math.max(...valid.map(x=>x.priceIRR)):null,min=valid.length?Math.min(...valid.map(x=>x.priceIRR)):null;
+  const spreadPct=min?(max/min-1)*100:null;
+  const primary=valid.find(x=>x.name==="TGJU")||valid.find(x=>x.name==="Servix")||valid[0]||null;
+  const data={checkedAt:new Date().toISOString(),primary:primary?.name||null,sources:results,spreadPct,anomaly:spreadPct!=null&&spreadPct>2,thresholdPct:2,providerHealth:{Servix:providerStatus("Servix"),TGJU:providerStatus("TGJU"),Tindex:providerStatus("Tindex")},servixPollMs:SERVIX_POLL_MS};
   sourceComparisonCache={at:Date.now(),data}; return data;
-}
-
-export async function getIran18() {
-  const errors = [];
-
-  // Primary: authenticated structured Servix feed. This avoids HTML scraping
-  // and gives us businessTime so the UI can distinguish source time from fetch time.
-  if (SERVIX_API_KEY) {
-    try {
-      const payload = await fetchJson(SERVIX_GOLD_URL, {"X-API-Key": SERVIX_API_KEY});
-      const quote = priceFromJson(payload);
-      if (!quote) throw new Error("valid GOLD_18_RLS value missing");
-      return saveFreshPrice({
-        priceIRR: Math.round(quote),
-        source: "Servix API",
-        at: payload?.businessTime || new Date().toISOString(),
-        unit: "IRR_PER_GRAM",
-        sourceCode: "GOLD_18_RLS"
-      });
-    } catch (error) {
-      errors.push(`Servix: ${error.name === "AbortError" ? "request timeout" : error.message}`);
-    }
-  } else {
-    errors.push("Servix: API key not configured");
-  }
-
-  // Secondary: TGJU HTML fallbacks. Only used when Servix is unavailable.
-  const urls = [...new Set([TGJU_GOLD_URL, ...TGJU_GOLD_FALLBACK_URLS])];
-  const primaryUrls = urls.slice(0, 4);
-  const attempts = await Promise.allSettled(primaryUrls.map(url => tryIran18Html(url)));
-  for (let i = 0; i < attempts.length; i++) {
-    const result = attempts[i];
-    if (result.status === "fulfilled") return saveFreshPrice(result.value);
-    const error = result.reason;
-    errors.push(`${new URL(primaryUrls[i]).host}: ${error?.name === "AbortError" ? "request timeout" : error?.message || "request failed"}`);
-  }
-  for (const url of urls.slice(4)) {
-    try {
-      const fresh = await tryIran18Html(url);
-      return saveFreshPrice(fresh);
-    } catch (error) {
-      errors.push(`${new URL(url).host}: ${error?.name === "AbortError" ? "request timeout" : error?.message || "request failed"}`);
-    }
-  }
-
-  if (TINDEX_API_TOKEN) {
-    try {
-      const payload = await fetchJson(TINDEX_GOLD_URL, {Authorization: `Bearer ${TINDEX_API_TOKEN}`});
-      const value = priceFromJson(payload);
-      if (!value) throw new Error("valid GOLD-18K value missing");
-      return saveFreshPrice({
-        priceIRR: Math.round(value * 10),
-        source: "Tindex API",
-        at: payload?.data?.updated_at || new Date().toISOString(),
-        unit: "IRR_PER_GRAM"
-      });
-    } catch (error) {
-      errors.push(`Tindex: ${error.name === "AbortError" ? "request timeout" : error.message}`);
-    }
-  }
-
-  if (lastValidIran18 && (Date.now() - lastIran18FetchAt) < CACHE_MAX_AGE) {
-    return { ...lastValidIran18, source: `${lastValidIran18.source} (CACHE)`, cached: true, warning: errors.join("; ") };
-  }
-  throw new Error(`Iran 18k gold unavailable — ${errors.join("; ")}`);
 }
 
 function parseLabelPrice(text, label) {

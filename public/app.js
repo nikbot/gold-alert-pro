@@ -56,7 +56,7 @@ function updateCommandCenter(){
 async function load(streamState=null){
  try{
   const oldLatest=latest; const s=streamState || await fetch('/api/state',{cache:'no-store'}).then(r=>r.json());latest=s;pollMs=s.config?.pollMs||10000;renderGoldChart(s.prices||[]);
-  document.getElementById('status').textContent=s.error?'خطا در یک منبع داده':'🟢 آنلاین';document.getElementById('dot').className='dot'+(s.error?' off':'');
+  const es=s.engineStatus||{}; const mainLive=es.status==='LIVE'; document.getElementById('status').textContent=mainLive?'🟢 LIVE':es.status==='STALE'?'🟡 آخرین قیمت معتبر':'🔴 آفلاین'; document.getElementById('dot').className='dot'+(mainLive?'':' off');
   if(s.iran){const livePrice=Number(s.iran.priceIRR||0);const prevPrice=Number(oldLatest?.iran?.priceIRR||0);document.getElementById('price').textContent=moneyIRR(livePrice);document.getElementById('updated').textContent='آخرین دریافت: '+new Date(s.updatedAt||s.iran.at).toLocaleTimeString('fa-IR');const tp=document.getElementById('tickerPrice');if(tp)tp.textContent=moneyIRR(livePrice);const lp=document.getElementById('livePriceBig');if(lp)lp.textContent=fa(livePrice);const tm=document.getElementById('tickerTime');if(tm)tm.textContent='اکنون • '+new Date(s.updatedAt||s.iran.at).toLocaleTimeString('fa-IR');const ls=document.getElementById('liveStatus');if(ls)ls.innerHTML='<span class=\"pushDot\"></span> آنلاین • بروزرسانی خودکار';const lc=document.getElementById('liveChange'),tc=document.getElementById('tickerChange');if(prevPrice>0){const d=(livePrice/prevPrice-1)*100;const txt=(d>=0?'▲ ':'▼ ')+f2(Math.abs(d))+'٪';if(lc){lc.textContent=txt;lc.className='change '+(d>=0?'up':'down')}if(tc){tc.textContent=txt;tc.className='tickerChange '+(d>=0?'upTxt':'downTxt')}}else{if(lc)lc.textContent='—';if(tc)tc.textContent='—'}}
   if(s.global?.xauUsd){const x='$'+Number(s.global.xauUsd).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});document.getElementById('xau').textContent=x;const lx=document.getElementById('liveXau');if(lx)lx.textContent=x;}
   if(s.dollar?.priceIRR){document.getElementById('dollar').textContent=moneyIRR(s.dollar.priceIRR);const ld=document.getElementById('liveDollar');if(ld)ld.textContent=moneyIRR(s.dollar.priceIRR);}
@@ -580,8 +580,11 @@ async function g59LoadEngine(){
   set('g59SourceTime',d.sourceTime?new Date(d.sourceTime).toLocaleTimeString('fa-IR'):'—');
   set('g59Received',d.receivedAt?new Date(d.receivedAt).toLocaleTimeString('fa-IR'):'—');
   set('g59Clients',d.clients!=null?fa(d.clients):'—');
+  const badge=document.getElementById('g59EngineBadge');
+  const es=d.engineStatus||{};
+  if(badge){badge.className='smartBadge '+(es.status==='LIVE'?'g59LiveBadge':es.status==='STALE'?'g59StaleBadge':'g59OfflineBadge');badge.textContent=es.status==='LIVE'?'● LIVE • قیمت جدید':es.status==='STALE'?'● STALE • آخرین قیمت معتبر':'● OFFLINE • منبع در دسترس نیست';}
   const sources=d.diagnostics?.sources||[]; const box=document.getElementById('g59Sources');
-  if(box)box.innerHTML=sources.length?sources.map(x=>`<div class="g59Source"><span><b>${esc(x.name)}</b><small> ${x.at?new Date(x.at).toLocaleTimeString('fa-IR'):''}</small></span><span class="${x.ok?'g59Ok':'g59Bad'}">${x.ok?moneyIRR(x.priceIRR):'✕ '+esc(x.error||'خطا')}</span></div>`).join(''):'اطلاعات منابع موجود نیست.';
+  if(box)box.innerHTML=sources.length?sources.map(x=>{const cd=Number(x.cooldownMs||0);const mins=cd>0?Math.ceil(cd/60000):0;return `<div class="g59Source"><span><b>${esc(x.name)}</b><small> ${x.at?new Date(x.at).toLocaleTimeString('fa-IR'):''}</small></span><span class="${x.ok?'g59Ok':'g59Bad'}">${x.ok?moneyIRR(x.priceIRR):'✕ '+esc(x.error||'خطا')}${mins?`<small> • بازگشت ${fa(mins)} دقیقه دیگر</small>`:''}</span></div>`}).join(''):'اطلاعات منابع موجود نیست.';
   const a=d.anomaly||{}; const n=document.getElementById('g59Anomaly');
   if(n){n.className='g59Notice '+(a.detected?'g59Warn':'g59Ok');n.innerHTML=a.detected?`⚠️ <b>ناهنجاری شناسایی شد</b> • جهش ${f2(a.jumpPct)}٪ • اختلاف منابع ${a.sourceSpreadPct==null?'—':f2(a.sourceSpreadPct)+'٪'}`:`✅ قیمت در محدوده عادی است • اختلاف منابع ${a.sourceSpreadPct==null?'—':f2(a.sourceSpreadPct)+'٪'}`;}
  }catch(e){}
@@ -605,6 +608,6 @@ function g59RenderPortfolio(){
 }
 function initG59(){
  document.querySelectorAll('.g59CandleBtn').forEach(b=>b.addEventListener('click',()=>{g59CandleInterval=Number(b.dataset.candle)||60;document.querySelectorAll('.g59CandleBtn').forEach(x=>x.classList.remove('active'));b.classList.add('active');g59LoadCandles();}));
- g59LoadEngine();g59LoadCandles();g59RenderPortfolio();setInterval(g59LoadEngine,10000);setInterval(g59LoadCandles,15000);setInterval(g59RenderPortfolio,5000);
+ g59LoadEngine();g59LoadCandles();g59RenderPortfolio();setInterval(g59LoadEngine,5000);setInterval(g59LoadCandles,15000);setInterval(g59RenderPortfolio,5000);
 }
 window.addEventListener('load',initG59);
