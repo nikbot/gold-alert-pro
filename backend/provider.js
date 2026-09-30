@@ -16,7 +16,7 @@ const TGJU_WORLD_URL = process.env.TGJU_WORLD_URL || "https://www.tgju.org/world
 const GOLDPRICE_URL = process.env.GOLDPRICE_URL || "https://api.goldprice.dev/v1/prices?symbol=XAU-USD-SPOT";
 const GDELT_URL = process.env.GDELT_URL || "https://api.gdeltproject.org/api/v2/doc/doc";
 const configuredTimeout = Number(process.env.HTTP_TIMEOUT || 12000);
-const HTTP_TIMEOUT = Number.isFinite(configuredTimeout) ? Math.max(5000, configuredTimeout) : 12000;
+const HTTP_TIMEOUT = Number.isFinite(configuredTimeout) ? Math.max(5000, configuredTimeout) : 8000;
 let lastValidIran18 = null;
 let lastIran18FetchAt = 0;
 const CACHE_MAX_AGE = 60000; // 60 seconds
@@ -70,7 +70,7 @@ async function fetchText(url, options = {}) {
     return await response.text();
   } finally { clearTimeout(timeout); }
 }
-async function fetchTextWithRetry(url, options = {}, attempts = 2) {
+async function fetchTextWithRetry(url, options = {}, attempts = 1) {
   let lastError;
   for (let attempt = 1; attempt <= attempts; attempt++) {
     try {
@@ -97,11 +97,17 @@ function extractFirst(text, patterns) {
 }
 export function parseIran18PriceFromText(text) {
   const normalized = normalizeDigits(text);
-  return extractFirst(normalized, [
-    /طلای\s*18\s*عیار[^\d]{0,160}((?:\d{1,3}(?:,\d{3})+)|(?:\d+))/i,
-    /طلا\s*18\s*عیار[^\d]{0,160}((?:\d{1,3}(?:,\d{3})+)|(?:\d+))/i,
+  // TGJU currently exposes the live quote as «نرخ فعلی:: 250,877,000».
+  // The old parser required the product label to be immediately adjacent to the
+  // number, which breaks as soon as TGJU changes its surrounding markup.
+  const currentRate = extractFirst(normalized, [
+    /نرخ\s*فعلی\s*:{1,2}\s*((?:\d{1,3}(?:,\d{3})+)|(?:\d+))/i,
+    /نرخ\s*فعلی[^\d]{0,120}((?:\d{1,3}(?:,\d{3})+)|(?:\d+))/i,
+    /طلای\s*18\s*عیار(?:\s*\/\s*750)?[^\d]{0,220}((?:\d{1,3}(?:,\d{3})+)|(?:\d+))/i,
+    /طلا\s*18\s*عیار[^\d]{0,220}((?:\d{1,3}(?:,\d{3})+)|(?:\d+))/i,
     /طلا\s*18\s*\|?\s*((?:\d{1,3}(?:,\d{3})+)|(?:\d+))/i
   ]);
+  return Number.isFinite(currentRate) ? currentRate : NaN;
 }
 function priceFromJson(payload) {
   const candidates = [payload?.value, payload?.price, payload?.data?.value, payload?.data?.price,
@@ -123,12 +129,25 @@ async function tryIran18Html(url) {
 export async function getIran18() {
   const urls = [...new Set([TGJU_GOLD_URL, ...TGJU_GOLD_FALLBACK_URLS])];
   const errors = [];
-  for (const url of urls) {
+  // Try the primary TGJU endpoints concurrently so a slow/dead mirror cannot
+  // block the 30-second market tick and abort unrelated providers such as Dollar.
+  const primaryUrls = urls.slice(0, 4);
+  const attempts = await Promise.allSettled(primaryUrls.map(url => tryIran18Html(url)));
+  for (let i = 0; i < attempts.length; i++) {
+    const result = attempts[i];
+    if (result.status === "fulfilled") return saveFreshPrice(result.value);
+    const error = result.reason;
+    errors.push(`${new URL(primaryUrls[i]).host}: ${error?.name === "AbortError" ? "request timeout" : error?.message || "request failed"}`);
+  }
+  // The site root mirrors are lower-priority fallbacks; keep them sequential to
+  // avoid unnecessary load when the profile endpoints are healthy.
+  for (const url of urls.slice(4)) {
     try {
       const fresh = await tryIran18Html(url);
       return saveFreshPrice(fresh);
+    } catch (error) {
+      errors.push(`${new URL(url).host}: ${error?.name === "AbortError" ? "request timeout" : error?.message || "request failed"}`);
     }
-    catch (error) { errors.push(`${new URL(url).host}: ${error.name === "AbortError" ? "request timeout" : error.message}`); }
   }
   // Authenticated structured feeds are optional; configure keys in deployment secrets only.
   if (SERVIX_API_KEY) {
