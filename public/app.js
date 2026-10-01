@@ -657,3 +657,14 @@ function initG59(){
  g59LoadEngine();g59LoadCandles();g59RenderPortfolio();setInterval(g59LoadEngine,5000);setInterval(g59LoadCandles,15000);setInterval(g59RenderPortfolio,5000);
 }
 window.addEventListener('load',initG59);
+
+
+// Ensure auth handlers are available for inline buttons after cache/version updates.
+window.showAuthMode = showAuthMode;
+window.showAdminLoginGate = showAdminLoginGate;
+window.gateLogin = gateLogin;
+window.gateRegister = gateRegister;
+window.loginAccount = loginAccount;
+window.registerAccount = registerAccount;
+window.forgotPasswordPrompt = forgotPasswordPrompt;
+window.adminLogin = adminLogin;
