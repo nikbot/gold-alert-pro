@@ -110,7 +110,19 @@ app.use((req, res, next) => {
   if (req.method === "OPTIONS") return res.sendStatus(204); next();
 });
 app.use(express.json({ limit: "64kb" }));
-app.use(express.static("public", { maxAge: "1h", setHeaders: (res, filePath) => { if (/\/(app|admin|sw)\.js$/.test(filePath) || /\/(index|admin)\.html$/.test(filePath) || /\/admin\.css$/.test(filePath)) res.setHeader("Cache-Control", "no-store"); } }));
+app.use(express.static("public", {
+  maxAge: 0,
+  etag: true,
+  lastModified: true,
+  setHeaders: (res, filePath) => {
+    const p = String(filePath).replaceAll("\\", "/");
+    if (/(\/(index|admin)\.html)$/.test(p) || /(\/(app|admin|sw)\.js)$/.test(p) || /\.(js|css)$/.test(p)) {
+      res.setHeader("Cache-Control", "no-store, max-age=0, must-revalidate");
+      res.setHeader("Pragma", "no-cache");
+      res.setHeader("Expires", "0");
+    }
+  }
+}));
 
 const state = {
   iran: null, global: null, dollar: null, coins: null, bitcoin: null, forgodCurrencies: null, marketPressure: null, analysis: null, prices: [], ticks: [], events: [], news: [], lastSignal: "WAIT", lastPressureAlert: "NEUTRAL",
