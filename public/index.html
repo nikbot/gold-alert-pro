@@ -203,7 +203,7 @@ body.authLocked .floatingMenuBtn,body.authLocked .menuBackdrop,body.authLocked .
     <div class="authTabs"><button id="authLoginTab" class="active" type="button" onclick="showAuthMode('login')">ورود</button><button id="authRegisterTab" type="button" onclick="showAuthMode('register')">ثبت‌نام</button></div>
     <div id="authLoginForm" class="authForm"><input id="authMobile" inputmode="tel" autocomplete="username" maxlength="11" placeholder="شماره موبایل، مثال 0912..." type="tel"><input id="authPass" autocomplete="current-password" type="password" placeholder="رمز عبور"><button type="button" class="secondary" onclick="forgotPasswordPrompt()">📧 بازیابی رمز عبور</button><button type="button" onclick="gateLogin()">🔐 ورود به حساب</button></div>
     <div id="authRegisterForm" class="authForm authRegisterOnly"><input id="regMobile" inputmode="tel" autocomplete="username" maxlength="11" placeholder="شماره موبایل، مثال 0912..." type="tel"><input id="regPass" autocomplete="new-password" type="password" minlength="6" placeholder="رمز عبور حداقل ۶ کاراکتر"><input id="regPass2" autocomplete="new-password" type="password" minlength="6" placeholder="تکرار رمز عبور"><button type="button" onclick="gateRegister()">📝 ساخت حساب</button></div>
-    <div id="authError" class="authError"></div><div style="margin-top:8px"><label><input id="adminMode" type="checkbox"> ورود مدیر</label></div>
+    <div id="authError" class="authError"></div><div style="margin-top:10px"><button type="button" class="secondary" onclick="showAdminLoginGate()">🔐 ورود مدیریت</button></div>
     <div class="authHint">حساب هر کاربر با شماره موبایل شناخته می‌شود. اطلاعات شخصی و رمز عبور برای امنیت حساب، به‌صورت امن روی سرور نگهداری می‌شوند.</div>
   </div>
 </div>
