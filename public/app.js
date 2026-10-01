@@ -400,35 +400,15 @@ function downloadBackup(){window.location.href='/api/export?deviceId='+encodeURI
 async function runNewsAI(){const box=document.getElementById('newsAiResult');if(!box)return;box.style.display='block';box.textContent='⏳ در حال خلاصه‌سازی اخبار...';try{const r=await fetch('/api/news-ai',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({deviceId,accountToken})});const d=await r.json();if(!r.ok)throw new Error(d.error||'خطا');box.textContent=d.text||'پاسخی دریافت نشد.';}catch(e){box.textContent='⚠️ '+e.message;}}
 function showAuthMode(mode){const login=mode==='login';document.getElementById('authLoginForm').style.display=login?'grid':'none';document.getElementById('authRegisterForm').style.display=login?'none':'grid';document.getElementById('authLoginTab').classList.toggle('active',login);document.getElementById('authRegisterTab').classList.toggle('active',!login);document.getElementById('authError').textContent='';}
 function showAuthGate(show=true){const g=document.getElementById('authGate');if(g)g.classList.toggle('hidden',!show);document.body.classList.toggle('authLocked',show);if(show)showAuthMode('login');}
-function showAdminLoginGate(){const g=document.getElementById('authGate');if(g)g.classList.add('hidden');document.body.classList.remove('authLocked');adminSession='';localStorage.removeItem('gold-alert-pro-admin-session-v38');showAdminMenu(false);const box=document.getElementById('adminLoginBox');if(box){box.style.display='block';const u=document.getElementById('adminUsernameInput'),pw=document.getElementById('adminPasswordInput');if(u)u.value='';if(pw)pw.value='';}const c=document.getElementById('adminContent');if(c)c.style.display='none';applyCategory('admin',false);}
-function normalizeDigits(v){return String(v||'').replace(/[۰-۹]/g,d=>'۰۱۲۳۴۵۶۷۸۹'.indexOf(d)).replace(/[٠-٩]/g,d=>'٠١٢٣٤٥٦٧٨٩'.indexOf(d));}
-function normalizeMobile(v){return normalizeDigits(v).replace(/[\s-]/g,'').trim();}
-async function gateLogin(){const mobile=normalizeMobile(document.getElementById('authMobile')?.value),password=document.getElementById('authPass')?.value||'';const err=document.getElementById('authError');if(!/^09\d{9}$/.test(mobile)||password.length<6){if(err)err.textContent='شماره موبایل یا رمز عبور معتبر نیست.';return;}try{const r=await fetch('/api/account/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone:mobile,password,deviceId,nationalId:document.getElementById('regNationalId')?.value||'',recoveryQuestion:document.getElementById('regRecoveryQuestion')?.value||'',recoveryAnswer:document.getElementById('regRecoveryAnswer')?.value||''})});const d=await r.json();if(!r.ok)throw new Error(d.error||'ورود ناموفق');accountToken=d.token;localStorage.setItem(ACCOUNT_TOKEN_KEY_V26,accountToken);showAuthGate(false);setAccountStatus('🟢 وارد شدید.');await loadTickets();await loadUserSettings();}catch(e){if(err)err.textContent='⚠️ '+e.message;}}
-async function gateRegister(){const mobile=normalizeMobile(document.getElementById('regMobile')?.value),p1=document.getElementById('regPass')?.value||'',p2=document.getElementById('regPass2')?.value||'',err=document.getElementById('authError');if(!/^09\d{9}$/.test(mobile)){if(err)err.textContent='شماره موبایل باید مثل 09123456789 باشد.';return}if(p1.length<6||p1!==p2){if(err)err.textContent='رمز باید حداقل ۶ کاراکتر باشد و دو بار یکسان وارد شود.';return}try{const r=await fetch('/api/account/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone:mobile,password:p1,deviceId})});const d=await r.json();if(!r.ok)throw new Error(d.error||'ثبت‌نام ناموفق');accountToken=d.token;localStorage.setItem(ACCOUNT_TOKEN_KEY_V26,accountToken);showAuthGate(false);setAccountStatus('🟢 ثبت‌نام انجام شد و وارد شدید.');await loadTickets();await loadUserSettings();}catch(e){if(err)err.textContent='⚠️ '+e.message;}}
-async function registerAccount(){showAuthGate(true);showAuthMode('register');}
-async function loginAccount(){showAuthGate(true);showAuthMode('login');}
-async function syncAccount(){if(!accountToken){showAuthGate(true);return}try{const r=await fetch('/api/account/sync',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:accountToken,deviceId})});const d=await r.json();if(!r.ok)throw new Error(d.error||'همگام‌سازی ناموفق');setAccountStatus('☁️ همگام‌سازی انجام شد • '+new Date(d.syncedAt).toLocaleString('fa-IR'));}catch(e){setAccountStatus('⚠️ '+e.message);}}
-async function logoutAccount(){if(accountToken)await fetch('/api/account/logout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:accountToken})}).catch(()=>{});accountToken='';localStorage.removeItem(ACCOUNT_TOKEN_KEY_V26);showAuthGate(true);}
-function setAccountStatus(t){const e=document.getElementById('accountStatus');if(e)e.textContent=t;}
-async function saveProfileV25(){const payload={deviceId,name:document.getElementById('profileName')?.value||'',city:document.getElementById('profileCity')?.value||'',phone:document.getElementById('profilePhone')?.value||''};try{const r=await fetch('/api/profile',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});const d=await r.json();if(!r.ok)throw new Error(d.error||'ذخیره ناموفق');setAccountStatus('✅ مشخصات ذخیره شد.');}catch(e){setAccountStatus('⚠️ '+e.message);}}
-async function loadProfileV25(){try{const r=await fetch('/api/profile?deviceId='+encodeURIComponent(deviceId),{cache:'no-store'});const d=await r.json();const p=d.profile||{};for(const [id,v] of [['profileName',p.name],['profileCity',p.city],['profilePhone',p.phone]]){const e=document.getElementById(id);if(e&&v)e.value=v;}}catch{}}
-function initV25AutoSave(){['pfWeight','pfBuyPrice','pfPurity','pfNote'].forEach(id=>{const e=document.getElementById(id);if(e)e.addEventListener('change',()=>{const w=Number(document.getElementById('pfWeight')?.value),bp=Number(document.getElementById('pfBuyPrice')?.value);if(w>0&&bp>0)savePortfolioForm(true);});});loadAllocation();loadProfileV25();}
-window.addEventListener('load',()=>{initV25AutoSave();});
-
-// v26: commercial user/admin experience, decision room, market structure, AI chat and economic calendar.
-let adminSession=localStorage.getItem('gold-alert-pro-admin-session-v38')||'';
-const ACCOUNT_TOKEN_KEY_V26='gold-alert-pro-account-token-v28';
-if(!accountToken){accountToken=localStorage.getItem(ACCOUNT_TOKEN_KEY_V26)||localStorage.getItem('gold-alert-pro-account-token-v28')||'';}
-function accountHeaders(){return accountToken?{'x-account-token':accountToken}:{};}
-function fmtDate(v){try{return new Date(v).toLocaleString('fa-IR',{dateStyle:'short',timeStyle:'short'});}catch{return String(v||'—')}}
-async function loadMarketStructure(){
- try{const d=await fetch('/api/market-structure',{cache:'no-store'}).then(r=>r.json());
-  const set=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v};
-  set('dsTrend',d.trendFa||'—');set('dsSupport',moneyIRR(d.support));set('dsResistance',moneyIRR(d.resistance));set('dsConfidence',fa(d.confidence)+'٪');
-  set('dsSignal',latest?.analysis?.signal||'—');set('dsBuy',fa(latest?.marketPressure?.buy||0)+'٪');set('dsSell',fa(latest?.marketPressure?.sell||0)+'٪');
-  const stateText=d.breakout?'شکست مقاومت':d.breakdown?'شکست حمایت':d.trendFa||'خنثی';set('dsState',stateText);
-  const reason=document.getElementById('dsReason');if(reason)reason.innerHTML=`روند کوتاه‌مدت: <b>${esc(d.trendFa||'—')}</b> • تغییر کوتاه‌مدت ${f2(d.shortPct||0)}٪ • تغییر میان‌مدت ${f2(d.midPct||0)}٪<br>حمایت/مقاومت از نقاط چرخش داده‌های اخیر برآورد شده‌اند و حجم واقعی سفارشات در این نسخه در دسترس نیست.`;
- }catch(e){const r=document.getElementById('dsReason');if(r)r.textContent='⚠️ ساختار بازار فعلاً قابل دریافت نیست.';}
+function showAdminLoginGate(){
+ const m=document.getElementById('adminLoginModal');
+ if(m){m.style.display='block';}
+ const e=document.getElementById('authError');
+ if(e)e.textContent='';
+}
+function closeAdminLoginGate(){
+ const m=document.getElementById('adminLoginModal');
+ if(m)m.style.display='none';
 }
 async function loadEconomicCalendar(){
  const box=document.getElementById('calendarList');if(!box)return;try{const d=await fetch('/api/economic-calendar',{cache:'no-store'}).then(r=>r.json());const events=Array.isArray(d.events)?d.events:[];if(!events.length){box.innerHTML='<div class="note">رویداد اقتصادی در فید فعلی ثبت نشده است. برنامه رویداد جعلی تولید نمی‌کند.</div>';return;}box.innerHTML=events.map(x=>`<div class="calendarItem"><div><b>${esc(x.title||'رویداد')}</b><div class="small">${esc(x.note||x.description||'')}</div></div><div><div class="calendarTime">${esc(fmtDate(x.date||x.datetime))}</div><div class="calendarImpact">${esc(x.impact||'watch')}</div></div></div>`).join('');}catch(e){box.textContent='⚠️ تقویم اقتصادی فعلاً در دسترس نیست.';}}

@@ -203,7 +203,13 @@ body.authLocked .floatingMenuBtn,body.authLocked .menuBackdrop,body.authLocked .
     <div class="authTabs"><button id="authLoginTab" class="active" type="button" onclick="showAuthMode('login')">ورود</button><button id="authRegisterTab" type="button" onclick="showAuthMode('register')">ثبت‌نام</button></div>
     <div id="authLoginForm" class="authForm"><input id="authMobile" inputmode="tel" autocomplete="username" maxlength="11" placeholder="شماره موبایل، مثال 0912..." type="tel"><input id="authPass" autocomplete="current-password" type="password" placeholder="رمز عبور"><button type="button" class="secondary" onclick="forgotPasswordPrompt()">📧 بازیابی رمز عبور</button><button type="button" onclick="gateLogin()">🔐 ورود به حساب</button><button type="button" class="secondary" onclick="showAdminLoginGate()">🔑 ورود مدیریت</button></div>
     <div id="authRegisterForm" class="authForm authRegisterOnly"><input id="regMobile" inputmode="tel" autocomplete="username" maxlength="11" placeholder="شماره موبایل، مثال 0912..." type="tel"><input id="regPass" autocomplete="new-password" type="password" minlength="6" placeholder="رمز عبور حداقل ۶ کاراکتر"><input id="regPass2" autocomplete="new-password" type="password" minlength="6" placeholder="تکرار رمز عبور"><input id="regNationalId" inputmode="numeric" placeholder="کد ملی"><input id="regRecoveryQuestion" placeholder="سؤال بازیابی رمز"><input id="regRecoveryAnswer" placeholder="پاسخ بازیابی"><button type="button" onclick="gateRegister()">📝 ساخت حساب</button></div>
-    <div id="authError" class="authError"></div><div style="margin-top:10px"><button type="button" class="secondary" onclick="showAdminLoginGate()">🔐 ورود مدیریت</button></div>
+    <div id="authError" class="authError"></div><div id="adminLoginModal" style="display:none;margin-top:12px;padding:14px;border:1px solid #57451f;border-radius:18px;background:#0b1019">
+<div style="font-weight:bold;margin-bottom:10px">🔐 ورود مدیریت</div>
+<input id="adminUsernameInput" autocomplete="username" placeholder="نام کاربری مدیر" style="margin:6px 0;width:100%">
+<input id="adminPasswordInput" autocomplete="current-password" type="password" placeholder="رمز مدیر" style="margin:6px 0;width:100%">
+<button type="button" onclick="adminLogin()">ورود به پنل مدیریت</button>
+<button type="button" class="secondary" onclick="closeAdminLoginGate()">بازگشت</button>
+</div><div style="margin-top:10px"><button type="button" class="secondary" onclick="showAdminLoginGate()">🔐 ورود مدیریت</button></div>
     <div class="authHint">حساب هر کاربر با شماره موبایل شناخته می‌شود. اطلاعات شخصی و رمز عبور برای امنیت حساب، به‌صورت امن روی سرور نگهداری می‌شوند.</div>
   </div>
 </div>
