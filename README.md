@@ -87,3 +87,7 @@ These credentials are intended for the packaged/demo build. Change them before p
 - Data persists under `DATA_DIR`; see `database/SCHEMA.md`.
 - Deployment checklist: `DEPLOY_CHECKLIST.md`.
 
+
+
+## v61.0.0
+AI Decision Room, Smart Alerts ترکیبی و Portfolio Guard اضافه شدند.

@@ -75,6 +75,28 @@ body{background:radial-gradient(900px 420px at 85% -10%,#30220e55,transparent 65
 .adminSidebar button:hover{border-color:var(--gold);transform:translateX(-3px)}
 .adminMain{flex:1}
 @media(max-width:760px){.adminShell{flex-direction:column}.adminSidebar{width:100%;position:static}}
+
+/* =========================================================
+   Gold2 Pro V62 Market Terminal
+   ========================================================= */
+:root{--v62-bg:#080b12;--v62-panel:#101522;--v62-panel2:#0c111b;--v62-line:#202a3b;--v62-text:#f5f7fa;--v62-muted:#8e9aae;--v62-live:#22c55e;--v62-red:#ef4444;--v62-gold:#d9ad55;--v62-blue:#6aa8ff;}
+body.v62Terminal{background:radial-gradient(circle at 70% -20%,#182033 0,#080b12 42%,#05070c 100%);}
+body.v62Terminal .wrap{max-width:1440px;padding:14px 18px 48px}
+body.v62Terminal .top{display:none}
+body.v62Terminal:not(.categoryView) .liveTicker,body.v62Terminal:not(.categoryView) #livePricePanel,body.v62Terminal:not(.categoryView) #categoryIntro,body.v62Terminal:not(.categoryView) .accountQuick,body.v62Terminal:not(.categoryView) .commandCenter,body.v62Terminal:not(.categoryView) #notificationCenter,body.v62Terminal:not(.categoryView) #dashboard,body.v62Terminal:not(.categoryView) .commandBar{display:none!important}
+body.v62Terminal .v62TerminalShell{display:grid;grid-template-columns:224px minmax(0,1fr);gap:16px;direction:ltr;align-items:start}
+body.v62Terminal .v62Sidebar,body.v62Terminal .v62Main{direction:rtl}
+.v62Sidebar{position:sticky;top:14px;background:rgba(16,21,34,.94);border:1px solid var(--v62-line);border-radius:24px;padding:14px;box-shadow:0 18px 50px #0007;backdrop-filter:blur(18px)}
+.v62Brand{display:flex;align-items:center;gap:10px;padding:8px 6px 16px;border-bottom:1px solid #202a3b}.v62BrandMark{width:40px;height:40px;border-radius:13px;display:grid;place-items:center;background:linear-gradient(145deg,#f3d98c,#a87825);color:#15100a;font-size:21px;box-shadow:0 10px 28px #0008}.v62Brand b{font-size:16px}.v62Brand small{display:block;color:var(--v62-muted);font-size:9px;margin-top:3px}.v62Nav{padding-top:12px;display:grid;gap:5px}.v62Nav button{width:100%;display:flex;align-items:center;gap:10px;text-align:right;padding:11px 10px;background:transparent;border:1px solid transparent;color:#bfc8d5;font-size:11px}.v62Nav button:hover{background:#ffffff06;border-color:#253047}.v62Nav button.active{background:linear-gradient(90deg,#d9ad5517,#ffffff05);border-color:#725b2a;color:#fff}.v62Nav .v62Icon{width:28px;height:28px;border-radius:9px;display:grid;place-items:center;background:#0a101a;font-size:14px}.v62Collapse{margin-top:12px;width:100%;background:#0b111b!important;color:#aeb8c7!important;border:1px solid #253047!important}.v62SideFoot{color:#69768a;font-size:8px;line-height:1.9;padding:12px 7px 3px}
+.v62Header{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:14px;margin-bottom:12px}.v62HeaderBrand{display:flex;align-items:center;gap:9px}.v62HeaderBrand b{font-size:18px}.v62HeaderBrand span{font-size:9px;color:var(--v62-muted);display:block;margin-top:3px}.v62MarketStatus{justify-self:center;display:flex;align-items:center;gap:8px;background:#0b121c;border:1px solid #233047;border-radius:999px;padding:7px 13px;font-size:10px;color:#b9c4d3}.v62LiveDot{width:8px;height:8px;border-radius:50%;background:var(--v62-live);box-shadow:0 0 14px #22c55e;animation:pulse 1.6s infinite}.v62HeaderActions{justify-self:end;display:flex;align-items:center;gap:7px}.v62HeaderActions button{padding:8px 10px;background:#101826;color:#dce3ed;border:1px solid #26344b}.v62HeaderActions .v62CopilotBtn{background:linear-gradient(135deg,#e2c174,#a9792c);color:#17120a;border:0}.v62Notif{position:relative}.v62Notif i{position:absolute;top:-3px;left:-3px;min-width:15px;height:15px;border-radius:99px;background:#ef4444;color:#fff;font-size:8px;font-style:normal;display:grid;place-items:center}
+.v62MainGrid{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(300px,.75fr);gap:14px}.v62Hero{background:radial-gradient(circle at 5% 0,#d9ad5514,transparent 38%),linear-gradient(145deg,#111825,#0b1018);border:1px solid #2a3547;border-radius:26px;padding:20px;box-shadow:0 20px 60px #0007;min-height:245px}.v62HeroTop{display:flex;justify-content:space-between;gap:16px;align-items:flex-start}.v62Kicker{color:#8f9bad;font-size:10px}.v62HeroTitle{font-size:15px;font-weight:800;margin-top:5px}.v62HeroPrice{font-size:clamp(38px,5vw,66px);font-weight:950;letter-spacing:-2.5px;line-height:1;margin:14px 0 7px;color:#fff}.v62Unit{color:#8f9bad;font-size:10px}.v62HeroLive{padding:7px 10px;border:1px solid #1d6847;background:#0b2419;color:#65e7a4;border-radius:999px;font-size:9px;white-space:nowrap}.v62HeroMeta{display:flex;flex-wrap:wrap;gap:7px;margin-top:14px}.v62Pill{background:#0a1018;border:1px solid #202c3e;border-radius:11px;padding:7px 9px;font-size:9px;color:#8f9bad}.v62Pill b{color:#e9eef5;margin-right:4px}.v62HeroBottom{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:14px}.v62Source{font-size:9px;color:#718095}.v62Source strong{color:#d7dee9}.v62HeroChart{height:74px;width:42%;min-width:190px;overflow:hidden}.v62HeroChart svg{width:100%;height:100%}
+.v62MarketCards{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-top:12px}.v62MarketCard{background:#0d131e;border:1px solid #202b3c;border-radius:16px;padding:12px;min-width:0}.v62MarketCard span{font-size:9px;color:#7f8da2}.v62MarketCard b{display:block;font-size:15px;margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.v62MarketCard em{display:block;font-style:normal;font-size:9px;margin-top:4px;color:#647288}.v62Up{color:#22c55e!important}.v62Down{color:#ef4444!important}
+.v62ChartPanel{margin-top:12px;background:#0d131e;border:1px solid #202b3c;border-radius:22px;padding:14px}.v62PanelHead{display:flex;justify-content:space-between;align-items:center;gap:10px}.v62PanelHead h3{margin:0;font-size:14px}.v62PanelHead small{color:#748198;font-size:9px}.v62Range{display:flex;gap:4px}.v62Range button{padding:6px 8px;font-size:8px;background:#101827;color:#9eabbc;border:1px solid #25344a}.v62Range button.active{color:#f2d78e;border-color:#8a6b2d;background:#1a1810}.v62ChartViewport{height:370px;margin-top:10px;background:linear-gradient(180deg,#0a1019,#080d14);border:1px solid #192437;border-radius:16px;overflow:hidden}.v62ChartViewport .goldChart{height:100%;margin:0;padding:0;border:0;background:transparent}.v62ChartViewport .chartWrap{height:100%;margin:0}.v62ChartTools{display:flex;gap:5px;align-items:center}.v62ChartTools button{font-size:8px;padding:6px 8px}
+.v62Copilot{background:linear-gradient(155deg,#11192a,#0a1019);border:1px solid #34405b;border-radius:24px;padding:16px;min-height:505px;position:sticky;top:14px;box-shadow:0 20px 55px #0007}.v62CopilotHead{display:flex;align-items:center;gap:9px;border-bottom:1px solid #202b3c;padding-bottom:12px}.v62CopilotAvatar{width:37px;height:37px;border-radius:12px;background:#19182a;display:grid;place-items:center;font-size:19px}.v62CopilotHead b{font-size:14px}.v62CopilotHead small{display:block;color:#748198;font-size:8px;margin-top:3px}.v62CopilotLive{margin-right:auto;color:#5ee7a0;font-size:8px}.v62CopilotState{margin-top:14px;padding:11px;border-radius:14px;background:#0a1018;border:1px solid #202b3c}.v62StateLabel{font-size:9px;color:#7f8da2}.v62StateValue{font-size:18px;font-weight:900;margin-top:5px}.v62StateGrid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:8px}.v62StateGrid div{background:#0d141f;border:1px solid #1b2738;border-radius:10px;padding:8px}.v62StateGrid span{display:block;color:#748198;font-size:8px}.v62StateGrid b{display:block;font-size:10px;margin-top:4px}.v62CopilotText{margin-top:11px;color:#c5cedb;font-size:10px;line-height:2.1}.v62Warning{margin-top:11px;padding:10px;border-radius:12px;background:#241d0c;border:1px solid #594820;color:#e8d493;font-size:9px;line-height:1.8}.v62CopilotAsk{display:grid;grid-template-columns:1fr auto;gap:6px;margin-top:12px}.v62CopilotAsk input{font-size:9px;padding:9px}.v62CopilotAsk button{font-size:9px;padding:9px 11px}.v62CopilotLink{width:100%;margin-top:7px;font-size:9px!important;padding:9px!important;background:#101827!important;color:#b9c8dc!important;border:1px solid #26364f!important}
+.v62BottomGrid{display:grid;grid-template-columns:1.15fr .85fr;gap:12px;margin-top:12px}.v62Timeline,.v62PulsePanel{background:#0d131e;border:1px solid #202b3c;border-radius:20px;padding:14px}.v62Timeline h3,.v62PulsePanel h3{font-size:13px;margin:0}.v62TimelineList{margin-top:10px}.v62TimelineItem{display:grid;grid-template-columns:62px 24px 1fr;gap:8px;align-items:center;padding:9px 0;border-top:1px solid #1a2535}.v62TimelineItem:first-child{border-top:0}.v62TimelineTime{font-size:8px;color:#718096}.v62TimelineDot{width:21px;height:21px;border-radius:50%;display:grid;place-items:center;background:#111a28;font-size:10px}.v62TimelineText{font-size:9px;color:#bdc7d5}.v62PulseRows{display:grid;gap:7px;margin-top:10px}.v62PulseRow{display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;padding:9px 10px;background:#0a1018;border:1px solid #1a2637;border-radius:12px;font-size:9px}.v62PulseRow b{font-size:10px}.v62Customize{margin-top:10px;padding:10px;background:#0a1018;border:1px solid #1a2637;border-radius:13px}.v62Customize summary{cursor:pointer;font-size:9px;color:#b8c4d4}.v62Checks{display:flex;flex-wrap:wrap;gap:7px;margin-top:9px}.v62Checks label{font-size:8px;color:#8d9aae;background:#111a28;border:1px solid #243249;border-radius:9px;padding:6px 8px}.v62Checks input{width:auto;vertical-align:middle;margin-left:4px}.v62Collapsed .v62Sidebar{width:76px}.v62Collapsed .v62Sidebar .v62BrandText,.v62Collapsed .v62Sidebar .v62Nav b,.v62Collapsed .v62Sidebar .v62Nav small,.v62Collapsed .v62SideFoot{display:none}.v62Collapsed .v62Nav button{justify-content:center}.v62Collapsed .v62Sidebar{padding:10px}.v62Collapsed .v62Main{min-width:0}.v62Collapsed .v62TerminalShell{grid-template-columns:76px minmax(0,1fr)}
+@media(max-width:1100px){body.v62Terminal .v62TerminalShell{grid-template-columns:82px minmax(0,1fr)}.v62Sidebar .v62BrandText,.v62Sidebar .v62Nav b,.v62Sidebar .v62Nav small,.v62SideFoot{display:none}.v62Nav button{justify-content:center}.v62MainGrid{grid-template-columns:1fr}.v62Copilot{position:relative;top:auto;min-height:0}.v62BottomGrid{grid-template-columns:1fr}}
+@media(max-width:760px){body.v62Terminal .wrap{padding:10px 10px 30px}.v62TerminalShell{display:block!important}.v62Sidebar{position:fixed;z-index:60;right:10px;left:10px;bottom:10px;top:auto;padding:7px;border-radius:18px}.v62Brand,.v62SideFoot,.v62Collapse{display:none}.v62Nav{display:flex;overflow:auto;padding:0}.v62Nav button{min-width:52px;display:grid;gap:3px;padding:7px 5px;justify-items:center;border-radius:11px}.v62Nav .v62Icon{width:25px;height:25px}.v62Nav b{display:none}.v62Nav small{display:none}.v62Header{grid-template-columns:1fr auto}.v62MarketStatus{grid-column:1/-1;grid-row:2;justify-self:stretch;justify-content:center}.v62HeaderActions{grid-column:2}.v62HeaderBrand{grid-column:1}.v62Hero{padding:15px}.v62HeroBottom{display:block}.v62HeroChart{width:100%;height:70px;margin-top:10px}.v62MarketCards{grid-template-columns:1fr 1fr}.v62ChartViewport{height:300px}.v62Copilot{padding:13px}.v62BottomGrid{margin-bottom:70px}.v62MainGrid{gap:10px}}
+@media(max-width:430px){.v62MarketCards{grid-template-columns:1fr 1fr}.v62HeroPrice{font-size:36px}.v62ChartViewport{height:260px}.v62StateGrid{grid-template-columns:1fr 1fr}.v62StateGrid div:last-child{grid-column:1/-1}}
 </style>
 
 <style>
@@ -189,10 +211,21 @@ body.authLocked .floatingMenuBtn,body.authLocked .menuBackdrop,body.authLocked .
 #adminUsersTable table tr:hover{background:#ffffff08}
 #adminLoginBox{background:linear-gradient(145deg,#101827,#080c12);border:1px solid #57451f;border-radius:24px;padding:20px;box-shadow:0 20px 60px #0008}
 @media(max-width:800px){.adminCommandBar h2{font-size:20px}}
+
+<style id="v61-premium-ui">
+.v61DecisionRoom{background:radial-gradient(circle at 90% 0%,#3d2d0d55,transparent 45%),linear-gradient(145deg,#0d141c,#080d13);border:1px solid #4e4022!important;box-shadow:0 22px 55px #0007}
+.v61DecisionHeader{display:flex;justify-content:space-between;gap:16px;align-items:flex-start}.v61DecisionHeader h2{margin:4px 0;font-size:24px}.v61DecisionHeader p{margin:0;color:#9daabd;font-size:11px;line-height:1.9}.v61DecisionLive{padding:8px 12px;border-radius:999px;background:#12291f;border:1px solid #2f7657;color:#86e4b4;font-size:10px;white-space:nowrap}
+.v61MetricGrid,.v61ScenarioGrid,.v61Levels,.v61GuardGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-top:13px}.v61Metric,.v61Levels>div,.v61GuardGrid>div{background:#0a1017;border:1px solid #202b38;border-radius:16px;padding:12px}.v61Metric span,.v61Levels span,.v61GuardGrid span{display:block;color:#8794a5;font-size:9px}.v61Metric b,.v61Levels b,.v61GuardGrid b{display:block;margin-top:6px;font-size:16px;color:#f5d782}.v61Metric small{display:block;margin-top:4px;color:#778596;font-size:9px}
+.v61ActionBar{margin-top:12px;padding:12px 14px;border:1px solid #2b3642;border-radius:16px;background:#0a1017;display:flex;justify-content:space-between;align-items:center;gap:12px}.v61ActionBar span{display:block;color:#8794a5;font-size:9px}.v61ActionBar strong{display:block;margin-top:4px;font-size:17px;color:#f5d782}
+.v61ScenarioGrid{grid-template-columns:repeat(3,1fr)}.v61Scenario{border-radius:17px;padding:13px;border:1px solid #293440;background:#0a1017}.v61Scenario.bullish{border-color:#27573f;background:linear-gradient(145deg,#0b1914,#09110e)}.v61Scenario.base{border-color:#5b4b22;background:linear-gradient(145deg,#18150d,#0c1015)}.v61Scenario.bearish{border-color:#63313a;background:linear-gradient(145deg,#1b1014,#0c0f14)}.v61ScenarioTop{display:flex;justify-content:space-between;align-items:center}.v61ScenarioTop span{font-size:8px;color:#8996a5}.v61Scenario strong{display:block;margin-top:10px;font-size:12px;line-height:1.9}.v61Scenario small{display:block;margin-top:8px;color:#9aa6b5;line-height:1.8}
+.v61Levels{grid-template-columns:repeat(4,1fr)}.v61AIResult{margin-top:12px;padding:12px 14px;border:1px solid #263242;background:#090e14;border-radius:16px;color:#c8d1dc;font-size:11px;line-height:2;min-height:46px;white-space:pre-wrap}.v61SmartAlerts{background:linear-gradient(145deg,#101720,#0a0f15);border-color:#3f3826}.v61AlertIntro{font-size:10px;color:#9aa6b6;line-height:1.9;margin-top:7px}.v61AlertForm{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px}.v61AlertForm input,.v61AlertForm select{min-width:0}.v61AlertForm button{grid-column:1/-1}.v61SmartAlertList{margin-top:12px;display:grid;gap:8px}.v61SmartRow{display:grid;grid-template-columns:1.3fr 2fr auto;gap:10px;align-items:center;background:#0a1017;border:1px solid #202b38;border-radius:15px;padding:11px}.v61SmartRow b{font-size:11px}.v61SmartRow small{display:block;color:#8794a5;line-height:1.8}.v61SmartChips{display:flex;gap:5px;flex-wrap:wrap}.v61SmartChip{font-size:8px;padding:4px 6px;border-radius:999px;background:#18212b;border:1px solid #2b3947;color:#aab5c2}.v61GuardGrid{grid-template-columns:repeat(4,1fr)}.v61AllocationBar{height:14px;border-radius:999px;background:#141b23;display:flex;overflow:hidden;margin-top:12px;border:1px solid #273240}.v61AllocationBar i{display:block;height:100%}.v61AllocationBar i:nth-child(1){background:#2f9e6a}.v61AllocationBar i:nth-child(2){background:#a66a35}.v61AllocationBar i:nth-child(3){background:#5b78b6}
+@media(max-width:800px){.v61MetricGrid,.v61Levels,.v61GuardGrid{grid-template-columns:repeat(2,1fr)}.v61ScenarioGrid{grid-template-columns:1fr}.v61AlertForm{grid-template-columns:1fr 1fr}.v61SmartRow{grid-template-columns:1fr}.v61ActionBar,.v61DecisionHeader{flex-direction:column;align-items:stretch}}
+@media(max-width:450px){.v61DecisionHeader h2{font-size:19px}.v61AlertForm{grid-template-columns:1fr}.v61MetricGrid,.v61Levels,.v61GuardGrid{grid-template-columns:1fr 1fr}}
+</style>
 </style>
 <link rel="stylesheet" href="/auth-premium.css">
 </head>
-<body>
+<body class="v62Terminal">
 <div id="updateBanner" style="display:none;position:sticky;top:0;z-index:900;background:#17140d;border-bottom:1px solid #4a3a19;padding:10px 14px;text-align:center">
   <span id="updateText">نسخه جدید آماده است.</span>
   <button id="updateBtn" class="secondary" style="margin-right:8px">🔄 آپدیت</button>
@@ -262,6 +295,62 @@ body.authLocked .floatingMenuBtn,body.authLocked .menuBackdrop,body.authLocked .
 <div class="dashboardHead"><div><div class="eyebrow">مرکز فرمان بازار</div><h2>پیشخوان امروز طلا</h2></div><div class="liveBadge">● داده‌خوانی خودکار فعال</div></div>
 <div class="liveTicker" id="liveTicker"><div class="tickerMain"><span class="tickerPulse"></span><div><div class="tickerLabel">قیمت زنده طلای ۱۸ عیار</div><div id="tickerPrice" class="tickerPrice">—</div></div></div><div class="tickerSide"><div id="tickerChange" class="tickerChange">—</div><div id="tickerTime" class="tickerTime">در حال اتصال...</div></div></div>
 <div class="livePanel menuSection" id="livePricePanel"><div class="livePriceRow"><div><div class="label">⚡ قیمت زنده • هر گرم طلای ۱۸ عیار</div><div id="livePriceBig" class="livePriceBig">—</div><div class="liveUnit">ریال</div></div><div style="text-align:left"><div id="liveChange" class="change">—</div><div id="liveStatus" class="small" style="margin-top:7px">در حال اتصال...</div></div></div><div class="liveMeta"><div class="liveMetaBox"><span>اونس جهانی</span><b id="liveXau">—</b></div><div class="liveMetaBox"><span>دلار</span><b id="liveDollar">—</b></div><div class="liveMetaBox"><span>به‌روزرسانی</span><b id="liveAge">—</b></div></div><div class="phoneCta"><div style="flex:1">📲 با نصب روی گوشی، همین صفحه را مثل یک اپلیکیشن باز کن. برای اعلان قیمت و هشدارها هم Push را فعال کن.</div><button class="secondary" onclick="enablePush()">🔔 فعال‌سازی اعلان</button></div><div class="installHero"><button id="installBtnHero" class="blue" style="display:none" onclick="installApp()">📲 نصب روی صفحه گوشی</button><button class="secondary" onclick="manualRefresh()">↻ دریافت قیمت جدید</button></div><div class="mobileHint">نمایش قیمت داخل برنامه هر ۱۰ ثانیه تازه می‌شود؛ اعلان گوشی برای جلوگیری از مزاحمت، فقط برای هشدارهای مهم و به‌روزرسانی‌های انتخاب‌شده ارسال می‌شود.</div></div>
+<div class="v62TerminalShell" id="v62TerminalShell">
+  <aside class="v62Sidebar" id="v62Sidebar">
+    <div class="v62Brand"><div class="v62BrandMark">Au</div><div class="v62BrandText"><b>Gold2 Pro</b><small>V62 Market Terminal</small></div></div>
+    <nav class="v62Nav" id="v62Nav">
+      <button class="active" data-v62cat="dashboard" type="button"><span class="v62Icon">⌂</span><span><b>پیشخوان</b><small>نمای اصلی بازار</small></span></button>
+      <button data-v62cat="market" type="button"><span class="v62Icon">↗</span><span><b>بازار</b><small>نمودار و قیمت</small></span></button>
+      <button data-v62cat="ai" type="button"><span class="v62Icon">✦</span><span><b>AI Decision Room</b><small>تحلیل هوشمند</small></span></button>
+      <button data-v62cat="alerts" type="button"><span class="v62Icon">◉</span><span><b>هشدارها</b><small>Timeline و Push</small></span></button>
+      <button data-v62cat="tools" type="button"><span class="v62Icon">▣</span><span><b>پرتفوی</b><small>دارایی و ابزار</small></span></button>
+      <button data-v62cat="news" type="button"><span class="v62Icon">≡</span><span><b>اخبار</b><small>اخبار بازار</small></span></button>
+      <button data-v62cat="account" type="button"><span class="v62Icon">●</span><span><b>حساب</b><small>تنظیمات</small></span></button>
+    </nav>
+    <button class="v62Collapse" id="v62Collapse" type="button">◀ جمع‌کردن منو</button>
+    <div class="v62SideFoot">داده‌های بازار لحظه‌ای هستند. تحلیل‌ها سناریویی‌اند و تضمین نتیجه آینده نیستند.</div>
+  </aside>
+  <main class="v62Main">
+    <header class="v62Header">
+      <div class="v62HeaderBrand"><div class="v62BrandMark" style="width:34px;height:34px;border-radius:10px;font-size:16px">Au</div><div><b>Gold2 Pro</b><span>Market Terminal • V62</span></div></div>
+      <div class="v62MarketStatus"><span class="v62LiveDot"></span><b id="v62MarketState">LIVE</b><span id="v62UpdateAge">آخرین بروزرسانی —</span></div>
+      <div class="v62HeaderActions"><button class="v62Notif" type="button" onclick="applyCategory('alerts')">🔔<i id="v62NotifCount">0</i></button><button type="button" onclick="applyCategory('account')">👤 <span id="v62AccountName">حساب کاربری</span></button><button class="v62CopilotBtn" type="button" onclick="document.getElementById('v62CopilotQuestion')?.focus();document.getElementById('v62Copilot')?.scrollIntoView({behavior:'smooth',block:'center'})">AI Copilot</button></div>
+    </header>
+    <section class="v62MainGrid">
+      <div>
+        <section class="v62Hero">
+          <div class="v62HeroTop"><div><div class="v62Kicker">MARKET HERO • GOLD 18K / 750</div><div class="v62HeroTitle">طلای ۱۸ عیار</div><div class="v62HeroPrice" id="v62GoldPrice">—</div><div class="v62Unit">ریال / هر گرم</div></div><div class="v62HeroLive"><span class="v62LiveDot" style="display:inline-block;margin-left:5px"></span> LIVE</div></div>
+          <div class="v62HeroMeta"><div class="v62Pill">تغییر <b id="v62GoldChange">—</b></div><div class="v62Pill">آخرین قیمت <b id="v62GoldTime">—</b></div><div class="v62Pill">منبع <b>TGJU</b></div></div>
+          <div class="v62HeroBottom"><div class="v62Source">وضعیت داده: <strong id="v62DataQuality">در حال بررسی</strong></div><div class="v62HeroChart" id="v62HeroChart"></div></div>
+        </section>
+        <section class="v62MarketCards" id="v62MarketCards">
+          <div class="v62MarketCard"><span>طلای ۱۸K</span><b id="v62CardGold">—</b><em id="v62CardGoldCh">—</em></div>
+          <div class="v62MarketCard"><span>دلار آزاد</span><b id="v62CardDollar">—</b><em id="v62CardDollarCh">—</em></div>
+          <div class="v62MarketCard"><span>اونس جهانی</span><b id="v62CardXau">—</b><em id="v62CardXauCh">—</em></div>
+          <div class="v62MarketCard"><span>مظنه / گرمی</span><b id="v62CardGram">—</b><em id="v62CardGramCh">—</em></div>
+        </section>
+        <section class="v62ChartPanel">
+          <div class="v62PanelHead"><div><h3>LIVE GOLD CHART</h3><small>نمودار زنده • حمایت • مقاومت • سیگنال</small></div><div class="v62ChartTools"><button class="active" type="button" onclick="v62ChartRange(this,60)">1H</button><button type="button" onclick="v62ChartRange(this,120)">4H</button><button type="button" onclick="v62ChartRange(this,240)">1D</button><button type="button" onclick="v62ChartRange(this,480)">1W</button></div></div>
+          <div class="v62ChartViewport"><div class="goldChart" id="v62GoldChart"><div class="chartWrap"><div class="chartEmpty">در حال دریافت نمودار...</div></div></div></div>
+        </section>
+      </div>
+      <aside class="v62Copilot" id="v62Copilot">
+        <div class="v62CopilotHead"><div class="v62CopilotAvatar">🧠</div><div><b>AI Copilot</b><small>دستیار بازار • تحلیل ساده و لحظه‌ای</small></div><span class="v62CopilotLive" id="v62CopilotLive">LIVE</span></div>
+        <div class="v62CopilotState"><div class="v62StateLabel">وضعیت بازار</div><div class="v62StateValue" id="v62AiTrend">در حال بررسی</div><div class="v62StateGrid"><div><span>روند</span><b id="v62AiTrendMeta">—</b></div><div><span>مومنتوم</span><b id="v62AiMomentum">—</b></div><div><span>ریسک</span><b id="v62AiRisk">—</b></div></div></div>
+        <div class="v62CopilotText" id="v62AiSummary">در حال خواندن قیمت، نمودار و ساختار بازار...</div>
+        <div class="v62Warning" id="v62AiWarning">⚠ هشدار: در حال بررسی مقاومت و حمایت نزدیک.</div>
+        <div class="v62CopilotAsk"><input id="v62CopilotQuestion" placeholder="مثلاً: وضعیت فعلی بازار چیست؟"><button type="button" onclick="v62AskCopilot()">بپرس</button></div>
+        <button class="v62CopilotLink" type="button" onclick="applyCategory('ai')">تحلیل کامل AI →</button>
+      </aside>
+    </section>
+    <section class="v62BottomGrid">
+      <div class="v62Timeline"><div class="v62PanelHead"><div><h3>SMART ALERTS • TIMELINE</h3><small>آخرین رویدادهای مهم بازار</small></div><button class="secondary" style="padding:6px 9px;font-size:8px" type="button" onclick="applyCategory('alerts')">همه هشدارها</button></div><div class="v62TimelineList" id="v62TimelineList"><div class="v62TimelineItem"><span class="v62TimelineTime">—</span><span class="v62TimelineDot">⏳</span><span class="v62TimelineText">در حال دریافت رویدادها...</span></div></div></div>
+      <div class="v62PulsePanel"><div class="v62PanelHead"><div><h3>MARKET PULSE</h3><small>وضعیت بازار در یک نگاه</small></div></div><div class="v62PulseRows"><div class="v62PulseRow"><span>طلای ۱۸K</span><b id="v62PulseGold">—</b><span id="v62PulseGoldCh">—</span></div><div class="v62PulseRow"><span>دلار</span><b id="v62PulseDollar">—</b><span id="v62PulseDollarCh">—</span></div><div class="v62PulseRow"><span>اونس</span><b id="v62PulseXau">—</b><span id="v62PulseXauCh">—</span></div><div class="v62PulseRow"><span>گرمی</span><b id="v62PulseGram">—</b><span id="v62PulseGramCh">—</span></div></div>
+        <details class="v62Customize"><summary>⚙ شخصی‌سازی داشبورد</summary><div class="v62Checks"><label><input type="checkbox" checked data-v62-widget="hero"> طلای 18K</label><label><input type="checkbox" checked data-v62-widget="pulse"> Market Pulse</label><label><input type="checkbox" checked data-v62-widget="ai"> AI Copilot</label><label><input type="checkbox" checked data-v62-widget="alerts"> هشدارها</label><label><input type="checkbox" checked data-v62-widget="portfolio"> پرتفوی</label></div></details>
+      </div>
+    </section>
+  </main>
+</div>
 <div class="sectionIntro" id="categoryIntro"><b id="categoryTitle">پیشخوان</b><span id="categoryDesc">قیمت زنده، وضعیت امروز و سیگنال کلی بازار</span></div><div class="accountQuick"><div><span class="small">وضعیت حساب</span><b id="quickAccountStatus">در حال بررسی...</b></div><div class="quickActions"><button class="secondary smallBtn" onclick="openAccountQuickMenu()">👤 حساب من</button><button class="secondary smallBtn" onclick="logoutAndRelogin()">🚪 خروج و ورود مجدد</button></div></div>
 
 <section class="card commandCenter categorySection category-dashboard"><div class="sectionTitle"><div><h3>✨ مرکز کنترل سرمایه</h3><span>نمای سریع بازار، دارایی و هشدارها</span></div><div class="liveBadge">LIVE</div></div><div class="commandGrid"><div class="commandBox"><span>ارزش سبد</span><b id="ccPortfolioValue">—</b><small id="ccPortfolioPnl">—</small></div><div class="commandBox"><span>روند بازار</span><b id="ccTrend">—</b><small id="ccTrendMeta">—</small></div><div class="commandBox"><span>ریسک</span><b id="ccRisk">—</b><small>بر پایه داده‌های موجود</small></div><div class="commandBox"><span>هشدارهای فعال</span><b id="ccAlerts">—</b><small>هدف قیمت و بازار</small></div></div><div class="quickFeatureGrid"><button class="featureTile" onclick="applyCategory('market')">📊<b>بازار</b><small>نمودار و تکنیکال</small></button><button class="featureTile" onclick="applyCategory('ai')">🤖<b>AI</b><small>تحلیل و دستیار</small></button><button class="featureTile" onclick="applyCategory('alerts')">🔔<b>هشدار</b><small>قیمت و Push</small></button><button class="featureTile" onclick="applyCategory('tools')">💼<b>دارایی</b><small>سبد و سناریو</small></button><button class="featureTile" onclick="applyCategory('decision')">🧠<b>اتاق تصمیم</b><small>سناریو و کنترل</small></button><button class="featureTile" onclick="applyCategory('account')">👤<b>حساب</b><small>پشتیبانی و بکاپ</small></button></div></section>
@@ -288,6 +377,24 @@ body.authLocked .floatingMenuBtn,body.authLocked .menuBackdrop,body.authLocked .
 <div class="decisionGrid"><div class="decisionBox"><span>روند</span><b id="dsTrend">—</b></div><div class="decisionBox"><span>حمایت</span><b id="dsSupport">—</b></div><div class="decisionBox"><span>مقاومت</span><b id="dsResistance">—</b></div><div class="decisionBox"><span>اعتماد ساختار</span><b id="dsConfidence">—</b></div></div>
 <div class="decisionGrid"><div class="decisionBox"><span>سیگنال تکنیکال</span><b id="dsSignal">—</b></div><div class="decisionBox"><span>فشار خرید</span><b id="dsBuy">—</b></div><div class="decisionBox"><span>فشار فروش</span><b id="dsSell">—</b></div><div class="decisionBox"><span>وضعیت</span><b id="dsState">—</b></div></div>
 <div id="dsReason" class="note" style="margin-top:10px">در حال دریافت ساختار بازار...</div>
+</section>
+
+<section class="card categorySection category-decision v61DecisionRoom" id="v61DecisionRoom">
+  <div class="v61DecisionHeader"><div><div class="eyebrow">AI DECISION ROOM • v61</div><h2>🧠 اتاق تصمیم هوشمند</h2><p>بازار را ساده ببین: روند، ریسک، سناریو و شرط تغییر وضعیت در یک نگاه.</p></div><div class="v61DecisionLive" id="v61DecisionLive">در حال بررسی</div></div>
+  <div class="v61MetricGrid">
+    <div class="v61Metric"><span>رژیم بازار</span><b id="v61Regime">—</b><small id="v61TrendMeta">—</small></div>
+    <div class="v61Metric"><span>سیگنال</span><b id="v61Signal">—</b><small id="v61Score">امتیاز —</small></div>
+    <div class="v61Metric"><span>ریسک</span><b id="v61Risk">—</b><small id="v61RiskMeta">—</small></div>
+    <div class="v61Metric"><span>کیفیت داده</span><b id="v61Quality">—</b><small id="v61QualityMeta">—</small></div>
+  </div>
+  <div class="v61ActionBar"><div><span>سناریوی فعلی</span><strong id="v61Action">—</strong></div><button class="aiBtn" id="v61DecisionAI">🤖 توضیح ساده AI</button></div>
+  <div class="v61ScenarioGrid">
+    <div class="v61Scenario bullish"><div class="v61ScenarioTop"><b>🟢 صعودی</b><span>شرط تأیید</span></div><strong id="v61BullCond">—</strong><small id="v61BullRisk">—</small></div>
+    <div class="v61Scenario base"><div class="v61ScenarioTop"><b>🟡 پایه</b><span>وضعیت میانه</span></div><strong id="v61BaseCond">—</strong><small id="v61BaseRisk">—</small></div>
+    <div class="v61Scenario bearish"><div class="v61ScenarioTop"><b>🔴 نزولی</b><span>شرط تأیید</span></div><strong id="v61BearCond">—</strong><small id="v61BearRisk">—</small></div>
+  </div>
+  <div class="v61Levels"><div><span>حمایت</span><b id="v61Support">—</b></div><div><span>مقاومت</span><b id="v61Resistance">—</b></div><div><span>فاصله تا حمایت</span><b id="v61SupportDistance">—</b></div><div><span>فاصله تا مقاومت</span><b id="v61ResistanceDistance">—</b></div></div>
+  <div id="v61DecisionAIResult" class="v61AIResult">تحلیل AI بعد از ورود به حساب فعال می‌شود.</div>
 </section>
 
 <section class="card menuSection categorySection category-market" id="goldChartCard">
@@ -350,6 +457,25 @@ body.authLocked .floatingMenuBtn,body.authLocked .menuBackdrop,body.authLocked .
 <div class="smsCodeRow"><input id="smsActivationCode" inputmode="numeric" placeholder="کد ۶ رقمی فعال‌سازی" maxlength="6"><button class="secondary" onclick="activateSmsPremium()">🔓 فعال‌سازی</button></div>
 <div id="smsPremiumStatus" class="smsStatus">در حال بررسی وضعیت سرویس...</div>
 <div class="note" style="margin-top:9px">⚠️ پرداخت کارت‌به‌کارت تا زمان تأیید مدیریت خودکار تأیید نمی‌شود. کلید IPPanel فقط روی سرور نگهداری می‌شود.</div>
+</section>
+
+<section class="card menuSection categorySection category-alerts v61SmartAlerts" id="smartAlertsV61">
+  <div class="sectionTitle"><div><h3>🧠 هشدارهای هوشمند ترکیبی</h3><span>قیمت + روند + RSI + سیگنال + فشار بازار</span></div><span class="smartBadge">LIVE ENGINE</span></div>
+  <div class="v61AlertIntro">به‌جای یک شرط ساده، چند شرط را کنار هم بگذار. هشدار فقط وقتی ارسال می‌شود که همه شروط فعال باشند.</div>
+  <div class="v61AlertForm">
+    <input id="v61AlertName" placeholder="نام هشدار؛ مثلاً شکست مقاومت">
+    <input id="v61AlertAbove" type="number" placeholder="قیمت بالاتر از (اختیاری)">
+    <input id="v61AlertBelow" type="number" placeholder="قیمت پایین‌تر از (اختیاری)">
+    <select id="v61AlertTrend"><option value="">هر روند</option><option value="UP">صعودی</option><option value="SIDEWAYS">خنثی</option><option value="DOWN">نزولی</option></select>
+    <select id="v61AlertSignal"><option value="">هر سیگنال</option><option value="BUY">خرید</option><option value="WATCH_BUY">مراقبت خرید</option><option value="SELL">فروش</option><option value="WATCH_SELL">مراقبت فروش</option></select>
+    <input id="v61AlertScore" type="number" min="0" max="100" placeholder="حداقل امتیاز">
+    <input id="v61AlertMinRsi" type="number" min="0" max="100" placeholder="RSI حداقل">
+    <input id="v61AlertMaxRsi" type="number" min="0" max="100" placeholder="RSI حداکثر">
+    <select id="v61AlertPressure"><option value="">هر فشار</option><option value="BUY">فشار خرید ≥ 65٪</option><option value="SELL">فشار فروش ≥ 65٪</option><option value="BALANCED">بازار متعادل</option></select>
+    <input id="v61AlertChange" type="number" step="0.1" placeholder="حداقل تغییر ۷ تیک (%)">
+    <button id="v61SmartAlertAdd">🔔 ثبت هشدار هوشمند</button>
+  </div>
+  <div id="v61SmartAlertList" class="v61SmartAlertList"><div class="emptyAlert">هنوز هشدار هوشمندی ثبت نشده است.</div></div>
 </section>
 
 <section class="card menuSection categorySection category-alerts" id="alerts"><div class="sectionTitle"><h3>🔔 اعلان‌ها</h3><span>سیگنال، هدف و فشار بازار</span></div><div class="buttons"><button onclick="enablePush()">🔔 فعال‌کردن اعلان گوشی</button><button class="secondary" onclick="enableBrowserNotification()">🖥️ فعال‌سازی اعلان کامپیوتر</button></div><div class="small" style="margin-top:7px">هشدارهای مهم: سیگنال، رسیدن به هدف/حدضرر و عبور فشار خرید یا فروش از آستانه.</div></section>
@@ -493,6 +619,13 @@ body.authLocked .floatingMenuBtn,body.authLocked .menuBackdrop,body.authLocked .
 <div id="g59PortfolioSummary" class="g59PortfolioSummary">اطلاعات سبد از بخش دارایی خوانده می‌شود.</div>
 </section>
 
+<section class="card categorySection category-tools v61PortfolioGuard" id="v61PortfolioGuard">
+  <div class="sectionTitle"><div><h3>🛡️ محافظ هوشمند پرتفوی</h3><span>سناریوی نگهداری، کاهش یا افزایش پله‌ای</span></div><button class="secondary" id="v61PortfolioRefresh">↻ بروزرسانی</button></div>
+  <div class="v61GuardGrid"><div><span>نگهداری</span><b id="v61KeepPct">—</b></div><div><span>کاهش ریسک</span><b id="v61ReducePct">—</b></div><div><span>افزایش پله‌ای</span><b id="v61AddPct">—</b></div><div><span>امتیاز بازار</span><b id="v61PortScore">—</b></div></div>
+  <div class="v61AllocationBar"><i id="v61KeepBar"></i><i id="v61ReduceBar"></i><i id="v61AddBar"></i></div>
+  <div id="v61PortfolioText" class="v61AIResult">اطلاعات محافظ پرتفوی بعد از ثبت دارایی و ورود به حساب نمایش داده می‌شود.</div>
+</section>
+
 <section class="card categorySection category-intelligence giSection" id="goldIntelligence">
 <div class="giHeader"><div><div class="eyebrow">GOLD INTELLIGENCE</div><h2>🧠 مرکز هوش و ابزارهای طلا</h2><p>همه ابزارهای تحلیلی، پایش، سناریو و مدیریت شخصی در یک فضای طبقه‌بندی‌شده.</p></div><div class="giHeaderActions"><span id="giStatus" class="giStatus good">● در حال آماده‌سازی</span><button id="giRefresh" class="secondary">↻ تازه‌سازی</button></div></div>
 <div class="giTabs"><button class="giTab active" data-gi-cat="intelligence">مرکز هوش</button><button class="giTab" data-gi-cat="market">بازار</button><button class="giTab" data-gi-cat="tools">دارایی</button><button class="giTab" data-gi-cat="ai">AI</button><button class="giTab" data-gi-cat="alerts">هشدارها</button></div>
@@ -512,11 +645,11 @@ body.authLocked .floatingMenuBtn,body.authLocked .menuBackdrop,body.authLocked .
 
 <footer class="footer">Gold Alert Pro © 2026<br><strong>طراح و توسعه: عباس صدیق آرانی</strong><br>۰۹۱۳۰۱۱۵۹۲۰<br>این سامانه ابزار پایش و تحلیل است؛ سیگنال‌ها قطعی و تضمین‌کننده سود نیستند.</footer>
 </div>
-<script src="/app.js?v=60.1.0" defer></script>
-<script src="/gold-intelligence.js?v=60.1.0" defer></script>
+<script src="/app.js?v=61.0.0" defer></script>
+<script src="/gold-intelligence.js?v=61.0.0" defer></script>
 
 <script>
-const APP_BUILD_VERSION='v60-auto-cache';
+const APP_BUILD_VERSION='v61-ai-decision-smart-alerts';
 if('serviceWorker' in navigator){
  window.addEventListener('load',()=>{
   navigator.serviceWorker.register('/sw.js?v='+APP_BUILD_VERSION);

@@ -15,7 +15,7 @@ import { adminLogin, requireAdminToken, requireAdminSession, adminLogout, listUs
 import { analyzeGold } from "./ai/manager.js";
 import { getTheme, setTheme } from "./theme.js";
 
-const APP_VERSION = "60.0.0"
+const APP_VERSION = "61.0.0"
 const USER_SESSION_HOURS = Math.max(1, Number(process.env.USER_SESSION_HOURS || 72));
 const LOGIN_WINDOW_MS = 10 * 60_000;
 const LOGIN_MAX_ATTEMPTS = 12;
@@ -41,6 +41,7 @@ const PROFILES_FILE = path.join(DATA_DIR, "profiles.json");
 const ECONOMIC_EVENTS_FILE = path.join(DATA_DIR, "economic-events.json");
 const NOTIFICATIONS_FILE = path.join(DATA_DIR, "notifications.json");
 const AUDIT_FILE = path.join(DATA_DIR, "audit-log.json");
+const SMART_ALERTS_FILE = path.join(DATA_DIR, "smart-alerts.json");
 const PAYMENTS_FILE = path.join(DATA_DIR, "payments.json");
 const USER_SETTINGS_FILE = path.join(DATA_DIR, "user-settings.json");
 const UPDATE_MANIFEST_URL = String(process.env.UPDATE_MANIFEST_URL || "").trim();
@@ -118,7 +119,7 @@ const state = {
   engineStatus: { status: "STARTING", label: "در حال راه‌اندازی", source: null, sourceAgeMs: null, reason: null },
   sourceDiagnostics: null,
   portfolioRisk: { lastKey: "", lastAt: 0 },
-  historyLoaded: false, activeTrade: null, targetEvents: [], personalAlerts: [], busy: false, consecutiveErrors: 0
+  historyLoaded: false, activeTrade: null, targetEvents: [], personalAlerts: [], smartAlerts: [], busy: false, consecutiveErrors: 0
 };
 
 const sseClients = new Set();
@@ -323,6 +324,66 @@ function schedulePersonalAlertSave() {
 }
 function cleanDeviceId(v) { return String(v || "").trim().slice(0, 120); }
 function cleanAlert(a) { return { id: String(a.id), deviceId: cleanDeviceId(a.deviceId), direction: a.direction === "below" ? "below" : "above", price: Number(a.price), label: String(a.label || "طلای ۱۸ عیار").slice(0, 80), createdAt: a.createdAt || new Date().toISOString(), triggeredAt: a.triggeredAt || null }; }
+function cleanSmartAlert(a) {
+  const c=a?.conditions||{};
+  const num=v=>{const n=Number(v);return Number.isFinite(n)?n:null};
+  return {
+    id:String(a.id||crypto.randomUUID()),
+    deviceId:cleanDeviceId(a.deviceId),
+    name:String(a.name||"هشدار هوشمند").slice(0,80),
+    active:a.active!==false,
+    createdAt:a.createdAt||new Date().toISOString(),
+    triggeredAt:a.triggeredAt||null,
+    lastTriggeredAt:a.lastTriggeredAt||null,
+    conditions:{
+      priceAbove:num(c.priceAbove), priceBelow:num(c.priceBelow),
+      trend:["UP","DOWN","SIDEWAYS"].includes(String(c.trend||''))?String(c.trend):null,
+      signal:["BUY","SELL","WATCH_BUY","WATCH_SELL","WAIT"].includes(String(c.signal||''))?String(c.signal):null,
+      minScore:num(c.minScore), minRsi:num(c.minRsi), maxRsi:num(c.maxRsi),
+      changePct:num(c.changePct), pressure:["BUY","SELL","BALANCED"].includes(String(c.pressure||''))?String(c.pressure):null
+    }
+  };
+}
+let smartAlertSaveTimer=null;
+function scheduleSmartAlertSave(){
+  clearTimeout(smartAlertSaveTimer);
+  smartAlertSaveTimer=setTimeout(async()=>{try{await fs.mkdir(DATA_DIR,{recursive:true});await fs.writeFile(SMART_ALERTS_FILE,JSON.stringify(state.smartAlerts.slice(0,5000)),"utf8");}catch(e){console.warn("Smart alert persistence unavailable:",e.message);}},200);
+}
+async function loadSmartAlerts(){try{const raw=await fs.readFile(SMART_ALERTS_FILE,"utf8");const saved=JSON.parse(raw);if(Array.isArray(saved))state.smartAlerts=saved.map(cleanSmartAlert).slice(0,5000);}catch{}}
+function smartAlertMatches(a){
+  const c=a.conditions||{}, price=Number(state.iran?.priceIRR||0), an=state.analysis||{}, ms=marketStructure(state.prices), mp=state.marketPressure||{};
+  if(!price)return {ok:false,reason:'price-unavailable'};
+  if(c.priceAbove!=null && price < c.priceAbove)return {ok:false};
+  if(c.priceBelow!=null && price > c.priceBelow)return {ok:false};
+  if(c.trend && ms.trend!==c.trend)return {ok:false};
+  if(c.signal && an.signal!==c.signal)return {ok:false};
+  if(c.minScore!=null && Number(an.score||0) < c.minScore)return {ok:false};
+  if(c.minRsi!=null && (an.rsi==null || Number(an.rsi) < c.minRsi))return {ok:false};
+  if(c.maxRsi!=null && (an.rsi==null || Number(an.rsi) > c.maxRsi))return {ok:false};
+  if(c.changePct!=null){const base=state.prices.length>6?Number(state.prices.at(-7)):0;const ch=base?(price/base-1)*100:0;if(Math.abs(ch)<Math.abs(c.changePct))return {ok:false};}
+  if(c.pressure==='BUY' && Number(mp.buy||0)<65)return {ok:false};
+  if(c.pressure==='SELL' && Number(mp.sell||0)<65)return {ok:false};
+  if(c.pressure==='BALANCED' && Math.abs(Number(mp.buy||50)-Number(mp.sell||50))>15)return {ok:false};
+  return {ok:true,price,analysis:an,market:ms,pressure:mp};
+}
+async function checkSmartAlerts(){
+  if(!state.smartAlerts.length)return;
+  const now=Date.now(); const cooldownMs=Math.max(5,Number(process.env.SMART_ALERT_COOLDOWN_MIN||20))*60000;
+  let changed=false;
+  for(const a of state.smartAlerts){
+    if(!a.active||!a.deviceId)continue;
+    const last=Date.parse(a.lastTriggeredAt||0)||0; if(now-last<cooldownMs)continue;
+    const hit=smartAlertMatches(a); if(!hit.ok)continue;
+    const price=hit.price; const signalFa={BUY:'خرید',SELL:'فروش',WATCH_BUY:'مراقبت برای خرید',WATCH_SELL:'مراقبت برای فروش',WAIT:'انتظار'}[hit.analysis?.signal]||'انتظار';
+    const body=`${a.name} فعال شد\nطلای ۱۸: ${rial(price)} ریال\nروند: ${hit.market.trendFa||'—'} | سیگنال: ${signalFa}\nامتیاز: ${Math.round(Number(hit.analysis?.score||0))}% | RSI: ${hit.analysis?.rsi==null?'—':Number(hit.analysis.rsi).toFixed(1)}\nاین هشدار خودکار است و تضمین نتیجه آینده نیست.`;
+    a.lastTriggeredAt=new Date().toISOString(); a.triggeredAt=a.triggeredAt||a.lastTriggeredAt; changed=true;
+    await safeAlert(()=>sendWebPushToDevice(a.deviceId,{title:`🧠 ${a.name}`,body,icon:'/icon-192.png',badge:'/icon-192.png',tag:`smart-alert-${a.id}`,renotify:true,data:{url:'/#smartAlertsV61'}},`SMART_${a.id}`,price));
+    try{const acc=await accountByDevice(a.deviceId);if(acc?.id)await addNotification(acc.id,`🧠 ${a.name}`,body,'smart-alert');}catch{}
+  }
+  if(changed)scheduleSmartAlertSave();
+}
+async function accountByDevice(deviceId){const store=await readJsonFile(ACCOUNTS_FILE,{});return Object.values(store).find(x=>cleanDeviceId(x?.deviceId)===cleanDeviceId(deviceId))||null;}
+
 async function checkPersonalPriceAlerts(price) {
   if (!Number.isFinite(price) || price <= 0) return;
   let changed = false;
@@ -533,6 +594,7 @@ async function tick() {
     await safeAlert(() => emitLivePricePush(iran, global, dollar));
     await safeAlert(() => checkTargets(iran.priceIRR));
     await safeAlert(() => checkPersonalPriceAlerts(iran.priceIRR));
+    await safeAlert(() => checkSmartAlerts());
     await safeAlert(() => sendPremiumPriceSMS({ iran, global, dollar, coins, analysis: state.analysis }));
     const a = state.analysis;
     if (a && ["BUY", "SELL"].includes(a.signal) && a.score >= minScore && a.signal !== state.lastSignal) await emitSignal(a);
@@ -741,6 +803,55 @@ app.delete("/api/price-alerts/:id", async (req, res) => {
   state.personalAlerts = state.personalAlerts.filter(a => !(a.deviceId === deviceId && String(a.id) === id));
   if (state.personalAlerts.length !== before) schedulePersonalAlertSave();
   res.json({ ok: true, removed: before !== state.personalAlerts.length });
+});
+app.get("/api/smart-alerts", async (req,res)=>{
+  const deviceId=cleanDeviceId(req.query.deviceId);
+  const mine=state.smartAlerts.filter(a=>a.deviceId===deviceId).sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt)));
+  res.set("Cache-Control","no-store");
+  res.json({ok:true,alerts:mine});
+});
+app.post("/api/smart-alerts", async (req,res)=>{
+  try{
+    const deviceId=cleanDeviceId(req.body?.deviceId); if(!deviceId)return res.status(400).json({error:"deviceId required"});
+    if(!(await accountFromReq(req)))return res.status(401).json({error:"برای ثبت هشدار هوشمند ابتدا وارد حساب شوید."});
+    const max=Math.max(1,Number(process.env.SMART_ALERT_MAX_PER_DEVICE||12));
+    if(state.smartAlerts.filter(a=>a.deviceId===deviceId&&a.active).length>=max)return res.status(429).json({error:`حداکثر ${max} هشدار هوشمند فعال مجاز است.`});
+    const a=cleanSmartAlert({deviceId,name:req.body?.name,conditions:req.body?.conditions});
+    if(!Object.values(a.conditions).some(v=>v!==null&&v!==''))return res.status(400).json({error:"حداقل یک شرط برای هشدار تعیین کنید."});
+    state.smartAlerts.unshift(a); state.smartAlerts=state.smartAlerts.slice(0,5000); scheduleSmartAlertSave();
+    res.json({ok:true,alert:a});
+  }catch(e){res.status(400).json({error:e.message});}
+});
+app.delete("/api/smart-alerts/:id", async (req,res)=>{
+  const deviceId=cleanDeviceId(req.query.deviceId); const account=await accountFromReq(req); if(!account)return res.status(401).json({error:"ابتدا وارد حساب شوید."});
+  const id=String(req.params.id||''); const before=state.smartAlerts.length; state.smartAlerts=state.smartAlerts.filter(a=>!(a.deviceId===deviceId&&a.id===id));
+  if(before!==state.smartAlerts.length)scheduleSmartAlertSave(); res.json({ok:true,removed:before!==state.smartAlerts.length});
+});
+
+app.get("/api/decision-room", async (req,res)=>{
+  const ms=marketStructure(state.prices); const a=state.analysis||{}; const mp=state.marketPressure||{}; const price=Number(state.iran?.priceIRR||0);
+  const risk=Math.min(100,Math.max(0,Math.round((Number(a.rsi||50)>72||Number(a.rsi||50)<28?35:10)+(Number(a.score||0)<55?25:10)+(Number(state.anomaly?.detected?1:0)*20)+Math.max(0,Math.round(20-Math.abs(Number(mp.buy||50)-50))))));
+  const q=state.engineStatus?.status==='LIVE'?'GOOD':state.engineStatus?.status==='STALE'?'STALE':'OFFLINE';
+  let regime='نوسانی / خنثی'; if(ms.trend==='UP')regime='روند صعودی'; if(ms.trend==='DOWN')regime='روند نزولی';
+  const current=price; const support=Number(ms.support||0), resistance=Number(ms.resistance||0);
+  const distanceToResistance=current&&resistance?((resistance-current)/current*100):null; const distanceToSupport=current&&support?((current-support)/current*100):null;
+  const scenarios={bullish:{title:'سناریوی صعودی',condition:resistance&&current>resistance?'شکست مقاومت تأیید شده':'عبور از مقاومت با تثبیت قیمت',risk:'شکست ناموفق مقاومت و برگشت قیمت'},base:{title:'سناریوی پایه',condition:'نوسان بین حمایت و مقاومت',risk:'افزایش ناگهانی نوسان یا خبر مهم'},bearish:{title:'سناریوی نزولی',condition:support&&current<support?'شکست حمایت تأیید شده':'از دست رفتن حمایت',risk:'ادامه فشار فروش'}};
+  let action='صبر و مشاهده'; if(a.signal==='BUY'&&Number(a.score||0)>=70&&Number(mp.buy||0)>=60)action='خرید پله‌ای / بررسی ورود'; else if(a.signal==='SELL'&&Number(a.score||0)>=70&&Number(mp.sell||0)>=60)action='کاهش ریسک / بررسی فروش پله‌ای';
+  res.json({ok:true,generatedAt:new Date().toISOString(),dataAt:state.updatedAt,price,source:state.iran?.source||null,engineStatus:state.engineStatus,quality:q,regime,trend:ms,analysis:a,pressure:mp,risk:{score:risk,label:risk>=70?'بالا':risk>=45?'متوسط':'پایین'},action,distanceToResistance,distanceToSupport,scenarios,disclaimer:'این خروجی سناریویی و آموزشی است؛ دستور قطعی معامله یا تضمین سود نیست.'});
+});
+app.post("/api/ai-decision", async (req,res)=>{
+  const account=await accountFromReq(req); if(!account)return res.status(401).json({error:"برای تحلیل AI این بخش ابتدا وارد حساب شوید."});
+  if(!aiAllowed(req.ip||'unknown'))return res.status(429).json({error:'تعداد درخواست‌های AI زیاد است. کمی بعد دوباره امتحان کنید.'});
+  const q=String(req.body?.question||'').trim().slice(0,1000);
+  const context={price:state.iran?.priceIRR||null,source:state.iran?.source||null,engine:state.engineStatus,structure:marketStructure(state.prices),analysis:state.analysis,pressure:state.marketPressure,anomaly:state.anomaly,question:q};
+  try{
+    const out=await callGapGPT([{role:'system',content:'تو دستیار تصمیم Gold Alert Pro هستی. فارسی، ساده و خیلی قابل فهم توضیح بده. فقط از داده ارائه‌شده استفاده کن. نتیجه را سناریویی بگو و دستور قطعی خرید/فروش یا تضمین سود نده. اگر داده منبع قدیمی است اول آن را بگو.'},{role:'user',content:`این وضعیت بازار طلاست:\n${JSON.stringify(context,null,2)}\n\nتحلیل را با این ساختار بده: «الان چه خبر است؟»، «سناریوی محتمل فعلی»، «چه چیزی باید تأیید شود؟»، «چه هشداری فعال است؟»، «ریسک اصلی چیست؟». اگر کاربر سؤال داده، آخر پاسخ مستقیم جواب بده.`}],{temperature:0.2,max_tokens:900,timeoutMs:30000});
+    res.json({ok:true,provider:out.model,text:out.text,at:new Date().toISOString(),dataAt:state.updatedAt});
+  }catch(e){
+    const d=marketStructure(state.prices),a=state.analysis||{},mp=state.marketPressure||{};
+    const text=`الان بازار ${d.trendFa||'نامشخص'} است. سیگنال فعلی ${a.signal||'WAIT'} با امتیاز ${Math.round(Number(a.score||0))}٪ است. حمایت ${d.support?rial(d.support):'نامشخص'} و مقاومت ${d.resistance?rial(d.resistance):'نامشخص'} است. ${Number(mp.buy||0)>60?'فشار خرید بیشتر است':Number(mp.sell||0)>60?'فشار فروش بیشتر است':'فشار بازار متعادل است'}. اگر قصد معامله داری، سناریوی پله‌ای و تعیین حد ریسک را قبل از تصمیم در نظر بگیر. این توضیح قطعی نیست.`;
+    res.json({ok:true,provider:'rule-engine',text,at:new Date().toISOString(),dataAt:state.updatedAt,warning:'سرویس AI خارجی در دسترس نبود.'});
+  }
 });
 app.post("/api/push/unsubscribe", async (req, res) => { await removeSubscription(req.body?.endpoint); res.json({ ok: true }); });
 app.get("/api/portfolio", async (req,res)=>{
@@ -1065,6 +1176,7 @@ const server = app.listen(port, "0.0.0.0", async () => {
   console.log(`Gold Alert Pro listening on 0.0.0.0:${port}`);
   await loadState();
   await loadPersonalAlerts();
+  await loadSmartAlerts();
   await initAlerts();
   try { await loadHistorySeed(); console.log(`History seed: ${state.prices.length} points`); } catch (e) { console.warn("History seed error:", e.message); }
   await tick();

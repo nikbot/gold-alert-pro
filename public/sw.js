@@ -1,4 +1,4 @@
-const CACHE_VERSION='gold-alert-pro-v60-auto-update';
+const CACHE_VERSION='gold-alert-pro-v61-ai-decision-smart-alerts';
 const STATIC_CACHE=CACHE_VERSION;
 const NO_CACHE_PATHS=['/api/','/login','/register','/admin'];
 

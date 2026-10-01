@@ -739,6 +739,58 @@ function initG59(){
 window.addEventListener('load',initG59);
 
 
+
+// v61: AI Decision Room + Smart Alerts + Portfolio Guard
+function v61FmtPct(v){return Number.isFinite(Number(v))?`${Number(v).toFixed(1)}٪`:'—'}
+async function loadV61DecisionRoom(){
+  try{
+    const r=await fetch('/api/decision-room',{cache:'no-store'});const d=await r.json();if(!r.ok)throw new Error(d.error||'خطا');
+    const set=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v};
+    set('v61Regime',d.regime||'—');set('v61TrendMeta',d.trend?.confidence?`اعتماد ساختار ${fa(d.trend.confidence)}٪`:'—');
+    const sigFa={BUY:'خرید',SELL:'فروش',WATCH_BUY:'مراقبت برای خرید',WATCH_SELL:'مراقبت برای فروش',WAIT:'انتظار'};
+    set('v61Signal',sigFa[d.analysis?.signal]||'انتظار');set('v61Score',`امتیاز ${fa(d.analysis?.score||0)}٪`);
+    set('v61Risk',d.risk?.label||'—');set('v61RiskMeta',`امتیاز ${fa(d.risk?.score||0)} از ۱۰۰`);set('v61Quality',d.quality==='GOOD'?'خوب':d.quality==='STALE'?'قدیمی':'قطع');set('v61QualityMeta',d.engineStatus?.source?`منبع: ${d.engineStatus.source}`:'—');
+    set('v61Action',d.action||'—');set('v61Support',d.trend?.support?moneyIRR(d.trend.support):'—');set('v61Resistance',d.trend?.resistance?moneyIRR(d.trend.resistance):'—');set('v61SupportDistance',d.distanceToSupport!=null?v61FmtPct(d.distanceToSupport):'—');set('v61ResistanceDistance',d.distanceToResistance!=null?v61FmtPct(d.distanceToResistance):'—');
+    set('v61BullCond',d.scenarios?.bullish?.condition||'—');set('v61BullRisk',`ریسک: ${d.scenarios?.bullish?.risk||'—'}`);set('v61BaseCond',d.scenarios?.base?.condition||'—');set('v61BaseRisk',`ریسک: ${d.scenarios?.base?.risk||'—'}`);set('v61BearCond',d.scenarios?.bearish?.condition||'—');set('v61BearRisk',`ریسک: ${d.scenarios?.bearish?.risk||'—'}`);
+    const live=document.getElementById('v61DecisionLive');if(live){live.textContent=d.quality==='GOOD'?'● LIVE • داده تازه':d.quality==='STALE'?'● STALE • داده قدیمی':'● OFFLINE';live.style.color=d.quality==='GOOD'?'#86e4b4':d.quality==='STALE'?'#f2d58b':'#ff9aa5';}
+  }catch(e){const x=document.getElementById('v61DecisionLive');if(x)x.textContent='⚠️ داده در دسترس نیست';}
+}
+async function runV61AIDecision(){
+ const box=document.getElementById('v61DecisionAIResult');if(!box)return;
+ if(!accountToken){showAuthGate(true,'برای توضیح AI اتاق تصمیم ابتدا وارد حساب شوید.');pendingProtectedCategory='decision';return;}
+ box.textContent='⏳ دارم وضعیت بازار را به زبان ساده توضیح می‌دهم...';
+ try{const q='از روی وضعیت فعلی بازار خیلی ساده بگو الان چه خبر است، سناریوی اصلی چیست، چه چیزی باید تأیید شود، مهم‌ترین هشدار چیست و ریسک اصلی کجاست.';const r=await fetch('/api/ai-decision',{method:'POST',headers:{'Content-Type':'application/json',...accountHeaders()},body:JSON.stringify({deviceId,accountToken,question:q})});const d=await r.json();if(!r.ok)throw new Error(d.error||'تحلیل AI ناموفق');box.textContent=d.text||'پاسخ دریافت نشد.';}catch(e){box.textContent='⚠️ '+e.message;}
+}
+function v61SmartAlertPayload(){
+ const num=id=>{const v=Number(document.getElementById(id)?.value);return Number.isFinite(v)&&document.getElementById(id)?.value!==''?v:null};
+ return {deviceId,accountToken,name:document.getElementById('v61AlertName')?.value.trim()||'هشدار هوشمند',conditions:{priceAbove:num('v61AlertAbove'),priceBelow:num('v61AlertBelow'),trend:document.getElementById('v61AlertTrend')?.value||null,signal:document.getElementById('v61AlertSignal')?.value||null,minScore:num('v61AlertScore'),minRsi:num('v61AlertMinRsi'),maxRsi:num('v61AlertMaxRsi'),pressure:document.getElementById('v61AlertPressure')?.value||null,changePct:num('v61AlertChange')}};
+}
+function v61SmartConditionText(c){const x=[];if(c.priceAbove!=null)x.push('قیمت > '+moneyIRR(c.priceAbove));if(c.priceBelow!=null)x.push('قیمت < '+moneyIRR(c.priceBelow));const t={UP:'صعودی',DOWN:'نزولی',SIDEWAYS:'خنثی'};const s={BUY:'خرید',SELL:'فروش',WATCH_BUY:'مراقبت خرید',WATCH_SELL:'مراقبت فروش',WAIT:'انتظار'};if(c.trend)x.push('روند: '+(t[c.trend]||c.trend));if(c.signal)x.push('سیگنال: '+(s[c.signal]||c.signal));if(c.minScore!=null)x.push('امتیاز ≥ '+fa(c.minScore));if(c.minRsi!=null)x.push('RSI ≥ '+fa(c.minRsi));if(c.maxRsi!=null)x.push('RSI ≤ '+fa(c.maxRsi));if(c.pressure)x.push('فشار: '+(c.pressure==='BUY'?'خرید':c.pressure==='SELL'?'فروش':'متعادل'));if(c.changePct!=null)x.push('تغییر ≥ '+v61FmtPct(c.changePct));return x.join(' • ')}
+async function loadV61SmartAlerts(){
+ const box=document.getElementById('v61SmartAlertList');if(!box)return;
+ try{const r=await fetch('/api/smart-alerts?deviceId='+encodeURIComponent(deviceId),{headers:accountHeaders(),cache:'no-store'});const d=await r.json();if(!r.ok)throw new Error(d.error||'خطا');const list=d.alerts||[];box.innerHTML=list.length?list.map(a=>`<div class="v61SmartRow"><div><b>${esc(a.name)}</b><small>${a.active?'🟢 فعال':'⚪ غیرفعال'}${a.lastTriggeredAt?' • آخرین اجرا: '+new Date(a.lastTriggeredAt).toLocaleString('fa-IR'):''}</small></div><div class="v61SmartChips"><span class="v61SmartChip">${esc(v61SmartConditionText(a.conditions))}</span></div><button class="secondary" onclick="deleteV61SmartAlert('${esc(a.id)}')">حذف</button></div>`).join(''):'<div class="emptyAlert">هنوز هشدار هوشمندی ثبت نشده است.</div>'}catch(e){box.innerHTML='<div class="emptyAlert">⚠️ '+esc(e.message)+'</div>';}
+}
+async function addV61SmartAlert(){
+ if(!accountToken){showAuthGate(true,'برای ثبت هشدار هوشمند ابتدا وارد حساب شوید.');pendingProtectedCategory='alerts';return;}
+ try{const body=v61SmartAlertPayload();const r=await fetch('/api/smart-alerts',{method:'POST',headers:{'Content-Type':'application/json',...accountHeaders()},body:JSON.stringify(body)});const d=await r.json();if(!r.ok)throw new Error(d.error||'ثبت هشدار ناموفق');toast('✅ هشدار هوشمند ثبت شد.');['v61AlertName','v61AlertAbove','v61AlertBelow','v61AlertScore','v61AlertMinRsi','v61AlertMaxRsi','v61AlertChange'].forEach(id=>{const e=document.getElementById(id);if(e)e.value=''});['v61AlertTrend','v61AlertSignal','v61AlertPressure'].forEach(id=>{const e=document.getElementById(id);if(e)e.value=''});await loadV61SmartAlerts();}catch(e){toast('⚠️ '+e.message,'error');}
+}
+async function deleteV61SmartAlert(id){
+ if(!accountToken){showAuthGate(true,'ابتدا وارد حساب شوید.');return;} try{const r=await fetch('/api/smart-alerts/'+encodeURIComponent(id)+'?deviceId='+encodeURIComponent(deviceId),{method:'DELETE',headers:accountHeaders()});const d=await r.json();if(!r.ok)throw new Error(d.error||'حذف ناموفق');await loadV61SmartAlerts();}catch(e){toast('⚠️ '+e.message,'error');}
+}
+async function loadV61PortfolioGuard(){
+ const box=document.getElementById('v61PortfolioText');if(!box)return;
+ try{const r=await fetch('/api/portfolio-allocation?deviceId='+encodeURIComponent(deviceId),{cache:'no-store'});const d=await r.json();if(!r.ok)throw new Error(d.error||'خطا');const set=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v};set('v61KeepPct',fa(d.keepPct)+'٪');set('v61ReducePct',fa(d.reducePct)+'٪');set('v61AddPct',fa(d.addPct)+'٪');set('v61PortScore',fa(d.score)+'٪');const kb=document.getElementById('v61KeepBar'),rb=document.getElementById('v61ReduceBar'),ab=document.getElementById('v61AddBar');if(kb)kb.style.width=d.keepPct+'%';if(rb)rb.style.width=d.reducePct+'%';if(ab)ab.style.width=d.addPct+'%';box.textContent=`وضعیت فعلی: ${d.signal||'WAIT'} • امتیاز ${fa(d.score)}٪ • فشار خرید ${fa(d.buyPressure)}٪ • فشار فروش ${fa(d.sellPressure)}٪. ${d.disclaimer||''}`;}catch(e){box.textContent='⚠️ '+e.message;}
+}
+function initV61(){
+ document.getElementById('v61DecisionAI')?.addEventListener('click',runV61AIDecision);
+ document.getElementById('v61SmartAlertAdd')?.addEventListener('click',addV61SmartAlert);
+ document.getElementById('v61PortfolioRefresh')?.addEventListener('click',loadV61PortfolioGuard);
+ loadV61DecisionRoom();loadV61SmartAlerts();loadV61PortfolioGuard();
+ setInterval(loadV61DecisionRoom,10000);setInterval(loadV61SmartAlerts,30000);setInterval(loadV61PortfolioGuard,15000);
+}
+window.deleteV61SmartAlert=deleteV61SmartAlert;window.loadV61DecisionRoom=loadV61DecisionRoom;window.runV61AIDecision=runV61AIDecision;
+window.addEventListener('load',initV61);
+
 // Ensure auth handlers are available for inline buttons after cache/version updates.
 window.showAuthMode = showAuthMode;
 window.showAdminLoginGate = showAdminLoginGate;
@@ -748,3 +800,70 @@ window.loginAccount = loginAccount;
 window.registerAccount = registerAccount;
 window.forgotPasswordPrompt = forgotPasswordPrompt;
 window.adminLogin = adminLogin;
+
+/* =========================================================
+   Gold2 Pro V62 Market Terminal
+   ========================================================= */
+(function initV62Terminal(){
+  const $=id=>document.getElementById(id);
+  const faNum=v=>{try{return Number(v||0).toLocaleString('fa-IR')}catch{return String(v??'—')}};
+  const safeMoney=v=>{try{return moneyIRR(v)}catch{return faNum(v)}};
+  const set=(id,v)=>{const e=$(id);if(e)e.textContent=v??'—'};
+  function syncChart(){
+    const src=$('goldChart'),dst=$('v62GoldChart');
+    if(!src||!dst)return;
+    dst.innerHTML=src.innerHTML;
+    const svg=dst.querySelector('svg');if(svg){svg.style.width='100%';svg.style.height='100%'}
+    const hero=$('v62HeroChart'); if(hero){hero.innerHTML=src.innerHTML;const hs=hero.querySelector('svg');if(hs){hs.style.width='100%';hs.style.height='100%'}}
+  }
+  window.v62ChartRange=function(btn,n){
+    document.querySelectorAll('.v62Range button,.v62ChartTools button').forEach(x=>x.classList.remove('active'));btn?.classList.add('active');
+    const target=document.querySelector(`#goldChartCard button[data-range="${n}"]`);if(target)target.click();
+    setTimeout(syncChart,80);
+  };
+  function updatePulse(s){
+    const price=Number(s?.iran?.priceIRR||0), dollar=Number(s?.dollar?.priceIRR||0), xau=Number(s?.global?.xauUsd||0), gram=Number(s?.coins?.gram?.priceIRR||0);
+    const prev=window.__v62Prev||{};
+    const pct=(a,b)=>b>0?((a/b-1)*100):null;
+    const goldD=pct(price,prev.price), dollarD=pct(dollar,prev.dollar), xauD=pct(xau,prev.xau), gramD=pct(gram,prev.gram);
+    const fmtPct=d=>d==null?'—':(d>=0?'▲ +':'▼ ')+f2(Math.abs(d))+'٪';
+    set('v62GoldPrice',safeMoney(price));set('v62GoldChange',fmtPct(goldD));set('v62GoldTime',s?.updatedAt?new Date(s.updatedAt).toLocaleTimeString('fa-IR'):'—');
+    set('v62CardGold',safeMoney(price));set('v62CardDollar',safeMoney(dollar));set('v62CardXau',xau?'$'+Number(xau).toLocaleString('en-US',{maximumFractionDigits:2}):'—');set('v62CardGram',safeMoney(gram));
+    set('v62CardGoldCh',fmtPct(goldD));set('v62CardDollarCh',fmtPct(dollarD));set('v62CardXauCh',fmtPct(xauD));set('v62CardGramCh',fmtPct(gramD));
+    set('v62PulseGold',safeMoney(price));set('v62PulseDollar',safeMoney(dollar));set('v62PulseXau',xau?'$'+Number(xau).toLocaleString('en-US',{maximumFractionDigits:2}):'—');set('v62PulseGram',safeMoney(gram));
+    set('v62PulseGoldCh',fmtPct(goldD));set('v62PulseDollarCh',fmtPct(dollarD));set('v62PulseXauCh',fmtPct(xauD));set('v62PulseGramCh',fmtPct(gramD));
+    const es=s?.engineStatus||{};set('v62MarketState',es.status==='LIVE'?'LIVE':es.status==='STALE'?'STALE':'OFFLINE');
+    const q=$('v62DataQuality');if(q)q.textContent=s?.dataReady?'آماده تحلیل':(es.status==='LIVE'?'داده زنده':'داده ناقص');
+    const age=$('v62UpdateAge');if(age)age.textContent=s?.updatedAt?'آخرین بروزرسانی '+new Date(s.updatedAt).toLocaleTimeString('fa-IR'):'آخرین بروزرسانی —';
+    const live=$('v62MarketState');if(live)live.style.color=es.status==='LIVE'?'#22c55e':es.status==='STALE'?'#f5c451':'#ef4444';
+    window.__v62Prev={price,dollar,xau,gram};
+    syncChart();
+  }
+  function renderCopilotFromDom(){
+    const trend=$('ccTrend')?.textContent||$('quickTrend')?.textContent||'در حال بررسی';
+    const risk=$('ccRisk')?.textContent||'—';
+    const summary=$('aiCopilotSummary')?.textContent||'در حال تحلیل داده‌های بازار...';
+    const alert=$('aiCopilotAlert')?.textContent||'مقاومت و حمایت نزدیک را زیر نظر بگیر.';
+    set('v62AiTrend',trend);set('v62AiTrendMeta',trend);set('v62AiMomentum',$('quickPressure')?.textContent||'—');set('v62AiRisk',risk);set('v62AiSummary',summary);set('v62AiWarning',alert?'⚠ '+alert:'⚠ هشدار فعالی ثبت نشده است.');
+  }
+  window.v62AskCopilot=function(){const q=$('v62CopilotQuestion')?.value.trim();if(!q)return;refreshAICopilot(true,'dashboard',q);setTimeout(renderCopilotFromDom,900);};
+  function renderTimeline(){
+    const box=$('v62TimelineList');if(!box)return;
+    const events=latest?.events||[];const targets=latest?.targetEvents||[];const rows=[];
+    targets.slice(0,3).forEach(e=>rows.push({at:e.at,icon:e.kind==='stop'?'🛑':e.kind==='target2'?'🏆':'🎯',text:(e.kind==='stop'?'حد ضرر':e.kind==='target2'?'هدف دوم':'هدف اول')+' • '+safeMoney(e.price)}));
+    events.slice(0,5).forEach(e=>rows.push({at:e.at,icon:e.type==='signal'?'🧠':'📈',text:e.text||e.message||e.kind||'رویداد بازار'}));
+    if(!rows.length){box.innerHTML='<div class="v62TimelineItem"><span class="v62TimelineTime">—</span><span class="v62TimelineDot">•</span><span class="v62TimelineText">هنوز رویداد مهمی ثبت نشده است.</span></div>';return;}
+    box.innerHTML=rows.slice(0,6).map(e=>`<div class="v62TimelineItem"><span class="v62TimelineTime">${e.at?new Date(e.at).toLocaleTimeString('fa-IR'):'—'}</span><span class="v62TimelineDot">${e.icon}</span><span class="v62TimelineText">${esc(String(e.text))}</span></div>`).join('');
+    const n=$('v62NotifCount');if(n)n.textContent=String(Math.min(rows.length,9));
+  }
+  function wireNav(){
+    document.querySelectorAll('[data-v62cat]').forEach(btn=>btn.addEventListener('click',()=>{const c=btn.dataset.v62cat;document.querySelectorAll('[data-v62cat]').forEach(x=>x.classList.toggle('active',x===btn));if(c==='dashboard'){applyCategory('dashboard');}else{applyCategory(c);}}));
+    $('v62Collapse')?.addEventListener('click',()=>document.body.classList.toggle('v62Collapsed'));
+    document.querySelectorAll('[data-v62-widget]').forEach(ch=>ch.addEventListener('change',()=>{const map={hero:'.v62Hero',pulse:'.v62PulsePanel',ai:'.v62Copilot',alerts:'.v62Timeline',portfolio:'.v62MarketCards'};const el=document.querySelector(map[ch.dataset.v62Widget]);if(el)el.style.display=ch.checked?'':'none';localStorage.setItem('gold2_v62_widgets',JSON.stringify([...document.querySelectorAll('[data-v62-widget]')].reduce((o,x)=>(o[x.dataset.v62Widget]=x.checked,o),{})));}));
+    try{const saved=JSON.parse(localStorage.getItem('gold2_v62_widgets')||'{}');document.querySelectorAll('[data-v62-widget]').forEach(ch=>{if(saved[ch.dataset.v62Widget]!==undefined){ch.checked=!!saved[ch.dataset.v62Widget];ch.dispatchEvent(new Event('change'));}})}catch{}
+  }
+  document.addEventListener('DOMContentLoaded',()=>{wireNav();setTimeout(()=>{syncChart();renderCopilotFromDom();renderTimeline();},500);});
+  const oldLoad=window.load;
+  // load is declared in the page scope; wrap through an interval to avoid changing the stable V61 engine.
+  setInterval(()=>{try{if(typeof latest!=='undefined'&&latest){updatePulse(latest);renderCopilotFromDom();renderTimeline();}}catch{}},1500);
+})();
