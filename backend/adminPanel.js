@@ -317,6 +317,22 @@ export async function updateManagedUser(identifier, input = {}) {
   await saveAccounts(store);
   return publicUser(a);
 }
+export async function resetManagedUserPassword(identifier, newPassword) {
+  const key = String(identifier || '').trim();
+  const password = String(newPassword || '');
+  if (password.length < 6) throw new Error('رمز باید حداقل ۶ کاراکتر باشد.');
+  const store = await getAccounts();
+  const a = store[key] || Object.values(store).find(x => String(x.id||'') === key || x.phone === normalizePhone(key) || String(x.username || '').toLowerCase() === key.toLowerCase());
+  if (!a) throw new Error('کاربر پیدا نشد.');
+  Object.assign(a, hashPassword(password));
+  a.token = '';
+  a.tokenExpiresAt = null;
+  a.passwordChangedAt = new Date().toISOString();
+  store[a.id] = a;
+  await saveAccounts(store);
+  return publicUser(a);
+}
+
 export async function deleteManagedUser(identifier) {
   const key = String(identifier || '').trim();
   const store = await getAccounts();

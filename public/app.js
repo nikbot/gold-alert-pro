@@ -135,7 +135,7 @@ async function enablePush(silent=false){
   if(!status.configured)throw new Error('کلید Push روی سرور آماده نشده است.');
   const permission=Notification.permission==='granted'?'granted':await Notification.requestPermission();
   if(permission!=='granted')throw new Error('اجازه اعلان داده نشد');
-  const reg=await navigator.serviceWorker.register('/sw.js?v='+(window.APP_BUILD_VERSION||'current'),{updateViaCache:'none'});
+  const reg=await navigator.serviceWorker.register('/sw.js');
   await navigator.serviceWorker.ready;
   const k=await fetch('/api/push/public-key',{cache:'no-store'}).then(r=>r.json());
   if(!k.publicKey)throw new Error('کلید Push روی سرور تنظیم نشده است');
@@ -159,7 +159,7 @@ async function enablePush(silent=false){
 function urlBase64ToUint8Array(s){const padding='='.repeat((4-s.length%4)%4),base64=(s+padding).replace(/-/g,'+').replace(/_/g,'/'),raw=atob(base64),out=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++)out[i]=raw.charCodeAt(i);return out}
 async function runBacktest(){const el=document.getElementById('bt');el.textContent='در حال اجرای بک‌تست...';try{const x=await fetch('/api/backtest?deviceId='+encodeURIComponent(deviceId)+'&accountToken='+encodeURIComponent(accountToken)).then(r=>r.json());if(x.error)throw new Error(x.error);el.innerHTML=`دوره ${x.from} تا ${x.to}<br>معاملات: <b>${fa(x.trades)}</b> • موفقیت: <b>${f2(x.winRate)}٪</b><br>سود خالص تاریخی: <b>${f2(x.netReturn)}٪</b> • افت سرمایه: ${f2(x.maxDrawdown)}٪`}catch(e){el.textContent='خطا: '+e.message}}
 async function installApp(){if(deferredPrompt){deferredPrompt.prompt();await deferredPrompt.userChoice;deferredPrompt=null;document.getElementById('installBtn').style.display='none';const h=document.getElementById('installBtnHero');if(h)h.style.display='none'}else alert('در Chrome اندروید: منوی ⋮ → افزودن به صفحه اصلی / Install app')}
-function registerSW(){if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js?v='+(window.APP_BUILD_VERSION||'current'),{updateViaCache:'none'}).catch(()=>{})}
+function registerSW(){if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js')}
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;document.getElementById('installBtn').style.display='inline-block';const h=document.getElementById('installBtnHero');if(h)h.style.display='inline-block'});window.addEventListener('appinstalled',()=>{document.getElementById('installBtn').style.display='none';const h=document.getElementById('installBtnHero');if(h)h.style.display='none'});
 let liveStream=null, streamFallbackTimer=null;
 function connectLiveStream(){
