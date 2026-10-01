@@ -147,6 +147,10 @@
     const xau = num(s?.global?.xauUsd);
     const btc = getBitcoin(s);
 
+    const mobileGold = $('v75MobileGold');
+    const mobileChange = $('v75MobileChange');
+    const mobileUpdated = $('v75MobileUpdated');
+    const mobileSource = $('v75MobileSource');
     set('v72Gold', gold ? money(gold) : '—');
     set('v72Dollar', dollar ? money(dollar) : '—');
     set('v72Xau', xau ? '$' + xau.toLocaleString('en-US', { maximumFractionDigits: 2 }) : '—');
@@ -154,6 +158,22 @@
     const marketTimes = [s?.iran?.fetchedAt||s?.iran?.at,s?.dollar?.fetchedAt||s?.dollar?.at,s?.global?.at,s?.bitcoin?.fetchedAt||s?.bitcoin?.at].filter(Boolean).map(x=>new Date(x).getTime()).filter(Number.isFinite);
     const newestMarketAt = marketTimes.length ? new Date(Math.max(...marketTimes)) : (s.updatedAt ? new Date(s.updatedAt) : null);
     set('v72UpdateTime', newestMarketAt ? newestMarketAt.toLocaleTimeString('fa-IR') : '—');
+    if (mobileGold) mobileGold.textContent = gold ? money(gold) : '—';
+    if (mobileUpdated) mobileUpdated.textContent = newestMarketAt
+      ? `آخرین بروزرسانی ${newestMarketAt.toLocaleTimeString('fa-IR')}`
+      : 'در انتظار بروزرسانی';
+    if (mobileSource) mobileSource.textContent = s?.iran?.source
+      ? `منبع: ${s.iran.source}`
+      : 'منبع آنلاین در حال شناسایی';
+    if (mobileChange) {
+      const base = Array.isArray(s?.prices) ? s.prices.map(Number).filter(Number.isFinite) : [];
+      const current = base.at(-1);
+      const previous = base.length > 1 ? base[base.length - 2] : 0;
+      const ch = percent(current, previous);
+      mobileChange.textContent = previous ? `${ch >= 0 ? '+' : ''}${ch.toFixed(2)}٪` : '—';
+      mobileChange.className = ch > 0 ? 'up' : ch < 0 ? 'down' : 'neutral';
+    }
+
 
     const status = s?.engineStatus?.status || 'OFFLINE';
     const liveCount = [gold, dollar, xau, btc].filter((x) => x > 0).length;
@@ -213,6 +233,8 @@
     document.querySelectorAll('[data-v72-go]').forEach((button) => {
       button.addEventListener('click', (event) => {
         event.preventDefault();
+        document.querySelectorAll('.v75MobileNav button').forEach((item) => item.classList.remove('active'));
+        if (button.closest('.v75MobileNav')) button.classList.add('active');
         go(button.dataset.v72Go);
       });
     });
