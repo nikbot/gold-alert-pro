@@ -1,4 +1,5 @@
 const TGJU_GOLD_URL = process.env.TGJU_GOLD_URL || "https://gem.tgju.org/profile/geram18";
+const TGJU_WIDGET_URL = process.env.TGJU_WIDGET_URL || "https://www.tgju.org/widget/get/market-data";
 const TGJU_GOLD_FALLBACK_URLS = [
   "https://www.tgju.org/profile/geram18/today",
   "https://www.tgju.org/profile/geram18",
@@ -159,98 +160,138 @@ async function tryTGJUJson(url){
   const at=time ? (String(time).includes('T') ? new Date(time).toISOString() : combineTodayTime(String(time))) : new Date().toISOString();
   return {priceIRR:Math.round(price),source:"TGJU structured API",at,fetchedAt:new Date().toISOString(),unit:"IRR_PER_GRAM",sourceCode:"TGJU_GERAM18",parser:"structured"};
 }
-function priceFromJson(payload){
+function deepFindNumber(value, predicate = () => true, depth = 0) {
+  if (depth > 8 || value == null) return null;
+  if (typeof value === "number" && Number.isFinite(value) && predicate(value, null)) return value;
+  if (typeof value === "string") {
+    const n = parseNumber(value);
+    return Number.isFinite(n) && predicate(n, value) ? n : null;
+  }
+  if (Array.isArray(value)) {
+    for (const item of value) { const n = deepFindNumber(item, predicate, depth + 1); if (n != null) return n; }
+    return null;
+  }
+  if (typeof value === "object") {
+    const preferred = ["value","price","current","last","rate","amount","close","sell","sellPrice","currentPrice","priceIRR","price_toman","price_toman_per_gram","toman","rial","valueIRR","valueToman"];
+    for (const key of preferred) if (key in value) { const n = deepFindNumber(value[key], predicate, depth + 1); if (n != null) return n; }
+    for (const [key,item] of Object.entries(value)) {
+      if (/price|value|rate|current|last|amount|close|rial|toman/i.test(key)) {
+        const n = deepFindNumber(item, predicate, depth + 1); if (n != null) return n;
+      }
+    }
+  }
+  return null;
+}
+function payloadUnit(payload) {
+  const parts = [];
+  const walk = (v, depth=0) => {
+    if (depth > 6 || v == null) return;
+    if (typeof v === "string") { parts.push(v); return; }
+    if (Array.isArray(v)) { v.slice(0,20).forEach(x=>walk(x,depth+1)); return; }
+    if (typeof v === "object") {
+      for (const [k,x] of Object.entries(v)) if (/unit|currency|denomination|quoteUnit|priceUnit/i.test(k)) walk(x,depth+1);
+    }
+  };
+  walk(payload);
+  return parts.join(" ").toLowerCase();
+}
+function normalizeProviderPrice(value, payload, providerName) {
+  const n=Number(value);
+  if (!Number.isFinite(n) || n <= 100000) return null;
+  const unit=payloadUnit(payload);
+  if (/toman|تومان/.test(unit) && n < 1000000000) return Math.round(n*10);
+  if (/usd|dollar|ریال|rial|irr/.test(unit)) return Math.round(n);
+  // Existing Tindex endpoint is documented in Toman/gram; preserve the existing
+  // contract while avoiding a second conversion when the payload explicitly says IRR.
+  if (providerName === "Tindex" && n < 1000000000) return Math.round(n*10);
+  return Math.round(n);
+}
+function priceFromJson(payload, providerName="API") {
+  const text=JSON.stringify(payload||{});
+  const candidates=[];
+  const push=(v,score=0)=>{const n=Number(v);if(Number.isFinite(n)&&n>1000000&&n<10000000000)candidates.push({n,score});};
   const rows=Array.isArray(payload)?payload:(Array.isArray(payload?.data)?payload.data:[]);
-  const candidates=[payload?.value,payload?.price,payload?.data?.value,payload?.data?.price,payload?.data?.indicator?.price,
-    ...rows.filter(x=>/GOLD_18_RLS|GOLD-18K|18.?k|18 عیار/i.test(`${x?.code||""} ${x?.slug||""} ${x?.name||""}`)).map(x=>x?.value??x?.price)];
-  for(const candidate of candidates){const n=typeof candidate==="string"?parseNumber(candidate):Number(candidate);if(Number.isFinite(n)&&n>100000)return Math.round(n);} return null;
+  const relevant=/GOLD_18_RLS|GOLD-18K|geram18|gold.?18|18.?k|طلای?\s*۱۸|طلای?\s*18/i.test(text);
+  if (relevant) {
+    const direct=deepFindNumber(payload,(n)=>n>1000000&&n<10000000000);
+    if(direct!=null) push(normalizeProviderPrice(direct,payload,providerName),10);
+  }
+  for(const x of rows){
+    const meta=`${x?.code||""} ${x?.symbol||""} ${x?.slug||""} ${x?.name||""} ${x?.title||""}`;
+    if(/GOLD_18_RLS|GOLD-18K|geram18|gold.?18|18.?k|طلای?\s*۱۸|طلای?\s*18/i.test(meta)) {
+      for(const k of ["value","price","current","last","rate","amount","close","sell","sellPrice","currentPrice"]) if(x?.[k]!=null) push(normalizeProviderPrice(x[k],x,providerName),8);
+      const n=deepFindNumber(x,(n)=>n>1000000&&n<10000000000); if(n!=null) push(normalizeProviderPrice(n,x,providerName),7);
+    }
+  }
+  for(const key of ["value","price","current","last","rate","amount","close","sell","sellPrice","currentPrice"]) if(payload?.[key]!=null) push(normalizeProviderPrice(payload[key],payload,providerName),4);
+  if(!candidates.length){
+    const matches=text.match(/(?:GOLD_18_RLS|GOLD-18K|geram18|gold.?18|18.?k)[\s\S]{0,300}?((?:\d{1,3}(?:[,٬،]\d{3}){2,3})|(?:\d{8,10}))/ig)||[];
+    for(const m of matches){const nums=m.match(/(?:\d{1,3}(?:[,٬،]\d{3}){2,3})|(?:\d{8,10})/g)||[];for(const x of nums)push(normalizeProviderPrice(parseNumber(x),payload,providerName),2);}
+  }
+  candidates.sort((a,b)=>b.score-a.score); return candidates[0]?.n || null;
 }
 async function fetchServix(){
   if(!SERVIX_API_KEY)throw Object.assign(new Error("API key not configured"),{status:401});
-  const payload=await fetchJson(SERVIX_GOLD_URL,{"X-API-Key":SERVIX_API_KEY});
-  const quote=priceFromJson(payload); if(!quote)throw new Error("valid GOLD_18_RLS value missing");
-  const result={priceIRR:quote,source:"Servix API",at:payload?.businessTime||new Date().toISOString(),unit:"IRR_PER_GRAM",sourceCode:"GOLD_18_RLS",fresh:payload?.fresh??null,stale:Boolean(payload?.stale)};
+  const payload=await fetchJson(SERVIX_GOLD_URL,{"X-API-Key":SERVIX_API_KEY,"Authorization":`Bearer ${SERVIX_API_KEY}`});
+  const quote=priceFromJson(payload,"Servix"); if(!quote)throw new Error("valid GOLD_18_RLS value missing");
+  const result={priceIRR:quote,source:"Servix API",at:payload?.businessTime||payload?.data?.businessTime||payload?.updatedAt||new Date().toISOString(),unit:"IRR_PER_GRAM",fresh:payload?.fresh??payload?.data?.fresh??null,stale:Boolean(payload?.stale||payload?.data?.stale)};
   markProvider("Servix",result); return result;
 }
 async function fetchTindex(){
   if(!TINDEX_API_TOKEN)throw Object.assign(new Error("API token not configured"),{status:401});
-  const payload=await fetchJson(TINDEX_GOLD_URL,{Authorization:`Bearer ${TINDEX_API_TOKEN}`});
-  const value=priceFromJson(payload); if(!value)throw new Error("valid GOLD-18K value missing");
-  const result={priceIRR:Math.round(value*10),source:"Tindex API",at:payload?.data?.updated_at||new Date().toISOString(),unit:"IRR_PER_GRAM"};
+  const payload=await fetchJson(TINDEX_GOLD_URL,{Authorization:`Bearer ${TINDEX_API_TOKEN}`,"X-API-Key":TINDEX_API_TOKEN});
+  const value=priceFromJson(payload,"Tindex"); if(!value)throw new Error("valid GOLD-18K value missing");
+  const result={priceIRR:Math.round(value),source:"Tindex API",at:payload?.data?.updated_at||payload?.updatedAt||new Date().toISOString(),unit:"IRR_PER_GRAM"};
   markProvider("Tindex",result); return result;
 }
 
 export async function getIran18(){
-  const errors=[]; const now=Date.now();
-  let tgjuResult=null;
-
-  // One upstream TGJU request per cycle. The previous build tried five pages on every
-  // failure, which multiplied rate-limit pressure and still returned the same parse error.
-  if(providerCanTry("TGJU",TGJU_MIN_REQUEST_MS)){
+  const errors=[];
+  const now=Date.now();
+  const jobs=[];
+  if(TGJU_JSON_URL && providerCanTry("TGJU",TGJU_MIN_REQUEST_MS)) jobs.push((async()=>{
     providerState.TGJU.lastAttempt=now;
-    try {
-      if(TGJU_JSON_URL) tgjuResult=await tryTGJUJson(TGJU_JSON_URL);
-      else tgjuResult=await tryIran18Html(TGJU_GOLD_URL);
-      markProvider("TGJU",tgjuResult);
-    } catch(e) {
-      markProvider("TGJU",null,e);
-      errors.push(`TGJU: ${providerError(e).message}`);
-      // Only use one HTML fallback after a failed primary cycle, never all fallbacks in a burst.
-      const fallback=TGJU_GOLD_FALLBACK_URLS[(providerState.TGJU.failures-1) % TGJU_GOLD_FALLBACK_URLS.length];
-      try {
-        tgjuResult=await tryIran18Html(fallback);
-        markProvider("TGJU",tgjuResult);
-      } catch(e2) {
-        markProvider("TGJU",null,e2);
-        errors.push(`TGJU fallback: ${new URL(fallback).host}: ${providerError(e2).message}`);
-        providerState.TGJU.cooldownUntil=Math.max(providerState.TGJU.cooldownUntil,Date.now()+TGJU_PARSE_COOLDOWN_MS);
-      }
-    }
-  } else if(providerState.TGJU.last?.priceIRR){
-    tgjuResult={...providerState.TGJU.last,cached:true};
-  }
-
-  let servixResult=null;
-  if(providerCanTry("Servix",SERVIX_POLL_MS)){
+    try{const r=await tryTGJUJson(TGJU_JSON_URL);markProvider("TGJU",r);return r;}catch(e){markProvider("TGJU",null,e);errors.push(`TGJU API: ${providerError(e).message}`);return null;}
+  })());
+  if(SERVIX_API_KEY && providerCanTry("Servix",SERVIX_POLL_MS)) jobs.push((async()=>{
     providerState.Servix.lastAttempt=now;
-    try{servixResult=await fetchServix();}
-    catch(e){markProvider("Servix",null,e);const pe=providerError(e);errors.push(`Servix: ${pe.message}${pe.status?` (${pe.status})`:""}`)}
-  } else if(providerState.Servix.last?.priceIRR){
-    servixResult={...providerState.Servix.last,cached:true};
-  }
-
-  // Tindex is a tertiary fallback only when neither fast TGJU nor structured Servix
-  // produced a usable quote.
-  const candidates=[tgjuResult,servixResult].filter(Boolean);
-  if(TINDEX_API_TOKEN && !candidates.length && providerCanTry("Tindex",TINDEX_POLL_MS)){
+    try{return await fetchServix();}catch(e){markProvider("Servix",null,e);errors.push(`Servix: ${providerError(e).message}${providerError(e).status?` (${providerError(e).status})`:""}`);return null;}
+  })());
+  if(TINDEX_API_TOKEN && providerCanTry("Tindex",TINDEX_POLL_MS)) jobs.push((async()=>{
     providerState.Tindex.lastAttempt=now;
-    try{candidates.push(await fetchTindex());}
-    catch(e){markProvider("Tindex",null,e);errors.push(`Tindex: ${providerError(e).message}`)}
+    try{return await fetchTindex();}catch(e){markProvider("Tindex",null,e);errors.push(`Tindex: ${providerError(e).message}${providerError(e).status?` (${providerError(e).status})`:""}`);return null;}
+  })());
+  if(!jobs.length){
+    if(providerState.TGJU.last?.priceIRR) return {...providerState.TGJU.last,cached:true,warning:"داده TGJU از کش خوانده شد"};
+    if(providerState.Servix.last?.priceIRR) return {...providerState.Servix.last,cached:true,warning:"داده Servix از کش خوانده شد"};
+    if(providerState.Tindex.last?.priceIRR) return {...providerState.Tindex.last,cached:true,warning:"داده Tindex از کش خوانده شد"};
   }
-  if(!candidates.length && providerState.Tindex.last?.priceIRR)candidates.push({...providerState.Tindex.last,cached:true});
-  if(!candidates.length && lastValidIran18 && Date.now()-lastIran18FetchAt<120000){
-    return {...lastValidIran18,cached:true,warning:errors.join("; ")||"منبع موقتاً در حال بازیابی است"};
+  let results=(await Promise.all(jobs)).filter(Boolean);
+  // Same TGJU source, but via its official market-data widget. This is a recovery
+  // path for deployments where the profile HTML is blocked or its markup changed.
+  if(!results.length && providerCanTry("TGJU",TGJU_MIN_REQUEST_MS)){
+    try {
+      providerState.TGJU.lastAttempt=Date.now();
+      const html=await fetchText(TGJU_WIDGET_URL);
+      const widget=parseTGJUWidgetMarketData(html);
+      if(Number.isFinite(widget.gold18) && plausibleGoldPrice(widget.gold18)){
+        const r={priceIRR:Math.round(widget.gold18),source:"TGJU widget API",at:new Date().toISOString(),fetchedAt:new Date().toISOString(),unit:"IRR_PER_GRAM",parser:"market-widget"};
+        markProvider("TGJU",r); results=[r];
+      } else throw new Error("18k value not found in TGJU market-data widget");
+    } catch(e){ errors.push(`TGJU widget: ${providerError(e).message}`); }
   }
-  if(!candidates.length)throw new Error(`Iran 18k gold unavailable — ${errors.join("; ")||"no provider available"}`);
-
-  const fresh=candidates.filter(x=>!x.cached);
-  // Never convert a cached quote into a fresh quote. A cached quote is intentionally surfaced
-  // as STALE by the server so the UI never claims LIVE while upstream polling is paused.
-  if(!fresh.length){
-    const cached=candidates[0];
-    return {...cached,cached:true,fetchedAt:cached.fetchedAt||lastValidIran18?.fetchedAt||new Date().toISOString(),warning:errors.join("; ")||"منبع جدید در دسترس نیست"};
+  if(!results.length){
+    if(lastValidIran18 && Date.now()-lastIran18FetchAt<10*60*1000) return {...lastValidIran18,cached:true,warning:errors.join("; ")||"منبع موقتاً در دسترس نیست"};
+    throw new Error(`Iran 18k gold unavailable — ${errors.join("; ")||"هیچ API قیمت فعالی تنظیم نشده است"}`);
   }
-  // TGJU is the live display source. Servix is used for validation, not to replace a newer TGJU tick.
-  const selected=tgjuResult?.cached!==true ? tgjuResult : fresh[0];
-  const validation=servixResult&&tgjuResult ? {
-    peer:"Servix",
-    spreadPct:Math.abs(servixResult.priceIRR/tgjuResult.priceIRR-1)*100,
-    peerAt:servixResult.at,
-    peerFresh:!servixResult.cached
-  } : null;
-  const warnings=[];
-  if(validation && validation.spreadPct>2) warnings.push(`اختلاف منبع با Servix: ${validation.spreadPct.toFixed(2)}٪`);
-  if(errors.length) warnings.push(...errors);
+  // Prefer an explicitly configured structured API over HTML. When multiple configured
+  // APIs answer, keep the freshest successful quote and expose the others for diagnostics.
+  const fresh=results.filter(x=>!x.cached).sort((a,b)=>new Date(b.fetchedAt||b.at||0)-new Date(a.fetchedAt||a.at||0));
+  const selected=fresh[0]||results[0];
+  const peers=results.filter(x=>x!==selected);
+  const validation=peers.length?{peers:peers.map(x=>({source:x.source,priceIRR:x.priceIRR,spreadPct:Math.abs(x.priceIRR/selected.priceIRR-1)*100}))}:null;
+  const warnings=[...errors];
+  for(const p of peers){const spread=Math.abs(p.priceIRR/selected.priceIRR-1)*100;if(spread>2)warnings.push(`اختلاف منبع ${p.source}: ${spread.toFixed(2)}٪`);}
   return saveFreshPrice({...selected,validation,warning:warnings.join("; ")||undefined});
 }
 
@@ -287,6 +328,26 @@ function parseLabelPrice(text, label) {
   const m = text.match(re);
   return m ? parseNumber(m[1]) : NaN;
 }
+export function parseTGJUWidgetMarketData(body) {
+  const text=cleanText(body);
+  const aliases={
+    gold18:["طلا ۱۸","طلای 18","طلای ۱۸"],
+    dollar:["دلار"],
+    xau:["انس طلا"],
+    mesghal:["مثقال طلا"],
+    emami:["سکه"]
+  };
+  const out={};
+  for(const [key,labels] of Object.entries(aliases)){
+    for(const label of labels){
+      const re=new RegExp(label.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+"\\s+((?:\\d{1,3}(?:[,٬،]\\d{3}){1,3})|(?:\\d{7,10}))","i");
+      const m=text.match(re);
+      if(m){const n=parseNumber(m[1]);if(Number.isFinite(n)){out[key]=n;break;}}
+    }
+  }
+  return out;
+}
+
 export function parseCoinsText(body) {
   const text = cleanText(body);
 
@@ -302,8 +363,13 @@ export function parseCoinsText(body) {
   return { ...prices, bubbles };
 }
 export async function getCoins() {
-  const html = await fetchText(TGJU_COIN_URL);
-  return { ...parseCoinsText(html), source:"TGJU", at:new Date().toISOString() };
+  try {
+    const html = await fetchText(TGJU_COIN_URL);
+    const parsed=parseCoinsText(html);
+    if(Object.values(parsed).some(v=>Number.isFinite(v)) || Object.values(parsed.bubbles||{}).some(v=>Number.isFinite(v))) return { ...parsed, source:"TGJU", at:new Date().toISOString() };
+  } catch {}
+  const widget=parseTGJUWidgetMarketData(await fetchText(TGJU_WIDGET_URL));
+  return { emami:Number.isFinite(widget.emami)?widget.emami:NaN, gram:NaN, half:NaN, quarter:NaN, bahar:NaN, bubbles:{}, source:"TGJU widget API", at:new Date().toISOString() };
 }
 export function parseDollarText(body) {
   const text = cleanText(body);
@@ -338,6 +404,10 @@ export async function getDollar() {
       /دلار\s*\|\s*((?:\d{1,3}(?:,\d{3})+)|(?:\d+))/i
     ]);
     if (Number.isFinite(price) && price > 10000) return {priceIRR:Math.round(price), source:"TGJU", at:new Date().toISOString()};
+  } catch {}
+  try {
+    const widget=parseTGJUWidgetMarketData(await fetchText(TGJU_WIDGET_URL));
+    if(Number.isFinite(widget.dollar) && widget.dollar>10000) return {priceIRR:Math.round(widget.dollar),source:"TGJU widget API",at:new Date().toISOString()};
   } catch {}
   const snap = await getWorldMarketSnapshot();
   if (!Number.isFinite(snap.dollar) || snap.dollar < 10000) throw new Error("TGJU dollar unavailable");

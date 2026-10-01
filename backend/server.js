@@ -15,7 +15,7 @@ import { adminLogin, requireAdminToken, requireAdminSession, adminLogout, listUs
 import { analyzeGold } from "./ai/manager.js";
 import { getTheme, setTheme } from "./theme.js";
 
-const APP_VERSION = "61.0.0"
+const APP_VERSION = "64.0.0"
 const USER_SESSION_HOURS = Math.max(1, Number(process.env.USER_SESSION_HOURS || 72));
 const LOGIN_WINDOW_MS = 10 * 60_000;
 const LOGIN_MAX_ATTEMPTS = 12;
