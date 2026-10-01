@@ -42,6 +42,16 @@ function renderGoldChart(prices){
 function initChartControls(){document.querySelectorAll('[data-range]').forEach(btn=>btn.addEventListener('click',()=>{chartRange=Number(btn.dataset.range)||60;document.querySelectorAll('[data-range]').forEach(x=>x.classList.remove('active'));btn.classList.add('active');renderGoldChart(latest?.prices||[])}))}
 
 function openAccountQuickMenu(){ applyCategory('account'); setTimeout(()=>document.getElementById('account')?.scrollIntoView({behavior:'smooth',block:'start'}),50); }
+
+async function forgotPasswordPrompt(){
+ const email=prompt('ایمیل حساب را وارد کنید:');
+ if(!email)return;
+ try{
+  const r=await fetch('/api/account/forgot-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email})});
+  const d=await r.json(); alert(d.message||d.error||'درخواست ارسال شد.');
+ }catch(e){alert('خطا در ارتباط با سرور');}
+}
+
 function logoutAndRelogin(){ logoutAccount(); setTimeout(()=>showAuthMode('login'),120); }
 function updateCommandCenter(){
  const set=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v};
@@ -563,7 +573,7 @@ async function restoreAdminSession(){if(!adminSession)return;try{const r=await a
 Object.assign(categoryLabels,{decision:'اتاق تصمیم',calendar:'تقویم اقتصادی',admin:'پنل مدیریت'});
 const oldApplyCategory=applyCategory;
 applyCategory=function(category,scroll=true){ oldApplyCategory(category,scroll); };
-window.askGoldAI=askGoldAI;window.runProfessionalAI=runProfessionalAI;window.loadUserSettings=loadUserSettings;window.saveInvestorSettings=saveInvestorSettings;window.addStorageLocation=addStorageLocation;window.addHouseholdPortfolio=addHouseholdPortfolio;window.runLadderSimulation=runLadderSimulation;window.saveInvoiceRecord=saveInvoiceRecord;window.changePasswordPrompt=changePasswordPrompt;window.adminLoadOverview=adminLoadOverview;window.adminLoadBusinessDashboard=adminLoadBusinessDashboard;window.adminCheckUpdate=adminCheckUpdate;window.adminLogin=adminLogin;window.adminCreateUser=adminCreateUser;window.adminLoadUsers=adminLoadUsers;window.adminSaveUser=adminSaveUser;window.adminResetPassword=adminResetPassword;window.adminDeleteUser=adminDeleteUser;window.adminLoadCalendar=adminLoadCalendar;window.adminSaveCalendar=adminSaveCalendar;window.adminLogout=adminLogout;window.showAuthMode=showAuthMode;window.gateLogin=gateLogin;window.gateRegister=gateRegister;window.loadTickets=loadTickets;window.createTicket=createTicket;window.replyTicket=replyTicket;window.adminLoadTickets=adminLoadTickets;window.adminReplyTicket=adminReplyTicket;window.adminSetTicketStatus=adminSetTicketStatus;window.adminBroadcast=adminBroadcast;window.adminAddPayment=adminAddPayment;window.adminLoadAudit=adminLoadAudit;window.adminDownloadBackup=adminDownloadBackup;
+window.askGoldAI=askGoldAI;window.runProfessionalAI=runProfessionalAI;window.loadUserSettings=loadUserSettings;window.saveInvestorSettings=saveInvestorSettings;window.addStorageLocation=addStorageLocation;window.addHouseholdPortfolio=addHouseholdPortfolio;window.runLadderSimulation=runLadderSimulation;window.saveInvoiceRecord=saveInvoiceRecord;window.changePasswordPrompt=changePasswordPrompt;window.adminLoadOverview=adminLoadOverview;window.adminLoadBusinessDashboard=adminLoadBusinessDashboard;window.adminCheckUpdate=adminCheckUpdate;window.adminLogin=adminLogin;window.adminCreateUser=adminCreateUser;window.adminLoadUsers=adminLoadUsers;window.adminSaveUser=adminSaveUser;window.adminResetPassword=adminResetPassword;window.adminDeleteUser=adminDeleteUser;window.adminLoadCalendar=adminLoadCalendar;window.adminSaveCalendar=adminSaveCalendar;window.adminLogout=adminLogout;window.forgotPasswordPrompt=forgotPasswordPrompt;window.showAuthMode=showAuthMode;window.gateLogin=gateLogin;window.gateRegister=gateRegister;window.loadTickets=loadTickets;window.createTicket=createTicket;window.replyTicket=replyTicket;window.adminLoadTickets=adminLoadTickets;window.adminReplyTicket=adminReplyTicket;window.adminSetTicketStatus=adminSetTicketStatus;window.adminBroadcast=adminBroadcast;window.adminAddPayment=adminAddPayment;window.adminLoadAudit=adminLoadAudit;window.adminDownloadBackup=adminDownloadBackup;
 async function restoreAccountSession(){if(!accountToken){showAuthGate(true);return}try{const r=await fetch('/api/account/me',{headers:accountHeaders(),cache:'no-store'});if(!r.ok)throw new Error('invalid');showAuthGate(false);setAccountStatus('🟢 وارد حساب: '+(await r.json()).user.username);await loadTickets();await loadUserSettings();}catch{accountToken='';localStorage.removeItem(ACCOUNT_TOKEN_KEY_V26);showAuthGate(true);}}
 setInterval(loadMarketStructure,10000);setInterval(loadEconomicCalendar,180000);loadMarketStructure();loadEconomicCalendar();restoreAdminSession();restoreAccountSession();
 
