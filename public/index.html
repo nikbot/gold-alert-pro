@@ -67,6 +67,14 @@ body{background:radial-gradient(900px 420px at 85% -10%,#30220e55,transparent 65
 @media(max-width:900px){.heroGrid{grid-template-columns:1fr}.commandGrid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:650px){.wrap{padding:10px 10px 100px}.top{position:relative}.price{font-size:34px}.commandGrid{grid-template-columns:1fr 1fr}.aiCopilotDock{left:10px;bottom:10px;width:calc(100vw - 20px)}}
 
+
+.adminShell{display:flex;gap:14px;align-items:stretch}
+.adminSidebar{width:210px;flex:0 0 210px;background:linear-gradient(180deg,#171b2a,#0b0f18);border:1px solid var(--line);border-radius:22px;padding:12px;box-shadow:var(--shadow);height:max-content;position:sticky;top:12px}
+.adminSidebar h4{margin:8px 0 14px;color:var(--gold2)}
+.adminSidebar button{width:100%;text-align:right;margin:5px 0;background:#101725;border:1px solid #283247;color:var(--text);padding:11px;border-radius:14px;cursor:pointer}
+.adminSidebar button:hover{border-color:var(--gold);transform:translateX(-3px)}
+.adminMain{flex:1}
+@media(max-width:760px){.adminShell{flex-direction:column}.adminSidebar{width:100%;position:static}}
 </style>
 
 <style>
@@ -401,6 +409,18 @@ body.authLocked .floatingMenuBtn,body.authLocked .menuBackdrop,body.authLocked .
 <div class="adminGrid"><input id="adminUsernameInput" autocomplete="username" placeholder="admin"><input id="adminPasswordInput" autocomplete="current-password" type="password" placeholder="رمز مدیر"><button onclick="adminLogin()">🔐 ورود مدیریت</button></div><div class="small" style="margin-top:7px">نام کاربری و رمز مدیریت را وارد کنید.</div>
 </div>
 <div id="adminContent" style="display:none">
+<div class="adminShell">
+<aside class="adminSidebar">
+<h4>⚜ مدیریت Gold Pro</h4>
+<button onclick="adminFocus('dashboard')">🏠 داشبورد</button>
+<button onclick="adminFocus('users')">👥 کاربران</button>
+<button onclick="adminFocus('payments')">💳 پرداخت‌ها</button>
+<button onclick="adminFocus('reports')">📊 گزارش‌ها</button>
+<button onclick="adminFocus('security')">🛡 امنیت</button>
+<button onclick="document.getElementById('themeSelect')?.scrollIntoView({behavior:'smooth'})">⚙ تنظیمات</button>
+<button onclick="adminLogout()">🚪 خروج</button>
+</aside>
+<main class="adminMain">
 <div class="adminCommandBar"><div><div class="eyebrow">مرکز فرمان مدیریت</div><h2 style="margin:3px 0 0">🚀 کنترل هوشمند Gold Alert Pro</h2><div class="small">کاربران، درآمد، پشتیبانی، سلامت سرویس و امنیت در یک نمای مدیریتی</div></div><div class="adminLive"><span>●</span> پنل فعال <b id="adminLastSync">—</b></div></div>
 <div class="adminQuickGrid"><button onclick="adminRefreshAll()">↻ <b>بروزرسانی همه</b><small>آمار و تیکت‌ها</small></button><button onclick="adminFocus('users')">👥 <b>کاربران</b><small>جستجو و مدیریت</small></button><button onclick="adminFocus('tickets')">🎫 <b>پشتیبانی</b><small>تیکت‌های باز</small></button><button onclick="adminFocus('payments')">💳 <b>پرداخت</b><small>ثبت تراکنش</small></button><button onclick="adminFocus('security')">🛡️ <b>امنیت</b><small>گزارش فعالیت</small></button><button onclick="adminDownloadBackup()">💾 <b>پشتیبان</b><small>خروجی داده‌ها</small></button></div>
 <div class="adminStats"><div class="adminStat"><span>کل کاربران</span><b id="adminUsersCount">—</b></div><div class="adminStat"><span>فعال</span><b id="adminActiveCount">—</b></div><div class="adminStat"><span>Pro</span><b id="adminProCount">—</b></div><div class="adminStat"><span>Premium</span><b id="adminPremiumCount">—</b></div></div><div class="card adminBusinessCard" style="margin-top:10px"><div class="sectionTitle"><h3>💰 داشبورد مالی و کاربران</h3><button class="secondary" onclick="adminLoadBusinessDashboard()">↻ بروزرسانی</button></div><div id="adminBusinessDashboard"></div></div><div id="adminOverviewGrid" class="adminOverviewGrid"></div><div class="card adminProCard" style="margin-top:10px"><div class="sectionTitle"><h3>🧠 مرکز سلامت و هوش مصنوعی</h3><span>کنترل سرویس‌ها</span></div><div class="adminGrid"><button class="secondary" onclick="testAIConnection()">🧪 تست اتصال AI</button><button class="secondary" onclick="adminLoadOverview()">↻ بروزرسانی سلامت</button></div><div id="adminHealthDetails" class="small" style="margin-top:8px">وضعیت سرویس‌ها را بررسی کنید.</div></div>
@@ -431,6 +451,7 @@ body.authLocked .floatingMenuBtn,body.authLocked .menuBackdrop,body.authLocked .
 <div id="security" class="sectionTitle" style="margin-top:14px"><h3>🧾 امنیت و گزارش مدیریت</h3><span>پشتیبان و رویدادها</span></div><div class="inlineActions"><button class="secondary" onclick="adminLoadAudit()">📋 گزارش فعالیت</button><button class="secondary" onclick="adminDownloadBackup()">💾 پشتیبان کامل</button></div><div id="adminAuditBox" class="small" style="margin-top:8px"></div>
 <div style="margin-top:12px"><button class="secondary" onclick="adminLogout()">خروج از مدیریت</button></div>
 </div>
+</main></div>
 </section>
 
 <section class="card categorySection category-tools" id="proToolsPanel"><div class="sectionTitle"><h3>🧰 مرکز ابزارهای حرفه‌ای سرمایه</h3><span>اطلاعات واقعی و ذخیره‌شده برای حساب شما</span></div><div class="professionalToolGrid"><div class="toolPanel"><h4>🎯 پروفایل سرمایه‌گذاری</h4><div class="accountGrid"><select id="investorRisk"><option value="low">ریسک کم</option><option value="medium" selected>ریسک متوسط</option><option value="high">ریسک بالا</option></select><select id="investorHorizon"><option value="short">کوتاه‌مدت</option><option value="medium" selected>میان‌مدت</option><option value="long">بلندمدت</option></select><input id="investorGoal" placeholder="هدف، مثلاً حفظ ارزش پول"><textarea id="investorNotes" placeholder="توضیحات شخصی" style="min-height:65px;grid-column:1/-1"></textarea></div><button class="secondary" onclick="saveInvestorSettings()">💾 ذخیره پروفایل</button></div><div class="toolPanel"><h4>🏦 محل نگهداری</h4><div class="accountGrid"><input id="storageName" placeholder="مثلاً صندوق امانات"><input id="storageNote" placeholder="یادداشت"></div><button class="secondary" onclick="addStorageLocation()">+ افزودن محل</button><div id="storageList" class="small"></div></div><div class="toolPanel"><h4>👨‍👩‍👧 سبد خانوادگی</h4><div class="accountGrid"><input id="householdName" placeholder="نام سبد"><input id="householdOwner" placeholder="مالک"></div><button class="secondary" onclick="addHouseholdPortfolio()">+ افزودن سبد</button><div id="householdList" class="small"></div></div><div class="toolPanel"><h4>🧮 شبیه‌ساز خرید پله‌ای</h4><div class="accountGrid"><input id="ladderCapital" type="number" placeholder="سرمایه ریال"><input id="ladderSteps" type="number" value="3" min="2" max="10" placeholder="تعداد پله"><input id="ladderStepPct" type="number" value="2" step="0.1" placeholder="فاصله هر پله ٪"></div><button class="secondary" onclick="runLadderSimulation()">محاسبه</button><div id="ladderResult" class="result"></div></div><div class="toolPanel"><h4>🧾 ثبت اطلاعات فاکتور</h4><input id="invoiceFile" type="file" accept="image/*,.pdf"><div class="small">فایل برای استخراج خودکار به سرویس OCR خارجی ارسال نمی‌شود. فعلاً اطلاعات فاکتور را دستی وارد کنید تا عدد ساختگی ایجاد نشود.</div><div class="accountGrid"><input id="invoiceWeight" type="number" step="0.001" placeholder="وزن گرم"><input id="invoicePurity" type="number" value="750" placeholder="عیار"><input id="invoiceAmount" type="number" placeholder="مبلغ ریال"><input id="invoiceDate" type="date"></div><button class="secondary" onclick="saveInvoiceRecord()">💾 ثبت فاکتور</button><div id="invoiceStatus" class="small"></div></div><div class="toolPanel"><h4>🛡️ امنیت حساب</h4><button class="secondary" onclick="logoutAndRelogin()">🚪 خروج از حساب</button><button class="secondary" onclick="changePasswordPrompt()">🔑 تغییر رمز</button><div class="small">برای امنیت، رمز ذخیره‌شده هرگز در پنل نمایش داده نمی‌شود.</div></div></div></section>
