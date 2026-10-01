@@ -45,7 +45,7 @@ async function writeJson(file, value) {
   await fs.mkdir(DATA_DIR, { recursive: true });
   await fs.writeFile(file, JSON.stringify(value, null, 2), 'utf8');
 }
-function normalizePhone(v) { return String(v || '').replace(/\s+/g, '').replace(/-/g, '').trim(); }
+function normalizePhone(v) { return String(v || '').replace(/[۰-۹]/g, d => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d))).replace(/[٠-٩]/g, d => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d))).replace(/[\u200c\u200f\u200e]/g, '').replace(/\s+/g, '').replace(/-/g, '').trim(); }
 function hashPassword(password, salt = crypto.randomBytes(16).toString('hex')) {
   const hash = crypto.scryptSync(String(password), salt, 64).toString('hex');
   return { salt, hash };
@@ -317,6 +317,22 @@ export async function updateManagedUser(identifier, input = {}) {
   await saveAccounts(store);
   return publicUser(a);
 }
+export async function resetManagedUserPassword(identifier, newPassword) {
+  const key = String(identifier || '').trim();
+  const password = String(newPassword || '');
+  if (password.length < 6) throw new Error('رمز باید حداقل ۶ کاراکتر باشد.');
+  const store = await getAccounts();
+  const a = store[key] || Object.values(store).find(x => String(x.id||'') === key || x.phone === normalizePhone(key) || String(x.username || '').toLowerCase() === key.toLowerCase());
+  if (!a) throw new Error('کاربر پیدا نشد.');
+  Object.assign(a, hashPassword(password));
+  a.token = '';
+  a.tokenExpiresAt = null;
+  a.passwordChangedAt = new Date().toISOString();
+  store[a.id] = a;
+  await saveAccounts(store);
+  return publicUser(a);
+}
+
 export async function deleteManagedUser(identifier) {
   const key = String(identifier || '').trim();
   const store = await getAccounts();

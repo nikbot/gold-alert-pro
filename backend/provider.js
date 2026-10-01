@@ -25,6 +25,7 @@ const FORGOD_POLL_MS = Math.max(3000, Number(process.env.FORGOD_POLL_MS || 8000)
 const GDELT_URL = process.env.GDELT_URL || "https://api.gdeltproject.org/api/v2/doc/doc";
 const configuredTimeout = Number(process.env.HTTP_TIMEOUT || 7000);
 const HTTP_TIMEOUT = Number.isFinite(configuredTimeout) ? Math.max(2500, configuredTimeout) : 7000;
+const LIVE_HTTP_TIMEOUT = Math.max(1200, Number(process.env.LIVE_HTTP_TIMEOUT || 2800));
 const SERVIX_POLL_MS = Math.max(60_000, Number(process.env.SERVIX_POLL_MS || 1_800_000)); // 30 min by default: protects daily quota.
 const TINDEX_POLL_MS = Math.max(30_000, Number(process.env.TINDEX_POLL_MS || 120_000));
 const SOURCE_DIAGNOSTICS_MS = Math.max(10_000, Number(process.env.SOURCE_DIAGNOSTICS_MS || 60_000));
@@ -173,6 +174,57 @@ async function fetchText(url, options = {}) {
 async function fetchJson(url, headers = {}) {
   const text=await fetchText(url,{headers:{Accept:"application/json",...headers}});
   try{return JSON.parse(text)}catch{throw new Error("Invalid JSON response")}
+}
+async function fetchFast(url, {headers={}, responseType="json", timeoutMs=LIVE_HTTP_TIMEOUT} = {}) {
+  const controller=new AbortController();
+  const timer=setTimeout(()=>controller.abort(),timeoutMs);
+  try {
+    const response=await fetch(url,{
+      signal:controller.signal,
+      redirect:"follow",
+      cache:"no-store",
+      headers:{
+        "User-Agent":"Mozilla/5.0 Gold2Pro/73 LiveQuote",
+        "Accept":responseType==="json"?"application/json,text/plain;q=0.9,*/*;q=0.8":"text/html,application/xhtml+xml,application/json;q=0.9,*/*;q=0.8",
+        ...headers
+      }
+    });
+    if(!response.ok){const e=new Error(`HTTP ${response.status}`);e.status=response.status;throw e;}
+    const text=await response.text();
+    if(responseType==="text") return text;
+    try{return JSON.parse(text)}catch{throw new Error("Invalid JSON response")}
+  } finally { clearTimeout(timer); }
+}
+async function firstValidQuote(tasks, {hedgeMs=180, overallMs=4200} = {}) {
+  if(!Array.isArray(tasks)||!tasks.length) throw new Error("No quote providers configured");
+  let settled=false, pending=0, lastError=null, timers=[];
+  return await new Promise((resolve,reject)=>{
+    const overall=setTimeout(()=>finishReject(new Error("All quote providers timed out")),overallMs);
+    const cleanup=()=>{clearTimeout(overall);for(const t of timers)clearTimeout(t);};
+    const finishReject=(e)=>{if(settled)return;settled=true;cleanup();reject(e||lastError||new Error("All quote providers failed"));};
+    const start=(task)=>{
+      if(settled)return;
+      pending++;
+      Promise.resolve().then(task).then((value)=>{
+        if(settled)return;
+        settled=true; cleanup(); resolve(value);
+      }).catch((e)=>{
+        lastError=e; pending--;
+        const anyFuture=timers.some(Boolean);
+        if(pending===0 && !anyFuture) finishReject(lastError);
+      });
+    };
+    tasks.forEach((task,i)=>{
+      if(i===0) start(task);
+      else {
+        const id=setTimeout(()=>{
+          timers[i]=null;
+          start(task);
+        },hedgeMs*i);
+        timers[i]=id;
+      }
+    });
+  });
 }
 function providerError(error){
   const status=Number(error?.status || String(error?.message||"").match(/^HTTP (\d{3})$/)?.[1] || 0);
@@ -329,62 +381,82 @@ async function fetchTindex(){
 }
 
 export async function getIran18(){
-  const errors=[];
-  // Priority 1: Forgod 18k endpoint. Other providers are only consulted after failure.
-  if(FORGOD_API_KEY && providerCanTry("ForgodGold",FORGOD_POLL_MS)){
-    providerState.ForgodGold.lastAttempt=Date.now();
-    try{
+  const tasks=[];
+
+  if(FORGOD_API_KEY){
+    tasks.push(async()=>{
       const q=await fetchForgodQuote("gold18","18ayar");
       const r={priceIRR:Math.round(q.priceIRR),source:q.source,sourceCode:q.sourceCode,at:q.at,fetchedAt:q.fetchedAt,unit:"IRR_PER_GRAM",provider:"Forgod"};
-      markProvider("ForgodGold",r); return saveFreshPrice(r);
-    }catch(e){markProvider("ForgodGold",null,e);errors.push(`Forgod 18ayar: ${providerError(e).message}`);}
-  } else if(providerState.ForgodGold.last?.priceIRR) {
-    return {...providerState.ForgodGold.last,cached:true,warning:"داده Forgod از کش خوانده شد"};
+      if(!plausibleGoldPrice(r.priceIRR)) throw new Error("Forgod 18k invalid");
+      markProvider("ForgodGold",r); return r;
+    });
+    tasks.push(async()=>{
+      const q=await fetchForgodAllQuote("gold18");
+      const r={priceIRR:Math.round(q.price),source:q.source,sourceCode:q.sourceCode,at:q.at,fetchedAt:q.fetchedAt,unit:"IRR_PER_GRAM",provider:"Forgod"};
+      if(!plausibleGoldPrice(r.priceIRR)) throw new Error("Forgod all 18k invalid");
+      return r;
+    });
   }
 
-  // Forgod aggregate endpoint is the second Forgod path, still before all other providers.
-  if(FORGOD_API_KEY && providerCanTry("ForgodAll",FORGOD_POLL_MS)) {
-    providerState.ForgodAll.lastAttempt=Date.now();
-    try { const q=await fetchForgodAllQuote("gold18"); const r={priceIRR:Math.round(q.price),source:q.source,sourceCode:q.sourceCode,at:q.at,fetchedAt:q.fetchedAt,unit:"IRR_PER_GRAM",provider:"Forgod"}; markProvider("ForgodAll",r); return saveFreshPrice(r); }
-    catch(e){ markProvider("ForgodAll",null,e); errors.push(`Forgod all 18ayar: ${providerError(e).message}`); }
+  if(TGJU_JSON_URL) tasks.push(()=>tryTGJUJson(TGJU_JSON_URL));
+
+  const urls=[TGJU_GOLD_URL,...TGJU_GOLD_FALLBACK_URLS].filter((u,i,a)=>u&&a.indexOf(u)===i);
+  for(const url of urls){
+    tasks.push(async()=>{
+      const html=await fetchFast(url,{responseType:"text"});
+      const price=parseIran18PriceFromText(html)||parseIran18PriceFromText(cleanText(html));
+      if(!plausibleGoldPrice(price)) throw new Error("TGJU 18k invalid");
+      return {priceIRR:Math.round(price),source:`TGJU (${new URL(url).host})`,at:combineTodayTime(parseTGJULatestAt(html)),fetchedAt:new Date().toISOString(),unit:"IRR_PER_GRAM",sourceCode:"TGJU_GERAM18",parser:"fast-html"};
+    });
   }
 
-  // Priority 2+: existing sources, sequentially so the preferred source is truly first.
-  if(TGJU_JSON_URL && providerCanTry("TGJU",TGJU_MIN_REQUEST_MS)){
-    providerState.TGJU.lastAttempt=Date.now();
-    try{const r=await tryTGJUJson(TGJU_JSON_URL);markProvider("TGJU",r);return saveFreshPrice(r);}catch(e){markProvider("TGJU",null,e);errors.push(`TGJU API: ${providerError(e).message}`);}
-  }
+  tasks.push(async()=>{
+    const widget=parseTGJUWidgetMarketData(await fetchFast(TGJU_WIDGET_URL,{responseType:"text"}));
+    if(!Number.isFinite(widget.gold18)||!plausibleGoldPrice(widget.gold18)) throw new Error("TGJU widget 18k invalid");
+    return {priceIRR:Math.round(widget.gold18),source:"TGJU widget API",at:new Date().toISOString(),fetchedAt:new Date().toISOString(),unit:"IRR_PER_GRAM",sourceCode:"TGJU_WIDGET",parser:"market-widget"};
+  });
+
   if(SERVIX_API_KEY && providerCanTry("Servix",SERVIX_POLL_MS)){
-    providerState.Servix.lastAttempt=Date.now();
-    try{return saveFreshPrice(await fetchServix());}catch(e){markProvider("Servix",null,e);errors.push(`Servix: ${providerError(e).message}`);}
+    tasks.push(async()=>{providerState.Servix.lastAttempt=Date.now();return await fetchServix();});
   }
   if(TINDEX_API_TOKEN && providerCanTry("Tindex",TINDEX_POLL_MS)){
-    providerState.Tindex.lastAttempt=Date.now();
-    try{return saveFreshPrice(await fetchTindex());}catch(e){markProvider("Tindex",null,e);errors.push(`Tindex: ${providerError(e).message}`);}
+    tasks.push(async()=>{providerState.Tindex.lastAttempt=Date.now();return await fetchTindex();});
   }
-  if(providerState.TGJU.last?.priceIRR)return {...providerState.TGJU.last,cached:true,warning:"منبع اصلی در دسترس نیست؛ آخرین داده TGJU"};
-  if(providerState.Servix.last?.priceIRR)return {...providerState.Servix.last,cached:true,warning:"منبع اصلی در دسترس نیست؛ آخرین داده Servix"};
-  if(providerState.Tindex.last?.priceIRR)return {...providerState.Tindex.last,cached:true,warning:"منبع اصلی در دسترس نیست؛ آخرین داده Tindex"};
-  if(providerCanTry("TGJU",TGJU_MIN_REQUEST_MS)){
-    try{providerState.TGJU.lastAttempt=Date.now();const html=await fetchText(TGJU_WIDGET_URL);const widget=parseTGJUWidgetMarketData(html);if(Number.isFinite(widget.gold18)&&plausibleGoldPrice(widget.gold18)){const r={priceIRR:Math.round(widget.gold18),source:"TGJU widget API",at:new Date().toISOString(),fetchedAt:new Date().toISOString(),unit:"IRR_PER_GRAM",parser:"market-widget"};markProvider("TGJU",r);return saveFreshPrice(r);}}catch(e){errors.push(`TGJU widget: ${providerError(e).message}`)}
+
+  try {
+    const result=await firstValidQuote(tasks,{hedgeMs:110,overallMs:4300});
+    if(String(result?.source||"").startsWith("TGJU")) markProvider("TGJU",result);
+    return saveFreshPrice(result);
+  } catch(e) {
+    const cached=[
+      providerState.ForgodGold.last,
+      providerState.TGJU.last,
+      providerState.Servix.last,
+      providerState.Tindex.last,
+      lastValidIran18
+    ].filter(x=>x&&plausibleGoldPrice(Number(x.priceIRR))).sort((a,b)=>new Date(b.fetchedAt||b.at||0)-new Date(a.fetchedAt||a.at||0))[0];
+    if(cached) return {...cached,cached:true,warning:"منابع آنلاین موقتاً پاسخ ندادند؛ آخرین قیمت معتبر نمایش داده شده است"};
+    throw new Error(`Iran 18k gold unavailable — ${e?.message||e}`);
   }
-  if(lastValidIran18 && Date.now()-lastIran18FetchAt<10*60*1000)return {...lastValidIran18,cached:true,warning:errors.join("; ")||"منبع موقتاً در دسترس نیست"};
-  throw new Error(`Iran 18k gold unavailable — ${errors.join("; ")||"هیچ API قیمت فعالی تنظیم نشده است"}`);
 }
 
 export async function getBitcoin(){
-  const errors=[];
-  if(FORGOD_API_KEY && providerCanTry("ForgodBtc",FORGOD_POLL_MS)){
-    providerState.ForgodBtc.lastAttempt=Date.now();
-    try{const q=await fetchForgodQuote("btc","usd_btc");const r={usd:Number(q.price),source:q.source,sourceCode:q.sourceCode,at:q.at,fetchedAt:q.fetchedAt,provider:"Forgod"};markProvider("ForgodBtc",r);return r;}catch(e){markProvider("ForgodBtc",null,e);errors.push(`Forgod BTC: ${providerError(e).message}`)}
+  const providers=[];
+  if(FORGOD_API_KEY){
+    providers.push(async()=>{
+      const q=await fetchForgodQuote("btc","usd_btc");
+      const r={usd:Number(q.price),source:q.source,sourceCode:q.sourceCode,at:q.at,fetchedAt:q.fetchedAt,provider:"Forgod"};
+      if(!Number.isFinite(r.usd)||r.usd<1000) throw new Error("Forgod BTC invalid");
+      markProvider("ForgodBtc",r); return r;
+    });
   }
-  if(FORGOD_API_KEY && providerCanTry("ForgodAll",FORGOD_POLL_MS)) {
-    providerState.ForgodAll.lastAttempt=Date.now();
-    try { const q=await fetchForgodAllQuote("btc"); const r={usd:Number(q.price),source:q.source,sourceCode:q.sourceCode,at:q.at,fetchedAt:q.fetchedAt,provider:"Forgod"}; markProvider("ForgodAll",r); return r; }
-    catch(e){ markProvider("ForgodAll",null,e); errors.push(`Forgod all BTC: ${providerError(e).message}`); }
+  providers.push(fetchCoinbaseBtc,fetchKrakenBtc,fetchBinanceBtc);
+  try {
+    return await firstValidQuote(providers,{hedgeMs:140,overallMs:3800});
+  } catch(e) {
+    if(providerState.ForgodBtc.last?.usd) return {...providerState.ForgodBtc.last,cached:true,warning:"آخرین قیمت معتبر بیت‌کوین"};
+    return {usd:null,source:"unavailable",at:new Date().toISOString(),error:String(e?.message||e)};
   }
-  if(providerState.ForgodBtc.last?.usd && providerState.ForgodBtc.last.sourceCode==='FORGOD_BTC')return {...providerState.ForgodBtc.last,cached:true,warning:"داده Bitcoin از کش خوانده شد"};
-  return {usd:null,source:"unavailable",at:new Date().toISOString(),error:errors.join("; ")||"Bitcoin provider unavailable"};
 }
 
 export async function getForgodCurrencies(){
@@ -472,12 +544,22 @@ export function parseCoinsText(body) {
 }
 export async function getCoins() {
   try {
-    const html = await fetchText(TGJU_COIN_URL);
-    const parsed=parseCoinsText(html);
-    if(Object.values(parsed).some(v=>Number.isFinite(v)) || Object.values(parsed.bubbles||{}).some(v=>Number.isFinite(v))) return { ...parsed, source:"TGJU", at:new Date().toISOString() };
-  } catch {}
-  const widget=parseTGJUWidgetMarketData(await fetchText(TGJU_WIDGET_URL));
-  return { emami:Number.isFinite(widget.emami)?widget.emami:NaN, gram:NaN, half:NaN, quarter:NaN, bahar:NaN, bubbles:{}, source:"TGJU widget API", at:new Date().toISOString() };
+    return await firstValidQuote([
+      async()=>{
+        const html=await fetchFast(TGJU_COIN_URL,{responseType:"text"});
+        const parsed=parseCoinsText(html);
+        if(!Object.values(parsed).some(v=>Number.isFinite(v))&&!Object.values(parsed.bubbles||{}).some(v=>Number.isFinite(v))) throw new Error("TGJU coin page invalid");
+        return {...parsed,source:"TGJU",at:new Date().toISOString(),fetchedAt:new Date().toISOString()};
+      },
+      async()=>{
+        const widget=parseTGJUWidgetMarketData(await fetchFast(TGJU_WIDGET_URL,{responseType:"text"}));
+        if(!Number.isFinite(widget.emami)) throw new Error("TGJU coin widget invalid");
+        return {emami:widget.emami,gram:NaN,half:NaN,quarter:NaN,bahar:NaN,bubbles:{},source:"TGJU widget API",at:new Date().toISOString(),fetchedAt:new Date().toISOString()};
+      }
+    ],{hedgeMs:180,overallMs:3800});
+  } catch(e) {
+    return {emami:NaN,gram:NaN,half:NaN,quarter:NaN,bahar:NaN,bubbles:{},source:"unavailable",at:new Date().toISOString(),error:String(e?.message||e)};
+  }
 }
 export function parseDollarText(body) {
   const text = cleanText(body);
@@ -504,56 +586,103 @@ async function getWorldMarketSnapshot() {
   return parseWorldMarketText(html);
 }
 export async function getDollar() {
-  const errors=[];
-  if(FORGOD_API_KEY && providerCanTry("ForgodUsd",FORGOD_POLL_MS)){
-    providerState.ForgodUsd.lastAttempt=Date.now();
-    try{
+  const providers=[];
+  if(FORGOD_API_KEY){
+    providers.push(async()=>{
       const q=await fetchForgodQuote("usd","usd");
-      const r={priceIRR:Math.round(q.price),source:q.source,sourceCode:q.sourceCode,at:q.at,fetchedAt:q.fetchedAt,unit:"IRR_PER_USD",provider:"Forgod"};
+      const priceIRR=Math.round(q.price);
+      if(!Number.isFinite(priceIRR)||priceIRR<10000) throw new Error("Forgod USD invalid");
+      const r={priceIRR,source:q.source,sourceCode:q.sourceCode,at:q.at,fetchedAt:q.fetchedAt,unit:"IRR_PER_USD",provider:"Forgod"};
       markProvider("ForgodUsd",r); return r;
-    }catch(e){markProvider("ForgodUsd",null,e);errors.push(`Forgod USD: ${providerError(e).message}`)}
-  } else if(providerState.ForgodUsd.last?.priceIRR && providerState.ForgodUsd.last.sourceCode==='FORGOD_USD') {
-    return {...providerState.ForgodUsd.last,cached:true,warning:"داده دلار Forgod از کش خوانده شد"};
+    });
+    providers.push(async()=>{
+      const q=await fetchForgodAllQuote("usd");
+      const priceIRR=Math.round(q.price);
+      if(!Number.isFinite(priceIRR)||priceIRR<10000) throw new Error("Forgod all USD invalid");
+      return {priceIRR,source:q.source,sourceCode:q.sourceCode,at:q.at,fetchedAt:q.fetchedAt,unit:"IRR_PER_USD",provider:"Forgod"};
+    });
   }
-  if(FORGOD_API_KEY && providerCanTry("ForgodAll",FORGOD_POLL_MS)) {
-    providerState.ForgodAll.lastAttempt=Date.now();
-    try { const q=await fetchForgodAllQuote("usd"); const r={priceIRR:Math.round(q.price),source:q.source,sourceCode:q.sourceCode,at:q.at,fetchedAt:q.fetchedAt,unit:"IRR_PER_USD",provider:"Forgod"}; markProvider("ForgodAll",r); return r; }
-    catch(e){ markProvider("ForgodAll",null,e); errors.push(`Forgod all USD: ${providerError(e).message}`); }
+  const tgjuDollar=async(url,label)=>{
+    const html=await fetchFast(url,{responseType:"text"});
+    const price=parseDollarText(html);
+    if(!Number.isFinite(price)||price<10000) throw new Error(`${label} USD invalid`);
+    return {priceIRR:Math.round(price),source:label,at:new Date().toISOString(),fetchedAt:new Date().toISOString(),unit:"IRR_PER_USD"};
+  };
+  providers.push(
+    ()=>tgjuDollar(TGJU_DOLLAR_URL,"TGJU dollar"),
+    ()=>tgjuDollar("https://www.tgju.org/profile/price_dollar_rl","TGJU dollar profile"),
+    async()=>{
+      const widget=parseTGJUWidgetMarketData(await fetchFast(TGJU_WIDGET_URL,{responseType:"text"}));
+      if(!Number.isFinite(widget.dollar)||widget.dollar<10000) throw new Error("TGJU widget USD invalid");
+      return {priceIRR:Math.round(widget.dollar),source:"TGJU widget API",at:new Date().toISOString(),fetchedAt:new Date().toISOString(),unit:"IRR_PER_USD"};
+    },
+    async()=>{
+      const snap=parseWorldMarketText(await fetchFast(TGJU_WORLD_URL,{responseType:"text"}));
+      if(!Number.isFinite(snap.dollar)||snap.dollar<10000) throw new Error("TGJU world USD invalid");
+      return {priceIRR:Math.round(snap.dollar),source:"TGJU world-market",at:new Date().toISOString(),fetchedAt:new Date().toISOString(),unit:"IRR_PER_USD"};
+    }
+  );
+  try {
+    return await firstValidQuote(providers,{hedgeMs:140,overallMs:4200});
+  } catch(e) {
+    if(providerState.ForgodUsd.last?.priceIRR) return {...providerState.ForgodUsd.last,cached:true,warning:"آخرین نرخ معتبر دلار"};
+    throw new Error(`USD unavailable — ${e?.message||e}`);
   }
-  try {
-    const html = await fetchText(TGJU_DOLLAR_URL);
-    const body = cleanText(html);
-    const price = extractFirst(body, [
-      /نرخ\s*فعلی\s*:{0,2}\s*((?:\d{1,3}(?:,\d{3})+)|(?:\d+))/i,
-      /دلار\s*\|\s*((?:\d{1,3}(?:,\d{3})+)|(?:\d+))/i
-    ]);
-    if (Number.isFinite(price) && price > 10000) return {priceIRR:Math.round(price), source:"TGJU", at:new Date().toISOString()};
-  } catch(e){errors.push(`TGJU USD: ${providerError(e).message}`)}
-  try {
-    const widget=parseTGJUWidgetMarketData(await fetchText(TGJU_WIDGET_URL));
-    if(Number.isFinite(widget.dollar) && widget.dollar>10000) return {priceIRR:Math.round(widget.dollar),source:"TGJU widget API",at:new Date().toISOString()};
-  } catch(e){errors.push(`TGJU widget USD: ${providerError(e).message}`)}
-  try {
-    const snap = await getWorldMarketSnapshot();
-    if (Number.isFinite(snap.dollar) && snap.dollar >= 10000) return {priceIRR:Math.round(snap.dollar), source:"TGJU world-market", at:new Date().toISOString()};
-  } catch(e){errors.push(`TGJU world-market USD: ${providerError(e).message}`)}
-  throw new Error(`USD unavailable — ${errors.join('; ')}`);
+}
+
+async function fetchGoldApiXau(){
+  const data=await fetchFast("https://api.gold-api.com/price/XAU");
+  const price=Number(data?.price ?? data?.value ?? data?.ask ?? data?.bid);
+  if(!Number.isFinite(price)||price<100||price>20000) throw new Error("Gold API XAU invalid");
+  return {xauUsd:price,bid:Number(data?.bid||price),ask:Number(data?.ask||price),stale:false,source:"Gold API",at:data?.updatedAt||data?.timestamp||new Date().toISOString()};
+}
+async function fetchGoldPriceDevXau(){
+  const data=await fetchFast(GOLDPRICE_URL);
+  const x=Array.isArray(data?.symbols)?data.symbols[0]:data;
+  const price=Number(x?.price ?? x?.ask ?? x?.bid);
+  if(!Number.isFinite(price)||price<100||price>20000) throw new Error("goldprice.dev XAU invalid");
+  return {xauUsd:price,bid:Number(x?.bid||price),ask:Number(x?.ask||price),stale:Boolean(x?.is_stale),computedAt:x?.computed_at||null,source:"goldprice.dev",at:new Date().toISOString()};
+}
+async function fetchYahooGoldFuture(){
+  const data=await fetchFast("https://query1.finance.yahoo.com/v8/finance/chart/GC=F?interval=1m&range=1d");
+  const meta=data?.chart?.result?.[0]?.meta;
+  const price=Number(meta?.regularMarketPrice);
+  if(!Number.isFinite(price)||price<100||price>20000) throw new Error("Yahoo GC=F invalid");
+  return {xauUsd:price,bid:price,ask:price,stale:false,source:"Yahoo Finance • GC=F",at:meta?.regularMarketTime?new Date(meta.regularMarketTime*1000).toISOString():new Date().toISOString(),instrument:"gold-futures"};
+}
+async function fetchCoinbaseBtc(){
+  const data=await fetchFast("https://api.coinbase.com/v2/prices/BTC-USD/spot");
+  const price=Number(data?.data?.amount);
+  if(!Number.isFinite(price)||price<1000) throw new Error("Coinbase BTC invalid");
+  return {usd:price,source:"Coinbase",sourceCode:"COINBASE_BTCUSD",at:new Date().toISOString(),fetchedAt:new Date().toISOString()};
+}
+async function fetchKrakenBtc(){
+  const data=await fetchFast("https://api.kraken.com/0/public/Ticker?pair=XBTUSD");
+  const row=Object.values(data?.result||{})[0];
+  const price=Number(row?.c?.[0]);
+  if(!Number.isFinite(price)||price<1000) throw new Error("Kraken BTC invalid");
+  return {usd:price,source:"Kraken",sourceCode:"KRAKEN_XBTUSD",at:new Date().toISOString(),fetchedAt:new Date().toISOString()};
+}
+async function fetchBinanceBtc(){
+  const data=await fetchFast("https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT");
+  const price=Number(data?.price);
+  if(!Number.isFinite(price)||price<1000) throw new Error("Binance BTC invalid");
+  return {usd:price,source:"Binance",sourceCode:"BINANCE_BTCUSDT",at:new Date().toISOString(),fetchedAt:new Date().toISOString()};
 }
 
 export async function getGlobalGold() {
   try {
-    const data = await fetchJson(GOLDPRICE_URL);
-    const x = data?.symbols?.[0];
-    const price = Number(x?.price);
-    if (!Number.isFinite(price) || price <= 0) throw new Error("global price unavailable");
-    return {xauUsd:price,bid:Number(x?.bid||price),ask:Number(x?.ask||price),stale:Boolean(x?.is_stale),computedAt:x?.computed_at||null,source:"goldprice.dev",at:new Date().toISOString()};
-  } catch(e) {
-    try {
-      const snap = await getWorldMarketSnapshot();
-      if (Number.isFinite(snap.xau) && snap.xau > 100) {
+    return await firstValidQuote([
+      fetchGoldApiXau,
+      fetchGoldPriceDevXau,
+      async()=>{
+        const snap=await getWorldMarketSnapshot();
+        if(!Number.isFinite(snap.xau)||snap.xau<=100) throw new Error("TGJU XAU invalid");
         return {xauUsd:snap.xau,bid:snap.xau,ask:snap.xau,stale:false,source:"TGJU world-market",at:new Date().toISOString()};
-      }
-    } catch {}
+      },
+      fetchYahooGoldFuture
+    ],{hedgeMs:160,overallMs:4200});
+  } catch(e) {
     return {xauUsd:null,bid:null,ask:null,stale:true,source:"unavailable",error:e.message,at:new Date().toISOString()};
   }
 }

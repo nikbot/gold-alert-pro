@@ -1,1 +1,332 @@
 .v72CommandCenter{display:none;padding:22px;border:1px solid rgba(255,255,255,.08);background:linear-gradient(145deg,#0c111b,#101522);border-radius:24px;box-shadow:0 18px 60px rgba(0,0,0,.22);margin-bottom:20px}.v72CommandCenter.categoryVisible{display:block}.v72Topbar{display:flex;justify-content:space-between;gap:20px;align-items:center;margin-bottom:18px}.v72Eyebrow{font-size:11px;letter-spacing:1.8px;color:#c7a65b;font-weight:800}.v72Topbar h2{margin:4px 0;font-size:25px}.v72Topbar p{margin:0;color:#8e99aa}.v72Live{min-width:150px;padding:12px 15px;border:1px solid rgba(255,255,255,.08);border-radius:14px;text-align:center;background:#0a0f18}.v72Live i{display:inline-block;width:8px;height:8px;border-radius:50%;background:#22c55e;margin-left:7px;box-shadow:0 0 12px #22c55e}.v72Live b{font-size:13px}.v72Live small{display:block;color:#7f8a9c;margin-top:5px}.v72MarketGrid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}.v72MarketCard{border:1px solid rgba(255,255,255,.07);background:#0d131e;color:#f5f7fa;border-radius:16px;padding:16px;text-align:right;cursor:pointer;transition:.2s}.v72MarketCard:hover{transform:translateY(-2px);border-color:rgba(199,166,91,.45)}.v72MarketCard span,.v72MarketCard small{display:block;color:#8d98a9;font-size:12px}.v72MarketCard b{display:block;font-size:19px;margin:9px 0}.v72MarketCard small{color:#22c55e}.v72MainGrid{display:grid;grid-template-columns:1.4fr 1fr;gap:12px;margin-top:12px}.v72Panel{background:#0d131e;border:1px solid rgba(255,255,255,.07);border-radius:18px;padding:16px;min-height:150px}.v72Wide{grid-column:1/-1}.v72PanelHead{display:flex;justify-content:space-between;align-items:center;gap:10px}.v72PanelHead h3{margin:0;font-size:16px}.v72PanelHead span{display:block;color:#7f8a9c;font-size:11px;margin-top:4px}.v72PanelHead button,.v72Quick button{border:1px solid rgba(255,255,255,.09);background:#141b28;color:#dfe5ee;border-radius:10px;padding:8px 11px;cursor:pointer}.v72ChartPanel{min-height:245px}.v72ChartHint{height:190px;display:flex;align-items:center;justify-content:center;color:#697487;border:1px dashed rgba(255,255,255,.08);border-radius:13px;margin-top:14px}.v72DecisionState{display:flex;justify-content:space-between;align-items:center;margin:18px 0}.v72DecisionState b{font-size:23px;color:#c7a65b}.v72DecisionState span{color:#8f9aac}.v72Metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.v72Metrics div{padding:10px;border-radius:12px;background:#111925}.v72Metrics span{display:block;color:#7f8a9c;font-size:11px}.v72Metrics b{display:block;margin-top:5px}.v72Panel p{color:#9ca7b8;line-height:1.8}.v72Sources,.v72List{margin-top:12px;display:grid;gap:8px}.v72Source,.v72Item{display:flex;justify-content:space-between;gap:10px;padding:10px 12px;background:#111925;border-radius:11px;font-size:12px}.v72Source b.ok{color:#22c55e}.v72Source b.warn{color:#f59e0b}.v72Watch{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:12px}.v72Watch div{background:#111925;padding:12px;border-radius:12px}.v72Watch span,.v72Watch small{display:block;color:#7f8a9c}.v72Watch b{display:block;margin:6px 0}.v72Quick{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.v72Quick button{padding:11px 15px}.v72Quick button:hover{border-color:#c7a65b}@media(max-width:900px){.v72MarketGrid{grid-template-columns:repeat(2,1fr)}.v72MainGrid{grid-template-columns:1fr}.v72Watch{grid-template-columns:repeat(2,1fr)}.v72Topbar{align-items:flex-start;flex-direction:column}}@media(max-width:520px){.v72MarketGrid{grid-template-columns:1fr}.v72Watch{grid-template-columns:1fr}.v72CommandCenter{padding:14px}.v72Topbar h2{font-size:21px}}
+
+
+/* V73 Persian Financial UX + Signal Panel */
+.v72SignalPanel{position:relative;overflow:hidden}
+.v72SignalHero{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px;border:1px solid rgba(255,255,255,.08);border-radius:16px;background:linear-gradient(135deg,rgba(255,255,255,.045),rgba(255,255,255,.015));margin-bottom:12px}
+.v72SignalHero small{display:block;color:var(--muted,#8f9aaa);font-size:.76rem;margin-bottom:5px}
+.v72SignalHero b{display:block;font-size:1.18rem}
+.v72SignalScore{min-width:72px;text-align:center}
+.v72SignalScore span{display:block;color:var(--muted,#8f9aaa);font-size:.72rem}
+.v72SignalScore strong{font-size:1.3rem}
+.v72SignalBadge.buy{color:#52e0a0}
+.v72SignalBadge.sell{color:#ff6f7d}
+.v72SignalBadge.watch-buy{color:#7ed6ff}
+.v72SignalBadge.watch-sell{color:#ffc56b}
+.v72SignalBadge.wait{color:#b7c0cc}
+.v72SignalPanel p{line-height:1.9;color:#dbe2eb;margin:8px 0}
+.v72SignalReasons{display:flex;flex-wrap:wrap;gap:7px}
+.v72SignalReasons span{padding:6px 9px;border-radius:999px;background:rgba(255,255,255,.045);color:#bfc9d6;font-size:.74rem}
+.v72SignalNote{margin-top:12px;padding-top:10px;border-top:1px dashed rgba(255,255,255,.08);font-size:.7rem;color:#7f8a99;line-height:1.8}
+@media(max-width:720px){
+  .v72SignalHero{align-items:flex-start}
+  .v72SignalHero b{font-size:1rem}
+}
+
+
+/* V75.1 Mobile Financial Terminal Refresh */
+@media (max-width: 600px){
+  :root{
+    --mobile-bg:#0b1220;
+    --mobile-surface:#121b2b;
+    --mobile-surface-2:#172236;
+    --mobile-line:#263750;
+    --mobile-text:#f4f7fb;
+    --mobile-muted:#8f9db1;
+    --mobile-gold:#e7bd62;
+  }
+
+  html,body{
+    background:#0b1220;
+    min-height:100%;
+  }
+
+  body{
+    background:
+      radial-gradient(120% 38% at 50% -5%,rgba(67,91,125,.34),transparent 62%),
+      linear-gradient(180deg,#0b1220 0%,#0a111d 58%,#09101b 100%);
+  }
+
+  .wrap{
+    max-width:none;
+    width:100%;
+    padding:10px 12px 112px;
+  }
+
+  .top{
+    margin:2px 2px 10px;
+    gap:8px;
+    align-items:center;
+  }
+
+  .brand{gap:8px}
+  .logo{
+    width:44px;height:44px;border-radius:14px;
+    box-shadow:0 8px 22px rgba(0,0,0,.28);
+  }
+  .brand h1{font-size:18px;line-height:1.15}
+  .sub{font-size:9px;margin-top:3px}
+  .top .buttons{margin-top:0;gap:5px}
+  .top .buttons button{
+    padding:8px 10px;
+    border-radius:12px;
+    font-size:10px;
+  }
+
+  .nav{
+    top:0;
+    margin:0 -12px 10px;
+    padding:6px 12px 8px;
+    background:rgba(9,16,28,.92);
+    border-bottom:1px solid rgba(102,126,158,.18);
+    scrollbar-width:none;
+  }
+  .nav::-webkit-scrollbar{display:none}
+  .nav button{
+    padding:8px 12px;
+    border-radius:999px;
+    font-size:10px;
+    background:#121d2d;
+    border:1px solid #26364e;
+    color:#b9c5d6;
+  }
+  .nav button.active{
+    background:linear-gradient(135deg,#e9c774,#c8953d);
+    color:#17130b;
+    box-shadow:none;
+  }
+
+  .liveTicker{
+    top:47px;
+    margin:0 0 10px;
+    border-color:#2a415f;
+    background:rgba(17,28,44,.9);
+    box-shadow:0 8px 24px rgba(0,0,0,.16);
+    border-radius:15px;
+  }
+
+  .premiumNav{
+    top:5px;
+    margin:0 0 10px;
+    padding:5px;
+    border-radius:15px;
+    background:rgba(14,23,37,.94);
+    border-color:#273850;
+    box-shadow:0 8px 24px rgba(0,0,0,.2);
+  }
+  .premiumNav button{
+    min-height:35px;
+    padding:7px 5px;
+    border-radius:10px;
+    background:#142033;
+    border-color:#273850;
+    font-size:9px;
+  }
+
+  .dashboardHead{
+    margin:5px 2px 9px;
+    align-items:center;
+  }
+  .dashboardHead h2{
+    font-size:20px;
+    margin:0;
+  }
+
+  .card,.v72Panel,.v72MarketCard{
+    background:linear-gradient(145deg,#142033,#101a2a);
+    border-color:#263850;
+    box-shadow:0 8px 28px rgba(0,0,0,.18);
+  }
+
+  .heroGrid{
+    display:grid;
+    grid-template-columns:1fr;
+    gap:10px;
+  }
+
+  .hero{
+    min-height:0;
+    padding:17px;
+    border-radius:22px;
+    background:
+      radial-gradient(90% 120% at 100% 0%,rgba(231,189,98,.09),transparent 48%),
+      linear-gradient(145deg,#172337,#101a2a);
+    border-color:#30435d;
+  }
+
+  .hero .label{font-size:10px}
+  .price{
+    font-size:35px;
+    line-height:1.12;
+    letter-spacing:-1px;
+    margin:8px 0 5px;
+  }
+
+  .hero .mini{
+    background:#101a29;
+    border-color:#2a3a52;
+    border-radius:13px;
+  }
+
+  .grid{
+    grid-template-columns:1fr 1fr;
+    gap:9px;
+  }
+
+  .metric,.asset,.target{
+    min-height:86px;
+    padding:13px;
+    border-radius:17px;
+    background:linear-gradient(145deg,#142033,#101a2a);
+    border:1px solid #263850;
+    box-shadow:0 7px 20px rgba(0,0,0,.14);
+  }
+
+  .metric b,.asset b,.target b{font-size:16px}
+  .metric small,.asset small,.target small{font-size:9px}
+
+  .commandBar{
+    grid-template-columns:1fr 1fr;
+    gap:8px;
+  }
+  .commandBar>*{
+    min-height:76px;
+    border-radius:16px;
+  }
+
+  .v72CommandCenter{
+    padding:14px;
+    border-radius:21px;
+    background:
+      linear-gradient(145deg,#111c2c,#0d1726);
+    border-color:#2a3c56;
+    box-shadow:0 10px 30px rgba(0,0,0,.2);
+  }
+
+  .v72Topbar{
+    margin-bottom:12px;
+    gap:10px;
+  }
+  .v72Topbar h2{font-size:20px}
+  .v72Topbar p{font-size:10px;line-height:1.7}
+  .v72Live{
+    width:100%;
+    min-width:0;
+    padding:9px 11px;
+    border-radius:12px;
+  }
+
+  .v72MarketGrid{
+    grid-template-columns:1fr 1fr;
+    gap:8px;
+  }
+  .v72MarketCard{
+    padding:12px;
+    border-radius:15px;
+  }
+  .v72MarketCard b{font-size:16px;margin:7px 0}
+  .v72MarketCard span,.v72MarketCard small{font-size:10px}
+
+  .v72MainGrid{
+    grid-template-columns:1fr;
+    gap:9px;
+  }
+  .v72Panel{
+    padding:13px;
+    min-height:0;
+    border-radius:17px;
+  }
+  .v72ChartPanel{min-height:215px}
+  .v72ChartHint{height:155px}
+  .v72Metrics{gap:6px}
+  .v72Metrics div{padding:9px}
+  .v72Metrics b{font-size:13px}
+
+  .v72Watch{
+    grid-template-columns:1fr 1fr;
+    gap:7px;
+  }
+  .v72Watch div{padding:10px;border-radius:12px}
+
+  .v72SignalHero{
+    padding:13px;
+    border-radius:15px;
+    background:linear-gradient(135deg,#17253a,#111b2c);
+  }
+
+  .quickGrid{grid-template-columns:1fr 1fr;gap:8px}
+  .quickGrid>*{min-height:72px}
+
+  .bottomNav{
+    position:fixed;
+    left:10px;
+    right:10px;
+    bottom:calc(8px + env(safe-area-inset-bottom));
+    margin:0;
+    padding:6px;
+    border-radius:20px;
+    background:rgba(12,19,31,.94);
+    border:1px solid #2a3b54;
+    box-shadow:0 16px 45px rgba(0,0,0,.38);
+    backdrop-filter:blur(20px);
+  }
+  .bottomNav button{
+    min-height:47px;
+    border-radius:14px;
+    font-size:8px;
+    color:#8290a5;
+  }
+  .bottomNav button b{
+    font-size:17px;
+    margin-bottom:3px;
+  }
+  .bottomNav button.active{
+    color:#f5d782;
+    background:linear-gradient(180deg,rgba(231,189,98,.15),rgba(231,189,98,.06));
+    box-shadow:inset 0 0 0 1px rgba(231,189,98,.25);
+  }
+
+  .floatingMenuBtn{
+    width:46px;
+    height:46px;
+    right:14px;
+    top:auto;
+    bottom:calc(82px + env(safe-area-inset-bottom));
+    transform:none;
+    border-radius:15px;
+    font-size:20px;
+    box-shadow:0 10px 28px rgba(0,0,0,.35);
+  }
+  .floatingMenuBtn:active{transform:scale(.96)}
+
+  .aiCopilotDock{
+    bottom:calc(82px + env(safe-area-inset-bottom));
+    left:12px;
+  }
+
+  .sideMenu{
+    width:min(340px,88vw);
+    background:linear-gradient(180deg,#142033,#0c1421);
+    border-left-color:#30435d;
+  }
+
+  .sectionTitle{font-size:13px}
+  .small{font-size:10px}
+  .footer{padding-bottom:20px}
+}
+
+@media (max-width:430px){
+  .wrap{padding-left:9px;padding-right:9px}
+  .top .buttons button{padding:7px 8px}
+  .brand h1{font-size:17px}
+  .logo{width:42px;height:42px}
+  .price{font-size:32px}
+  .grid,.v72MarketGrid{gap:7px}
+  .metric,.asset,.target{padding:11px;min-height:80px}
+  .metric b,.asset b,.target b{font-size:15px}
+  .v72CommandCenter{padding:12px}
+  .v72Topbar h2{font-size:18px}
+  .v72Watch{grid-template-columns:1fr 1fr}
+  .bottomNav{left:7px;right:7px}
+  .bottomNav button{min-height:45px}
+}

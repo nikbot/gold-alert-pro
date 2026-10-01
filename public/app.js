@@ -9,6 +9,7 @@ let notificationsBootstrapped=false;
 const deviceId=localStorage.getItem(DEVICE_KEY)||(()=>{const id=(crypto.randomUUID?crypto.randomUUID():Date.now().toString(36)+Math.random().toString(36).slice(2));localStorage.setItem(DEVICE_KEY,id);return id})();
 function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
 function moneyIRR(n){return n==null?'—':fa(n)+' ریال'}
+function normalizePhoneInput(v){return String(v||'').replace(/[۰-۹]/g,d=>String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d))).replace(/[٠-٩]/g,d=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(d))).replace(/[\u200c\u200f\u200e\s-]/g,'').trim();}
 function startCountdown(){clearInterval(timer);nextAt=Date.now()+pollMs;const tick=()=>{const left=Math.max(0,nextAt-Date.now()),sec=Math.ceil(left/1000);document.getElementById('count').textContent=sec+' ثانیه';document.getElementById('progress').style.width=Math.min(100,Math.max(0,100-left/pollMs*100))+'%';if(left<=0)clearInterval(timer)};tick();timer=setInterval(tick,250)}
 function changeClass(n){return Number(n)>0?'upTxt':Number(n)<0?'downTxt':''}
 function setAsset(id,value,prev){document.getElementById(id).textContent=moneyIRR(value);const el=document.getElementById(id+'Ch');if(el&&prev!=null){const d=(value/prev-1)*100;el.textContent=(d>=0?'▲ ':'▼ ')+pct(Math.abs(d));el.className=changeClass(d)}}
@@ -135,7 +136,8 @@ async function enablePush(silent=false){
   if(!status.configured)throw new Error('کلید Push روی سرور آماده نشده است.');
   const permission=Notification.permission==='granted'?'granted':await Notification.requestPermission();
   if(permission!=='granted')throw new Error('اجازه اعلان داده نشد');
-  const reg=await navigator.serviceWorker.register('/sw.js');
+  const reg=await registerSW();
+   if(!reg)throw new Error('سرویس اعلان مرورگر در دسترس نیست');
   await navigator.serviceWorker.ready;
   const k=await fetch('/api/push/public-key',{cache:'no-store'}).then(r=>r.json());
   if(!k.publicKey)throw new Error('کلید Push روی سرور تنظیم نشده است');
@@ -159,7 +161,14 @@ async function enablePush(silent=false){
 function urlBase64ToUint8Array(s){const padding='='.repeat((4-s.length%4)%4),base64=(s+padding).replace(/-/g,'+').replace(/_/g,'/'),raw=atob(base64),out=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++)out[i]=raw.charCodeAt(i);return out}
 async function runBacktest(){const el=document.getElementById('bt');el.textContent='در حال اجرای بک‌تست...';try{const x=await fetch('/api/backtest?deviceId='+encodeURIComponent(deviceId)+'&accountToken='+encodeURIComponent(accountToken)).then(r=>r.json());if(x.error)throw new Error(x.error);el.innerHTML=`دوره ${x.from} تا ${x.to}<br>معاملات: <b>${fa(x.trades)}</b> • موفقیت: <b>${f2(x.winRate)}٪</b><br>سود خالص تاریخی: <b>${f2(x.netReturn)}٪</b> • افت سرمایه: ${f2(x.maxDrawdown)}٪`}catch(e){el.textContent='خطا: '+e.message}}
 async function installApp(){if(deferredPrompt){deferredPrompt.prompt();await deferredPrompt.userChoice;deferredPrompt=null;document.getElementById('installBtn').style.display='none';const h=document.getElementById('installBtnHero');if(h)h.style.display='none'}else alert('در Chrome اندروید: منوی ⋮ → افزودن به صفحه اصلی / Install app')}
-function registerSW(){if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js')}
+const SW_BUILD_URL='/sw.js?build=75.4';
+let swRegistrationPromise=null;
+function registerSW(){
+  if(!('serviceWorker' in navigator)) return Promise.resolve(null);
+  if(swRegistrationPromise) return swRegistrationPromise;
+  swRegistrationPromise=navigator.serviceWorker.register(SW_BUILD_URL,{scope:'/',updateViaCache:'none'}).catch(()=>null);
+  return swRegistrationPromise;
+}
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;document.getElementById('installBtn').style.display='inline-block';const h=document.getElementById('installBtnHero');if(h)h.style.display='inline-block'});window.addEventListener('appinstalled',()=>{document.getElementById('installBtn').style.display='none';const h=document.getElementById('installBtnHero');if(h)h.style.display='none'});
 let liveStream=null, streamFallbackTimer=null;
 function connectLiveStream(){
@@ -235,23 +244,65 @@ const categoryLabels={
 const PUBLIC_CATEGORIES=new Set(['dashboard','account']);
 let pendingProtectedCategory='';
 function applyCategory(category,scroll=true){
+ const publicDashboard=(category==='dashboard');
  if(category!=='dashboard' && category!=='admin' && !PUBLIC_CATEGORIES.has(category) && !accountToken){
    pendingProtectedCategory=category;
    showAuthGate(true,'برای استفاده از این بخش ابتدا وارد حساب شوید.');
    return false;
  }
- document.querySelectorAll('.categorySection').forEach(el=>{el.classList.remove('categoryVisible');el.style.display='none';});
- document.body.classList.toggle('categoryView',category!=='dashboard');
+
+ // V75.4: one workspace at a time, without hiding dashboard children.
+ document.body.dataset.g2Category=category;
+ document.body.classList.toggle('g2Dashboard',publicDashboard);
+ document.body.classList.toggle('g2SectionPage',!publicDashboard);
+
+ document.querySelectorAll('.categorySection').forEach(el=>{
+   el.classList.remove('categoryVisible');
+   el.style.display='none';
+ });
+
+ if(publicDashboard){
+   const shell=document.getElementById('v62TerminalShell');
+   if(shell){
+     shell.classList.add('categoryVisible');
+     shell.style.display='grid';
+     shell.querySelectorAll('.category-dashboard').forEach(el=>{
+       el.classList.add('categoryVisible');
+       el.style.display='';
+     });
+   }
+ }else{
+   document.querySelectorAll('.category-'+category).forEach(el=>{
+     if(el.id==='v62TerminalShell') return;
+     el.classList.add('categoryVisible');
+     el.style.display='';
+   });
+ }
+
  document.querySelectorAll('.menuItem').forEach(b=>b.classList.toggle('active',b.dataset.category===category));
- document.querySelectorAll('.category-'+category).forEach(el=>{el.classList.add('categoryVisible');el.style.display='block';});
+ document.querySelectorAll('[data-v62cat]').forEach(b=>b.classList.toggle('active',b.dataset.v62cat===category));
+
  const title=document.getElementById('categoryTitle');
  const desc=document.getElementById('categoryDesc');
- if(title) title.textContent=categoryLabels[category]||'بخش';
- if(desc) desc.textContent=category==='dashboard'?'قیمت زنده، وضعیت امروز و سیگنال کلی بازار':'فقط ابزارهای مرتبط با '+(categoryLabels[category]||'این بخش')+' نمایش داده می‌شوند.';
+ const heading=document.getElementById('g2PageHeading');
+ const subheading=document.getElementById('g2PageSubheading');
+ const labels=typeof categoryLabels==='object'&&categoryLabels?categoryLabels:{};
+ const label=labels[category]||'بخش';
+ if(title) title.textContent=publicDashboard?'پیشخوان':label;
+ if(desc) desc.textContent=publicDashboard?'قیمت زنده، وضعیت امروز و مسیرهای اصلی':'فقط ابزارهای مرتبط با '+label+' نمایش داده می‌شوند.';
+ if(heading) heading.textContent=publicDashboard?'پیشخوان بازار':label;
+ if(subheading) subheading.textContent=publicDashboard?'نمای خلاصه و زنده بازار؛ جزئیات هر بخش از منوی کناری باز می‌شود.':'این بخش فقط ابزارها و داده‌های مرتبط با '+label+' را نمایش می‌دهد.';
+ const intro=document.getElementById('categoryIntro');
+ if(intro) intro.style.display='none';
+
  if(scroll){
-   const first=document.querySelector('.category-'+category);
-   if(first) setTimeout(()=>first.scrollIntoView({behavior:'smooth',block:'start'}),40);
-   else window.scrollTo({top:0,behavior:'smooth'});
+   if(publicDashboard){
+     window.scrollTo({top:0,behavior:'smooth'});
+   }else{
+     const first=document.querySelector('.category-'+category+':not(#v62TerminalShell)');
+     if(first) setTimeout(()=>first.scrollIntoView({behavior:'smooth',block:'start'}),40);
+     else window.scrollTo({top:0,behavior:'smooth'});
+   }
  }
  aiCopilotPage=category;
  if(typeof refreshAICopilot==='function') refreshAICopilot(false,category);
@@ -431,7 +482,7 @@ const ACCOUNT_TOKEN_KEY_V26='gold-alert-pro-account-token-v28';
 function persistAccountToken(token){accountToken=String(token||'');if(accountToken)localStorage.setItem(ACCOUNT_TOKEN_KEY_V26,accountToken);else localStorage.removeItem(ACCOUNT_TOKEN_KEY_V26);}
 function setAccountStatus(text){const e=document.getElementById('accountStatus');if(e)e.textContent='وضعیت حساب: '+text;const q=document.getElementById('quickAccountStatus');if(q)q.textContent=accountToken?'🟢 وارد شده':'🔒 نیاز به ورود';}
 async function gateLogin(){
- const username=String(document.getElementById('authMobile')?.value||'').trim();
+ const username=normalizePhoneInput(document.getElementById('authMobile')?.value||'');
  const password=String(document.getElementById('authPass')?.value||'');
  if(!username||!password){setAuthError('شماره موبایل و رمز عبور را وارد کنید.');return;}
  const btn=document.querySelector('#authLoginForm button[onclick="gateLogin()"]');
@@ -453,7 +504,7 @@ async function gateLogin(){
  finally{if(btn){btn.disabled=false;btn.textContent='🔐 ورود به حساب';}}
 }
 async function gateRegister(){
- const phone=String(document.getElementById('regMobile')?.value||'').trim();
+ const phone=normalizePhoneInput(document.getElementById('regMobile')?.value||'');
  const password=String(document.getElementById('regPass')?.value||'');
  const password2=String(document.getElementById('regPass2')?.value||'');
  if(!/^09\d{9}$/.test(phone)){setAuthError('شماره موبایل باید با 09 شروع شود و 11 رقم باشد.');return;}
@@ -599,6 +650,14 @@ async function adminLoadBusinessDashboard(){
     const r=await adminFetch('/api/admin/business-dashboard'); const d=await r.json();
     if(!r.ok)throw new Error(d.error||'خطا');
     const maxRev=Math.max(1,...(d.daily||[]).map(x=>Number(x.revenue||0)));
+    const monthRevenue=document.getElementById('adminMonthRevenue');
+    const avgPayment=document.getElementById('adminAvgPayment');
+    const paidUsers=document.getElementById('adminPaidUsers');
+    const expiringUsers=document.getElementById('adminExpiringUsers');
+    if(monthRevenue)monthRevenue.textContent=formatIRR(d.revenue.month);
+    if(avgPayment)avgPayment.textContent=formatIRR(d.revenue.average);
+    if(paidUsers)paidUsers.textContent=fa(Number(d.users.pro||0)+Number(d.users.premium||0));
+    if(expiringUsers)expiringUsers.textContent=fa(d.users.expiring7);
     box.innerHTML=`
       <div class="bizCards">
         <div class="bizCard"><span>درآمد کل ثبت‌شده</span><b>${formatIRR(d.revenue.total)}</b><small>${fa(d.revenue.confirmedCount)} تراکنش تأییدشده</small></div>
@@ -833,7 +892,7 @@ window.adminLogin = adminLogin;
     const raw=(latest?.prices||[]).map(Number).filter(Number.isFinite).slice(-chartRange);
     const high=raw.length?Math.max(...raw):0,low=raw.length?Math.min(...raw):0,last=raw.at(-1)||0,first=raw[0]||0,delta=first?((last/first-1)*100):0;
     set('v62GoldHigh',high?safeMoney(high):'—');set('v62GoldLow',low?safeMoney(low):'—');set('v62GoldMove',first?((delta>=0?'▲ +':'▼ ')+f2(Math.abs(delta))+'٪'):'—');
-    set('v62Source',latest?.iran?.source||'—');
+    set('v62Source',latest?.iran?.source||'—');set('v62GoldSource',latest?.iran?.source||'—');
   }
   window.v62ChartRange=function(btn,n){
     document.querySelectorAll('.v62Range button,.v62ChartTools button').forEach(x=>x.classList.remove('active'));btn?.classList.add('active');

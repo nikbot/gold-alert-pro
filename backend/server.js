@@ -15,14 +15,14 @@ import { adminLogin, requireAdminToken, requireAdminSession, adminLogout, listUs
 import { analyzeGold } from "./ai/manager.js";
 import { getTheme, setTheme } from "./theme.js";
 
-const APP_VERSION = "70.0.0"
+const APP_VERSION = "75.4.0"
 const USER_SESSION_HOURS = Math.max(1, Number(process.env.USER_SESSION_HOURS || 72));
 const LOGIN_WINDOW_MS = 10 * 60_000;
 const LOGIN_MAX_ATTEMPTS = 12;
 const loginAttempts = new Map();
 const app = express();
 const port = Number.isFinite(Number(process.env.PORT)) ? Number(process.env.PORT) : 3000;
-const pollMs = Math.max(5000, Number(process.env.POLL_MS || 8000));
+const pollMs = Math.max(2500, Math.min(5000, Number(process.env.POLL_MS || 4000)));
 const staleThresholdMs = Math.max(15000, Number(process.env.STALE_THRESHOLD_MS || 60000));
 const minScore = Math.min(100, Math.max(0, Number(process.env.MIN_SIGNAL_SCORE || 65)));
 const target1 = Math.max(0.1, Number(process.env.TARGET_1_PCT || 1.5));
@@ -110,7 +110,19 @@ app.use((req, res, next) => {
   if (req.method === "OPTIONS") return res.sendStatus(204); next();
 });
 app.use(express.json({ limit: "64kb" }));
-app.use(express.static("public", { maxAge: "1h", setHeaders: (res, filePath) => { if (/\/(app|admin|sw)\.js$/.test(filePath) || /\/(index|admin)\.html$/.test(filePath) || /\/admin\.css$/.test(filePath)) res.setHeader("Cache-Control", "no-store"); } }));
+app.use(express.static("public", {
+  maxAge: 0,
+  etag: true,
+  lastModified: true,
+  setHeaders: (res, filePath) => {
+    const p = String(filePath).replaceAll("\\", "/");
+    if (/(\/(index|admin)\.html)$/.test(p) || /(\/(app|admin|sw)\.js)$/.test(p) || /\.(js|css)$/.test(p)) {
+      res.setHeader("Cache-Control", "no-store, max-age=0, must-revalidate");
+      res.setHeader("Pragma", "no-cache");
+      res.setHeader("Expires", "0");
+    }
+  }
+}));
 
 const state = {
   iran: null, global: null, dollar: null, coins: null, bitcoin: null, forgodCurrencies: null, marketPressure: null, analysis: null, prices: [], ticks: [], events: [], news: [], lastSignal: "WAIT", lastPressureAlert: "NEUTRAL",
@@ -130,6 +142,7 @@ function publicStatePayload(){
     config: { pollMs, minScore, target1, target2, stopPct, appVersion: APP_VERSION },
     marketStructure: marketStructure(state.prices),
     sourceDiagnostics: state.sourceDiagnostics,
+    marketDiagnostics: state.marketDiagnostics || null,
     anomaly: state.anomaly || null,
     engineStatus: state.engineStatus,
     units: { gold18: "IRR_PER_GRAM", dollar: "IRR_PER_USD", coins: "IRR", bitcoin: "USD" },
@@ -165,6 +178,20 @@ async function loadState() {
     if (Array.isArray(saved?.targetEvents)) state.targetEvents = saved.targetEvents.slice(0, 30);
     if (saved?.lastSignal) state.lastSignal = saved.lastSignal;
     if (saved?.lastPressureAlert) state.lastPressureAlert = saved.lastPressureAlert;
+    if (saved?.market?.iran && Number.isFinite(Number(saved.market.iran.priceIRR)) && Number(saved.market.iran.priceIRR) > 0) {
+      state.iran = { ...saved.market.iran, priceIRR: Math.round(Number(saved.market.iran.priceIRR)), cached: true };
+      state.engineStatus = {
+        status: "STALE",
+        label: "آخرین قیمت معتبر ذخیره‌شده",
+        source: saved.market.iran.source || null,
+        sourceAgeMs: saved.market.iran.at ? Math.max(0, Date.now() - new Date(saved.market.iran.at).getTime()) : null,
+        reason: "منبع آنلاین هنوز قیمت جدیدی نداده است"
+      };
+    }
+    if (saved?.market?.global) state.global = saved.market.global;
+    if (saved?.market?.dollar && Number.isFinite(Number(saved.market.dollar.priceIRR))) state.dollar = saved.market.dollar;
+    if (saved?.market?.coins) state.coins = saved.market.coins;
+    if (saved?.market?.bitcoin) state.bitcoin = saved.market.bitcoin;
     if (Array.isArray(saved?.personalAlerts)) state.personalAlerts = saved.personalAlerts.slice(0, 1000);
   } catch {}
 }
@@ -173,7 +200,21 @@ function scheduleSave() {
   saveTimer = setTimeout(async () => {
     try {
       await fs.mkdir(DATA_DIR, { recursive: true });
-      await fs.writeFile(STATE_FILE, JSON.stringify({ activeTrade: state.activeTrade, events: state.events, targetEvents: state.targetEvents, lastSignal: state.lastSignal, lastPressureAlert: state.lastPressureAlert, personalAlerts: state.personalAlerts }), "utf8");
+      await fs.writeFile(STATE_FILE, JSON.stringify({
+        activeTrade: state.activeTrade,
+        events: state.events,
+        targetEvents: state.targetEvents,
+        lastSignal: state.lastSignal,
+        lastPressureAlert: state.lastPressureAlert,
+        personalAlerts: state.personalAlerts,
+        market: {
+          iran: state.iran,
+          global: state.global,
+          dollar: state.dollar,
+          coins: state.coins,
+          bitcoin: state.bitcoin
+        }
+      }), "utf8");
     } catch (e) { console.warn("State persistence unavailable:", e.message); }
   }, 150);
 }
@@ -183,7 +224,7 @@ async function audit(action, meta={}){ try{ const a=await readJsonFile(AUDIT_FIL
 async function addNotification(userId,title,message,type="info"){ const all=await readJsonFile(NOTIFICATIONS_FILE,[]); const item={id:crypto.randomUUID(),userId,title:String(title).slice(0,120),message:String(message).slice(0,1000),type,read:false,createdAt:new Date().toISOString()}; all.unshift(item); await writeJsonFile(NOTIFICATIONS_FILE,all.slice(0,5000)); try{ const store=await readJsonFile(ACCOUNTS_FILE,{}); const a=Object.values(store).find(x=>x?.id===userId); if(a?.deviceId) await sendWebPushToDevice(a.deviceId,{title:String(title).slice(0,120),body:String(message).slice(0,500),icon:'/icon-192.png',badge:'/icon-192.png',tag:`user-notification-${item.id}`,data:{url:'/#notificationCenter'}},`NOTIF_${item.id}`,Date.now()); }catch(e){ console.warn('User notification push failed:',e.message); } return item; }
 async function readJsonFile(file, fallback) { try { return JSON.parse(await fs.readFile(file, "utf8")); } catch { return fallback; } }
 async function writeJsonFile(file, value) { await fs.mkdir(DATA_DIR, { recursive: true }); await fs.writeFile(file, JSON.stringify(value), "utf8"); }
-function normalizePhone(v) { return String(v || "").replace(/\s+/g, "").replace(/-/g, "").trim(); }
+function normalizePhone(v) { return String(v || "").replace(/[۰-۹]/g, d => String("۰۱۲۳۴۵۶۷۸۹".indexOf(d))).replace(/[٠-٩]/g, d => String("٠١٢٣٤٥٦٧٨٩".indexOf(d))).replace(/[\u200c\u200f\u200e]/g, "").replace(/\s+/g, "").replace(/-/g, "").trim(); }
 function hashPassword(password, salt = crypto.randomBytes(16).toString("hex")) { const hash = crypto.scryptSync(String(password), salt, 64).toString("hex"); return { salt, hash }; }
 function verifyPassword(password, salt, expected) { try { const actual = crypto.scryptSync(String(password), salt, 64).toString("hex"); return crypto.timingSafeEqual(Buffer.from(actual, "hex"), Buffer.from(expected, "hex")); } catch { return false; } }
 async function accountByToken(token) { const t=String(token||""); if(!t) return null; const store=await readJsonFile(ACCOUNTS_FILE, {}); const a=Object.values(store).find(x=>x.token===t) || null; if(!a) return null; if(a.tokenExpiresAt && Date.parse(a.tokenExpiresAt)<Date.now()){ a.token=""; a.tokenExpiresAt=null; const key=Object.keys(store).find(k=>store[k]===a); if(key){store[key]=a; await writeJsonFile(ACCOUNTS_FILE,store);} return null; } return a; }
@@ -551,58 +592,210 @@ async function tick() {
   state.busy = true;
   try {
     const providerNames = ["Iran18", "GlobalGold", "Dollar", "Coins", "Bitcoin", "ForgodAll"];
-    const results = await Promise.allSettled([getIran18(), getGlobalGold(), getDollar(), getCoins(), getBitcoin(), getForgodCurrencies()]);
+    const results = await Promise.allSettled([
+      getIran18(),
+      getGlobalGold(),
+      getDollar(),
+      getCoins(),
+      getBitcoin(),
+      getForgodCurrencies()
+    ]);
+
     for (let i = 0; i < results.length; i++) {
-      if (results[i].status === "rejected") console.warn(`Provider ${providerNames[i]} failed:`, results[i].reason?.message || "unknown error");
+      if (results[i].status === "rejected") {
+        console.warn(`Provider ${providerNames[i]} failed:`, results[i].reason?.message || "unknown error");
+      }
     }
+
     const iran = results[0].status === "fulfilled" ? results[0].value : null;
     const global = results[1].status === "fulfilled" ? results[1].value : null;
     const dollar = results[2].status === "fulfilled" ? results[2].value : null;
     const coins = results[3].status === "fulfilled" ? results[3].value : null;
     const bitcoin = results[4].status === "fulfilled" ? results[4].value : null;
     const forgodCurrencies = results[5].status === "fulfilled" ? results[5].value : null;
-    if (!iran) {
-      console.warn("Iran18 unavailable, keeping previous state");
-      state.engineStatus = { status: "OFFLINE", label: "منبع قیمت در دسترس نیست", source: null, sourceAgeMs: null, reason: results[0].reason?.message || "Iran gold provider unavailable" };
-      if (state.iran) { state.error = results[0].reason?.message || "Iran gold provider unavailable"; broadcastMarketState(true); return; }
-      throw new Error(results[0].reason?.message || "Iran gold price unavailable");
+
+    // Every market is updated independently. A failed provider for one instrument
+    // must never blank or block the other instruments.
+    const validXau = Number(global?.xauUsd);
+    if (Number.isFinite(validXau) && validXau > 0) {
+      state.global = { ...global, xauUsd: validXau };
     }
-    if (iran.cached) {
-      const sourceAt = new Date(state.iran?.at || iran.at || 0).getTime();
-      const age = sourceAt ? Math.max(0, Date.now() - sourceAt) : null;
-      state.engineStatus = { status: "STALE", label: "آخرین قیمت معتبر", source: state.iran?.source || iran.source || null, sourceAgeMs: age, reason: iran.warning || "منبع قیمت فعلاً داده جدید نداده است" };
-      state.error = iran.warning || "قیمت جدید از منبع دریافت نشد";
-      try { state.sourceDiagnostics = await getIran18Sources(false); } catch {}
-      broadcastMarketState(true);
-      return;
+
+    const validDollar = Number(dollar?.priceIRR);
+    if (Number.isFinite(validDollar) && validDollar > 0) {
+      state.dollar = { ...dollar, priceIRR: Math.round(validDollar) };
     }
-    state.iran = iran; state.global = global; state.dollar = dollar; state.coins = coins; state.bitcoin = bitcoin; state.forgodCurrencies = forgodCurrencies;
-    if (!state.sourceDiagnostics || Date.now() - new Date(state.sourceDiagnostics.checkedAt || 0).getTime() > 60000) {
-      try { state.sourceDiagnostics = await getIran18Sources(false); } catch (e) { state.sourceDiagnostics = { checkedAt:new Date().toISOString(), primary:iran.source || null, sources:[{name:iran.source||"active",priceIRR:iran.priceIRR,ok:true}], anomaly:false, error:e.message }; }
+
+    if (coins && Object.values(coins).some(v => Number.isFinite(Number(v)))) {
+      state.coins = coins;
     }
-    const previousPrice = Number(state.prices.at(-1) || 0);
-    const jumpPct = previousPrice > 0 ? Math.abs((iran.priceIRR / previousPrice - 1) * 100) : 0;
-    const sourceTimestamp = iran.at ? new Date(iran.at).getTime() : 0;
-    const receivedTimestamp = iran.fetchedAt ? new Date(iran.fetchedAt).getTime() : Date.now();
-    const sourceAge = sourceTimestamp > 0 && Number.isFinite(sourceTimestamp) ? Math.max(0, Date.now() - sourceTimestamp) : 0;
-    const transportAge = Math.max(0, Date.now() - receivedTimestamp);
-    const sourceStale = sourceAge > staleThresholdMs || transportAge > staleThresholdMs;
-    state.anomaly = { detected: jumpPct > 5 || Boolean(state.sourceDiagnostics?.anomaly), jumpPct, thresholdPct:5, sourceSpreadPct:state.sourceDiagnostics?.spreadPct ?? null, checkedAt:new Date().toISOString() };
-    state.engineStatus = { status: sourceStale ? "STALE" : "LIVE", label: sourceStale ? "قیمت منبع قدیمی است" : "LIVE • قیمت جدید", source: iran.source || null, sourceAgeMs: sourceAge, transportAgeMs: transportAge, reason: sourceStale ? `آخرین داده بیش از ${Math.round(staleThresholdMs/1000)} ثانیه قبل است` : null };
-    pushPrice(iran.priceIRR); pushTick({iran,global,dollar,coins,bitcoin});
-    state.marketPressure = calcMarketPressure();
-    await emitPressureAlert(state.marketPressure, iran.priceIRR);
-    state.analysis = analyze(state.prices); state.dataReady = state.prices.length >= 30;
-    state.updatedAt = new Date().toISOString(); state.error = sourceStale ? state.engineStatus.reason : null; state.consecutiveErrors = 0; broadcastMarketState();
-    await safeAlert(() => checkPortfolioRiskAlerts());
-    await safeAlert(() => emitLivePricePush(iran, global, dollar));
-    await safeAlert(() => checkTargets(iran.priceIRR));
-    await safeAlert(() => checkPersonalPriceAlerts(iran.priceIRR));
-    await safeAlert(() => checkSmartAlerts());
-    await safeAlert(() => sendPremiumPriceSMS({ iran, global, dollar, coins, bitcoin, analysis: state.analysis }));
-    const a = state.analysis;
-    if (a && ["BUY", "SELL"].includes(a.signal) && a.score >= minScore && a.signal !== state.lastSignal) await emitSignal(a);
-    else if (!a || !["BUY", "SELL"].includes(a.signal)) { if (state.lastSignal !== "WAIT") { state.lastSignal = "WAIT"; scheduleSave(); } }
+
+    const validBtc = Number(bitcoin?.usd);
+    if (Number.isFinite(validBtc) && validBtc > 0) {
+      state.bitcoin = { ...bitcoin, usd: validBtc };
+    }
+
+    if (forgodCurrencies) state.forgodCurrencies = forgodCurrencies;
+
+    // Keep explicit per-market diagnostics for the frontend.
+    state.marketDiagnostics = {
+      gold18: {
+        ok: Boolean(iran && Number.isFinite(Number(iran.priceIRR)) && Number(iran.priceIRR) > 0),
+        source: iran?.source || state.iran?.source || null,
+        cached: Boolean(iran?.cached),
+        error: results[0].status === "rejected" ? (results[0].reason?.message || "unavailable") : (iran?.warning || null)
+      },
+      xauUsd: {
+        ok: Number.isFinite(validXau) && validXau > 0,
+        source: global?.source || state.global?.source || null,
+        error: global?.error || null
+      },
+      dollar: {
+        ok: Number.isFinite(validDollar) && validDollar > 0,
+        source: dollar?.source || state.dollar?.source || null,
+        cached: Boolean(dollar?.cached),
+        error: dollar?.error || (results[2].status === "rejected" ? results[2].reason?.message || "unavailable" : null)
+      },
+      coins: {
+        ok: Boolean(coins && Object.values(coins).some(v => Number.isFinite(Number(v)))),
+        source: coins?.source || state.coins?.source || null,
+        error: coins?.error || null
+      },
+      bitcoin: {
+        ok: Number.isFinite(validBtc) && validBtc > 0,
+        source: bitcoin?.source || state.bitcoin?.source || null,
+        cached: Boolean(bitcoin?.cached),
+        error: bitcoin?.error || null
+      },
+      checkedAt: new Date().toISOString()
+    };
+
+    // Iran 18k has its own freshness state. If it fails, preserve the previous
+    // valid quote but continue processing all other markets.
+    if (iran && Number.isFinite(Number(iran.priceIRR)) && Number(iran.priceIRR) > 0) {
+      const iranPrice = Math.round(Number(iran.priceIRR));
+      state.iran = { ...iran, priceIRR: iranPrice };
+
+      const sourceTimestamp = iran.at ? new Date(iran.at).getTime() : 0;
+      const receivedTimestamp = iran.fetchedAt ? new Date(iran.fetchedAt).getTime() : Date.now();
+      const sourceAge = sourceTimestamp > 0 && Number.isFinite(sourceTimestamp)
+        ? Math.max(0, Date.now() - sourceTimestamp)
+        : 0;
+      const transportAge = Math.max(0, Date.now() - receivedTimestamp);
+      const sourceStale = Boolean(iran.cached) || sourceAge > staleThresholdMs || transportAge > staleThresholdMs;
+
+      if (!state.sourceDiagnostics || Date.now() - new Date(state.sourceDiagnostics.checkedAt || 0).getTime() > 60000) {
+        try {
+          state.sourceDiagnostics = await getIran18Sources(false);
+        } catch (e) {
+          state.sourceDiagnostics = {
+            checkedAt: new Date().toISOString(),
+            primary: iran.source || null,
+            sources: [{ name: iran.source || "active", priceIRR: iranPrice, ok: true, cached: Boolean(iran.cached) }],
+            anomaly: false,
+            error: e.message
+          };
+        }
+      }
+
+      const previousPrice = Number(state.prices.at(-1) || 0);
+      const jumpPct = previousPrice > 0 ? Math.abs((iranPrice / previousPrice - 1) * 100) : 0;
+      state.anomaly = {
+        detected: jumpPct > 5 || Boolean(state.sourceDiagnostics?.anomaly),
+        jumpPct,
+        thresholdPct: 5,
+        sourceSpreadPct: state.sourceDiagnostics?.spreadPct ?? null,
+        checkedAt: new Date().toISOString()
+      };
+
+      state.engineStatus = {
+        status: sourceStale ? "STALE" : "LIVE",
+        label: sourceStale ? "آخرین قیمت معتبر طلا" : "LIVE • قیمت جدید",
+        source: iran.source || null,
+        sourceAgeMs: sourceAge,
+        transportAgeMs: transportAge,
+        reason: sourceStale
+          ? (iran.warning || `آخرین داده بیش از ${Math.round(staleThresholdMs / 1000)} ثانیه قبل است`)
+          : null
+      };
+
+      pushPrice(iranPrice);
+      pushTick({ iran: state.iran, global: state.global, dollar: state.dollar, coins: state.coins, bitcoin: state.bitcoin });
+      state.marketPressure = calcMarketPressure();
+      await emitPressureAlert(state.marketPressure, iranPrice);
+      state.analysis = analyze(state.prices);
+      state.dataReady = state.prices.length >= 30;
+      state.error = sourceStale ? state.engineStatus.reason : null;
+      state.consecutiveErrors = 0;
+    } else {
+      // No fresh/current Iran quote: preserve a previous valid quote if available.
+      // Other instruments remain fully usable.
+      const previousIran = state.iran;
+      const previousPrice = Number(previousIran?.priceIRR || 0);
+      if (previousPrice > 0) {
+        const fetchedAt = previousIran?.fetchedAt ? new Date(previousIran.fetchedAt).getTime() : 0;
+        const age = fetchedAt > 0 ? Math.max(0, Date.now() - fetchedAt) : null;
+        state.engineStatus = {
+          status: "STALE",
+          label: "آخرین قیمت معتبر طلا",
+          source: previousIran?.source || null,
+          sourceAgeMs: age,
+          reason: results[0].status === "rejected"
+            ? (results[0].reason?.message || "منبع طلای ۱۸ موقتاً در دسترس نیست")
+            : "قیمت جدید طلای ۱۸ دریافت نشد"
+        };
+        state.error = state.engineStatus.reason;
+        state.marketPressure = state.marketPressure || calcMarketPressure();
+        state.analysis = state.analysis || analyze(state.prices);
+      } else {
+        state.engineStatus = {
+          status: "OFFLINE",
+          label: "منبع طلای ۱۸ در دسترس نیست",
+          source: null,
+          sourceAgeMs: null,
+          reason: results[0].status === "rejected"
+            ? (results[0].reason?.message || "Iran gold provider unavailable")
+            : "Iran 18k quote unavailable"
+        };
+        state.error = state.engineStatus.reason;
+      }
+      state.consecutiveErrors++;
+    }
+
+    state.updatedAt = new Date().toISOString();
+    // Persist the latest valid market snapshot so a temporary provider outage or
+    // process restart does not leave the dashboard with a blank price.
+    if (state.iran?.priceIRR) scheduleSave();
+
+    // Broadcast even when only XAU/USD, USD/IRR, coins or BTC changed.
+    // Previously this was skipped by early returns from the Iran18 branch.
+    broadcastMarketState(true);
+
+    if (state.iran?.priceIRR) {
+      await safeAlert(() => checkPortfolioRiskAlerts());
+      await safeAlert(() => emitLivePricePush(state.iran, state.global, state.dollar));
+      await safeAlert(() => checkTargets(state.iran.priceIRR));
+      await safeAlert(() => checkPersonalPriceAlerts(state.iran.priceIRR));
+      await safeAlert(() => checkSmartAlerts());
+      await safeAlert(() => sendPremiumPriceSMS({
+        iran: state.iran,
+        global: state.global,
+        dollar: state.dollar,
+        coins: state.coins,
+        bitcoin: state.bitcoin,
+        analysis: state.analysis
+      }));
+
+      const a = state.analysis;
+      if (a && ["BUY", "SELL"].includes(a.signal) && a.score >= minScore && a.signal !== state.lastSignal) {
+        await emitSignal(a);
+      } else if (!a || !["BUY", "SELL"].includes(a.signal)) {
+        if (state.lastSignal !== "WAIT") {
+          state.lastSignal = "WAIT";
+          scheduleSave();
+        }
+      }
+    }
   } catch (e) {
     state.consecutiveErrors++;
     state.error = e.message;
@@ -610,14 +803,16 @@ async function tick() {
     const age = fetchedAt && Number.isFinite(fetchedAt) ? Math.max(0, Date.now() - fetchedAt) : Infinity;
     const hasLast = Boolean(state.iran?.priceIRR);
     state.engineStatus = hasLast && age <= staleThresholdMs
-      ? { status:"STALE", label:"آخرین قیمت معتبر", source:state.iran?.source||null, sourceAgeMs:age, reason:e.message }
-      : { status:"OFFLINE", label:"منبع قیمت در دسترس نیست", source:state.iran?.source||null, sourceAgeMs:Number.isFinite(age)?age:null, reason:e.message };
+      ? { status: "STALE", label: "آخرین قیمت معتبر", source: state.iran?.source || null, sourceAgeMs: age, reason: e.message }
+      : { status: "OFFLINE", label: "منبع قیمت در دسترس نیست", source: state.iran?.source || null, sourceAgeMs: Number.isFinite(age) ? age : null, reason: e.message };
     try { state.sourceDiagnostics = await getIran18Sources(false); } catch {}
+    state.updatedAt = new Date().toISOString();
     broadcastMarketState(true);
     console.warn("Tick error:", e.message);
-  } finally { state.busy = false; }
+  } finally {
+    state.busy = false;
+  }
 }
-
 
 
 function portfolioScenario(items, pct) {
@@ -987,7 +1182,21 @@ function parseCookies(req){ const raw=String(req.headers.cookie||''); const out=
 function adminTokenFromReq(req){ const cookies=parseCookies(req); return String(cookies[ADMIN_COOKIE_NAME] || req.headers["x-admin-session"] || req.body?.adminSession || req.query?.adminSession || ''); }
 function setAdminCookie(req,res,token,maxAgeSeconds){ const secure=(req.secure || String(req.headers['x-forwarded-proto']||'').split(',')[0].trim()==='https'); const parts=[`${ADMIN_COOKIE_NAME}=${encodeURIComponent(token||'')}`,'Path=/','HttpOnly','SameSite=Lax',`Max-Age=${Math.max(0,Math.floor(maxAgeSeconds||0))}`]; if(secure)parts.push('Secure'); res.setHeader('Set-Cookie',parts.join('; ')); }
 async function adminAuth(req,res,roles=[]){ const session=await requireAdminSession(adminTokenFromReq(req)); if(!session){ if(res) res.status(403); return null; } const required=Array.isArray(roles)?roles.filter(Boolean):[]; if(required.length && !required.includes(normalizeAdminRole(session.role))){ if(res) res.status(403); return null; } req.adminSession=session; return session; }
-function ensureAdminMutationOrigin(req,res){ const origin=String(req.headers.origin||'').trim(); if(!origin)return true; try { const expected=`${req.protocol}://${req.get('host')}`; if(origin!==expected){res.status(403).json({error:'origin نامعتبر'});return false;} } catch {} return true; }
+function ensureAdminMutationOrigin(req,res){
+  const origin=String(req.headers.origin||'').trim();
+  if(!origin)return true;
+  try {
+    const allowed=new Set();
+    const publicBase=String(process.env.PUBLIC_BASE_URL||'').trim().replace(/\/$/,'');
+    if(publicBase) allowed.add(publicBase);
+    const forwardedProto=String(req.headers['x-forwarded-proto']||'').split(',')[0].trim() || req.protocol;
+    const forwardedHost=String(req.headers['x-forwarded-host']||'').split(',')[0].trim() || req.get('host');
+    if(forwardedHost) allowed.add(`${forwardedProto}://${forwardedHost}`);
+    allowed.add(`${req.protocol}://${req.get('host')}`);
+    if(!allowed.has(origin)){res.status(403).json({error:'origin نامعتبر'});return false;}
+  } catch {}
+  return true;
+}
 
 app.get("/api/theme", async (req,res)=>{res.json(await getTheme());});
 app.get("/api/admin/theme", async (req,res)=>{if(!(await adminAuth(req,res)))return res.status(403).json({error:"admin session invalid"});res.json(await getTheme());});
@@ -1036,7 +1245,8 @@ app.get("/api/admin/users", async (req,res)=>{ const session=await adminAuth(req
 app.get("/api/admin/users/:identifier", async (req,res)=>{ const session=await adminAuth(req,res,['SUPER_ADMIN','ADMIN','MODERATOR']); if(!session)return res.status(403).json({error:"admin session invalid"}); const out=await listUsers({page:1,limit:200}); const user=out.users.find(u=>u.id===req.params.identifier||u.username===req.params.identifier||u.phone===req.params.identifier); if(!user)return res.status(404).json({error:"کاربر پیدا نشد."}); res.json({ok:true,user}); });
 app.post("/api/admin/users", async (req,res)=>{ const session=await adminAuth(req,res,['SUPER_ADMIN','ADMIN']); if(!session)return res.status(403).json({error:"admin session invalid"}); if(!ensureAdminMutationOrigin(req,res))return; try{res.json({ok:true,...await createManagedUser(req.body||{})});}catch(e){res.status(400).json({error:e.message});} });
 app.put("/api/admin/users/:identifier", async (req,res)=>{ const session=await adminAuth(req,res,['SUPER_ADMIN','ADMIN']); if(!session)return res.status(403).json({error:"admin session invalid"}); if(!ensureAdminMutationOrigin(req,res))return; try{res.json({ok:true,user:await updateManagedUser(req.params.identifier,req.body||{})});}catch(e){res.status(400).json({error:e.message});} });
-app.delete("/api/admin/users/:identifier", async (req,res)=>{ const session=await adminAuth(req,res,['SUPER_ADMIN']); if(!session)return res.status(403).json({error:"admin session invalid"}); if(!ensureAdminMutationOrigin(req,res))return; try{await deleteManagedUser(req.params.identifier);res.json({ok:true});}catch(e){res.status(400).json({error:e.message});} });
+app.post("/api/admin/users/:identifier/password", async (req,res)=>{ const session=await adminAuth(req,res,['SUPER_ADMIN','ADMIN']); if(!session)return res.status(403).json({error:"admin session invalid"}); if(!ensureAdminMutationOrigin(req,res))return; try{ const targetId=req.params.identifier; const target=(await listUsers({page:1,limit:200})).users.find(u=>u.id===targetId||u.username===targetId||u.phone===targetId); if(!target)return res.status(404).json({error:'کاربر پیدا نشد.'}); const targetRole=String(target.accessRole||'USER').toUpperCase(); const actorRole=normalizeAdminRole(session.role); if(['SUPER_ADMIN','ADMIN','MODERATOR'].includes(targetRole) && actorRole!=='SUPER_ADMIN') return res.status(403).json({error:'تغییر رمز حساب‌های مدیریتی فقط توسط مدیر ارشد مجاز است.'}); const {resetManagedUserPassword}=await import('./adminPanel.js'); const user=await resetManagedUserPassword(targetId,req.body?.password); await audit('admin_password_reset',{targetUserId:user.id,targetUsername:user.username,actor:session.username}); res.json({ok:true,user}); }catch(e){res.status(400).json({error:e.message});} });
+app.delete("/api/admin/users/:identifier", async (req,res)=>{ const session=await adminAuth(req,res,['SUPER_ADMIN','ADMIN']); if(!session)return res.status(403).json({error:"admin session invalid"}); if(!ensureAdminMutationOrigin(req,res))return; try{ const targetId=req.params.identifier; const target=(await listUsers({page:1,limit:200})).users.find(u=>u.id===targetId||u.username===targetId||u.phone===targetId); if(!target)return res.status(404).json({error:'کاربر پیدا نشد.'}); const actorRole=normalizeAdminRole(session.role); const targetRole=String(target.accessRole||'USER').toUpperCase(); if(target.id===session.userId || target.username===session.username)return res.status(400).json({error:'نمی‌توانید حساب خودتان را حذف کنید.'}); if(['SUPER_ADMIN','ADMIN','MODERATOR'].includes(targetRole) && actorRole!=='SUPER_ADMIN')return res.status(403).json({error:'حذف حساب‌های مدیریتی فقط توسط مدیر ارشد مجاز است.'}); await deleteManagedUser(targetId); await audit('admin_user_deleted',{targetUserId:target.id,targetUsername:target.username,actor:session.username});res.json({ok:true});}catch(e){res.status(400).json({error:e.message});} });
 app.post("/api/admin/broadcast", async (req,res)=>{ if(!(await adminAuth(req,res)))return res.status(403).json({error:'admin session invalid'}); const title=String(req.body?.title||'اطلاعیه مدیریت').trim(),message=String(req.body?.message||'').trim(); if(!message)return res.status(400).json({error:'متن پیام الزامی است.'}); const users=await listUsers(); for(const u of users.filter(x=>x.active)) await addNotification(u.id,title,message,'broadcast'); await audit('broadcast',{title,count:users.filter(x=>x.active).length}); res.json({ok:true,count:users.filter(x=>x.active).length}); });
 app.get("/api/admin/audit", async (req,res)=>{ if(!(await adminAuth(req,res)))return res.status(403).json({error:'admin session invalid'}); res.json({ok:true,items:(await readJsonFile(AUDIT_FILE,[])).slice(0,200)}); });
 app.get("/api/admin/payments", async (req,res)=>{ if(!(await adminAuth(req,res)))return res.status(403).json({error:'admin session invalid'}); res.json({ok:true,payments:await readJsonFile(PAYMENTS_FILE,[])}); });

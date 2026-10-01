@@ -2,6 +2,9 @@
 <html lang="fa" dir="rtl">
 <head>
 <meta charset="utf-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0b0d14">
 <meta name="mobile-web-app-capable" content="yes">
@@ -77,7 +80,7 @@ body{background:radial-gradient(900px 420px at 85% -10%,#30220e55,transparent 65
 @media(max-width:760px){.adminShell{flex-direction:column}.adminSidebar{width:100%;position:static}}
 
 /* =========================================================
-   Gold2 Pro V65 Market Terminal
+   Gold2 Pro V75 Market Terminal
    ========================================================= */
 :root{--v62-bg:#080b12;--v62-panel:#101522;--v62-panel2:#0c111b;--v62-line:#202a3b;--v62-text:#f5f7fa;--v62-muted:#8e9aae;--v62-live:#22c55e;--v62-red:#ef4444;--v62-gold:#d9ad55;--v62-blue:#6aa8ff;}
 body.v62Terminal{background:radial-gradient(circle at 70% -20%,#182033 0,#080b12 42%,#05070c 100%);}
@@ -100,6 +103,355 @@ body.v62Terminal .v62Sidebar,body.v62Terminal .v62Main{direction:rtl}
 
 .v62ExtraStats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}.v62Stat{background:#0a1018;border:1px solid #1b2738;border-radius:12px;padding:9px}.v62Stat span{display:block;font-size:8px;color:#728096}.v62Stat b{display:block;margin-top:4px;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.v62Stat small{display:block;margin-top:3px;color:#64748b;font-size:7px}.v62ChartTools{display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end}.v62ChartTools button{border:1px solid #25344a;background:#0b111b;color:#9eabc0;border-radius:8px;padding:5px 7px;font-size:8px;cursor:pointer}.v62ChartTools button.active{border-color:#d7ad55;color:#f4d98c;background:#17130a}.v62LevelLine{stroke:#d7ad55;stroke-width:1;stroke-dasharray:6 5;opacity:.75}.v62LevelLabel{fill:#d7ad55;font-size:10px;font-family:inherit}.v62ToolsRow{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}.v62ToolsRow button{border:1px solid #26344a;background:#0b111b;color:#9eabc0;border-radius:9px;padding:6px 9px;font-size:8px;cursor:pointer}.v62ToolsRow button.active{color:#fff;border-color:#d7ad55}.v62MiniCalc{margin-top:10px;padding:11px;background:#0a1018;border:1px solid #1b2738;border-radius:13px}.v62MiniCalc h4{margin:0 0 7px;font-size:10px}.v62MiniCalc input{width:100%;box-sizing:border-box;background:#0d1521;border:1px solid #26344a;color:#fff;border-radius:9px;padding:8px;font-size:10px}.v62MiniCalc button{margin-top:6px;width:100%;background:#c99b3c;color:#111;border:0;border-radius:9px;padding:8px;font-weight:700;cursor:pointer}.v62MiniCalc .result{margin-top:7px;font-size:9px;color:#cbd5e1;line-height:1.8}.v62MiniCalc .result b{color:#f4d98c}.v62Health{margin-top:10px;display:flex;justify-content:space-between;gap:8px;padding:8px 10px;border-radius:11px;background:#0a1018;border:1px solid #1b2738;font-size:8px;color:#8290a5}.v62Health strong{color:#22c55e}.v62CoinBadge{font-size:7px;color:#7f8da2}
 @media(max-width:760px){.v62ExtraStats{grid-template-columns:1fr 1fr}.v62ChartTools{justify-content:flex-start}}
+
+/* =========================================================
+   GOLD2 PRO V75 — Professional Fintech UI / UX
+   Inspired by the visual language of modern market terminals:
+   brighter slate/navy surfaces, restrained gold accent, clear
+   positive/negative states, high information density.
+   ========================================================= */
+:root{
+  --v75-bg:#0b1020;
+  --v75-surface:#141c2c;
+  --v75-surface-2:#182235;
+  --v75-surface-3:#1d2940;
+  --v75-border:#2b3a52;
+  --v75-text:#f4f7fb;
+  --v75-muted:#9aa9bd;
+  --v75-gold:#d8ad55;
+  --v75-gold-soft:#f0cf83;
+  --v75-green:#32d399;
+  --v75-red:#f06b7d;
+  --v75-blue:#5ea8ff;
+  --v75-cyan:#59d7e8;
+  --v75-shadow:0 22px 60px rgba(0,0,0,.34);
+}
+
+/* Main terminal canvas */
+body.v62Terminal{
+  background:
+    radial-gradient(900px 420px at 78% -8%,rgba(74,125,190,.18),transparent 62%),
+    radial-gradient(700px 360px at 12% 0%,rgba(216,173,85,.10),transparent 64%),
+    linear-gradient(180deg,#0d1423 0%,#0a1020 55%,#080d18 100%);
+  color:var(--v75-text);
+}
+body.v62Terminal .wrap{max-width:1480px;padding:14px 18px 70px}
+
+/* Sidebar */
+body.v62Terminal .v62Sidebar{
+  background:linear-gradient(180deg,rgba(25,35,53,.97),rgba(17,25,40,.97));
+  border:1px solid var(--v75-border);
+  box-shadow:var(--v75-shadow);
+}
+body.v62Terminal .v62Brand{border-bottom-color:#2a3850}
+body.v62Terminal .v62BrandMark{
+  background:linear-gradient(145deg,#f1d18a,#c28c34);
+  box-shadow:0 10px 26px rgba(216,173,85,.18);
+}
+body.v62Terminal .v62Nav button{color:#c6d1df}
+body.v62Terminal .v62Nav button:hover{
+  background:rgba(94,168,255,.08);
+  border-color:#38506e;
+}
+body.v62Terminal .v62Nav button.active{
+  background:linear-gradient(90deg,rgba(216,173,85,.16),rgba(94,168,255,.06));
+  border-color:rgba(216,173,85,.48);
+  color:#fff;
+}
+body.v62Terminal .v62Nav .v62Icon{
+  background:#202d42;
+  border:1px solid #30415b;
+}
+body.v62Terminal .v62Collapse{
+  background:#1b273b!important;
+  border-color:#30415b!important;
+}
+
+/* Header */
+body.v62Terminal .v62Header{
+  padding:10px 12px;
+  border:1px solid #2a3951;
+  border-radius:20px;
+  background:rgba(20,29,44,.88);
+  box-shadow:0 14px 40px rgba(0,0,0,.20);
+  backdrop-filter:blur(16px);
+}
+body.v62Terminal .v62HeaderBrand span,
+body.v62Terminal .v62HeaderBrand small{color:#9aa9bd}
+body.v62Terminal .v62MarketStatus{
+  background:#18263a;
+  border-color:#334862;
+  color:#d4deea;
+}
+body.v62Terminal .v62HeaderActions button{
+  background:#1a273b;
+  border-color:#30415a;
+  color:#e4ebf3;
+}
+body.v62Terminal .v62HeaderActions .v62CopilotBtn{
+  background:linear-gradient(135deg,#e8c97b,#c4933c);
+  box-shadow:0 8px 22px rgba(216,173,85,.16);
+}
+
+/* Hero */
+body.v62Terminal .v62Hero{
+  background:
+    radial-gradient(circle at 100% 0,rgba(94,168,255,.10),transparent 35%),
+    radial-gradient(circle at 0 0,rgba(216,173,85,.12),transparent 38%),
+    linear-gradient(145deg,#182337,#121b2b);
+  border-color:#34465f;
+  box-shadow:var(--v75-shadow);
+}
+body.v62Terminal .v62Kicker{color:#9eacc0}
+body.v62Terminal .v62HeroTitle{font-size:17px}
+body.v62Terminal .v62HeroPrice{
+  color:#fff;
+  text-shadow:0 3px 22px rgba(0,0,0,.28);
+}
+body.v62Terminal .v62Unit{color:#a2afc1}
+body.v62Terminal .v62HeroLive{
+  background:rgba(27,116,81,.16);
+  border-color:#2b805d;
+  color:#70e6b1;
+}
+body.v62Terminal .v62Pill{
+  background:#1a273a;
+  border-color:#30415a;
+  color:#9eacc0;
+}
+body.v62Terminal .v62Pill b{color:#f1f5f9}
+body.v62Terminal .v62Source{color:#8291a5}
+body.v62Terminal .v62Source strong{color:#dce5ef}
+
+/* Market cards */
+body.v62Terminal .v62MarketCard{
+  background:linear-gradient(145deg,#182337,#141e30);
+  border-color:#2d3e57;
+  box-shadow:0 10px 28px rgba(0,0,0,.16);
+  transition:transform .18s ease,border-color .18s ease,background .18s ease;
+}
+body.v62Terminal .v62MarketCard:hover{
+  transform:translateY(-2px);
+  border-color:#567294;
+  background:linear-gradient(145deg,#1b2940,#172338);
+}
+body.v62Terminal .v62MarketCard span{color:#9cabc0}
+body.v62Terminal .v62MarketCard b{color:#f4f7fb;font-size:17px}
+body.v62Terminal .v62MarketCard em{color:#7f90a6}
+
+/* Stats / charts */
+body.v62Terminal .v62Stat,
+body.v62Terminal .v62Timeline,
+body.v62Terminal .v62PulsePanel,
+body.v62Terminal .v62ChartPanel{
+  background:linear-gradient(145deg,#172236,#141e30);
+  border-color:#2c3d56;
+  box-shadow:0 12px 34px rgba(0,0,0,.15);
+}
+body.v62Terminal .v62ChartViewport{
+  background:linear-gradient(180deg,#111a2a,#0e1725);
+  border-color:#263850;
+}
+body.v62Terminal .v62Range button,
+body.v62Terminal .v62ChartTools button{
+  background:#1b293d;
+  border-color:#30445e;
+  color:#b7c5d6;
+}
+body.v62Terminal .v62Range button.active,
+body.v62Terminal .v62ChartTools button.active{
+  background:rgba(216,173,85,.14);
+  border-color:rgba(216,173,85,.62);
+  color:#f2d38a;
+}
+
+/* Copilot */
+body.v62Terminal .v62Copilot{
+  background:linear-gradient(155deg,#1a263b,#141e30);
+  border-color:#344862;
+  box-shadow:var(--v75-shadow);
+}
+body.v62Terminal .v62CopilotHead{border-bottom-color:#2b3b53}
+body.v62Terminal .v62CopilotAvatar{background:#22314a;border:1px solid #344a67}
+body.v62Terminal .v62CopilotState{
+  background:#1a293d;
+  border-color:#30435c;
+}
+body.v62Terminal .v62StateGrid div{
+  background:#1d2b40;
+  border-color:#2e4059;
+}
+
+/* Decision + heatmap */
+body.v62Terminal .v65MarketState,
+body.v62Terminal .v66DecisionCard,
+body.v62Terminal .v66HeatmapCard{
+  background:linear-gradient(145deg,#182438,#142033)!important;
+  border-color:#30435c!important;
+  box-shadow:0 12px 34px rgba(0,0,0,.14);
+}
+body.v62Terminal .v65StateGrid>div,
+body.v62Terminal .v66ScenarioGrid>div{
+  background:#1c2a3f!important;
+  border-color:#2d405b!important;
+}
+
+/* Better readability for old terminal components */
+body.v62Terminal .v62BottomGrid,
+body.v62Terminal .v62ExtraStats{gap:10px}
+body.v62Terminal .v62Stat small,
+body.v62Terminal .v62TimelineTime{color:#7f91a7}
+body.v62Terminal .v62PulseRow{
+  background:#1a273a;
+  border-color:#2c3e57;
+}
+body.v62Terminal .v62PulseRow span{color:#a9b8ca}
+
+/* Admin command center */
+body.v62Terminal .category-admin.card{
+  background:linear-gradient(145deg,#141e30,#111a2a);
+  border-color:#33465f;
+}
+body.v62Terminal .adminSidebar{
+  background:linear-gradient(180deg,#1a273b,#121b2c);
+  border-color:#30435c;
+}
+body.v62Terminal .adminSidebar button{
+  background:#1b293d;
+  border-color:#2c405b;
+  color:#dce6f0;
+}
+body.v62Terminal .adminSidebar button:hover{
+  border-color:#6685aa;
+  background:#203149;
+}
+body.v62Terminal .adminCommandBar{
+  background:
+    radial-gradient(circle at 0 0,rgba(216,173,85,.13),transparent 35%),
+    linear-gradient(135deg,#1b2a40,#182335);
+  border-color:#3a516d;
+  box-shadow:var(--v75-shadow);
+}
+body.v62Terminal .adminQuickGrid button,
+body.v62Terminal .adminStat{
+  background:linear-gradient(145deg,#19273b,#162235);
+  border-color:#2e425d;
+  color:#e5edf5;
+}
+body.v62Terminal .adminQuickGrid button:hover{
+  border-color:#6988ad;
+  background:#1d2d44;
+}
+body.v62Terminal .adminFilterBar input,
+body.v62Terminal .adminFilterBar select{
+  background:#18263a;
+  border-color:#30445f;
+  color:#eef4fa;
+}
+body.v62Terminal .adminRevenueStrip{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:9px;
+  margin-top:10px;
+}
+body.v62Terminal .adminRevenueCard{
+  background:linear-gradient(145deg,#1a2a40,#162337);
+  border:1px solid #30445f;
+  border-radius:16px;
+  padding:13px;
+  min-height:92px;
+  box-shadow:0 10px 28px rgba(0,0,0,.12);
+}
+body.v62Terminal .adminRevenueCard span,
+body.v62Terminal .adminRevenueCard small{
+  display:block;color:#92a4b9;font-size:9px;
+}
+body.v62Terminal .adminRevenueCard b{
+  display:block;margin-top:7px;font-size:20px;color:#f3f7fb;
+}
+body.v62Terminal .adminRevenuePrimary{
+  border-color:rgba(216,173,85,.52);
+  background:linear-gradient(145deg,#2a2a28,#1b2739);
+}
+body.v62Terminal .adminRevenuePrimary b{color:#f1cf7f}
+body.v62Terminal .adminMonetizationHub{
+  margin-top:10px;
+  padding:15px;
+  border-radius:20px;
+  border:1px solid #314660;
+  background:linear-gradient(145deg,#17263b,#142033);
+}
+body.v62Terminal .adminMonetizationHead{
+  display:flex;justify-content:space-between;gap:12px;align-items:flex-start;
+}
+body.v62Terminal .adminMonetizationHead h3{margin:3px 0 4px;font-size:16px}
+body.v62Terminal .adminMonetizationHead p{margin:0;color:#9aabbe;font-size:10px;line-height:1.8}
+body.v62Terminal .adminPlanGrid{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-top:12px;
+}
+body.v62Terminal .adminPlan{
+  padding:12px;border-radius:15px;border:1px solid #30445e;background:#1a293d;
+}
+body.v62Terminal .adminPlan.featured{
+  border-color:rgba(216,173,85,.62);
+  box-shadow:inset 0 1px rgba(240,207,131,.14);
+}
+body.v62Terminal .adminPlan span{font-size:9px;color:#9bacbf;letter-spacing:1px}
+body.v62Terminal .adminPlan b{display:block;margin-top:6px;color:#eef4fa;font-size:12px}
+body.v62Terminal .adminPlan small{display:block;margin-top:5px;color:#899bb0;font-size:8px;line-height:1.7}
+body.v62Terminal .adminBusinessCard,
+body.v62Terminal .adminProCard{
+  background:linear-gradient(145deg,#172337,#141f31)!important;
+  border-color:#30445f!important;
+}
+body.v62Terminal .bizCard,
+body.v62Terminal .bizPanel{
+  background:#1a293d!important;
+  border-color:#30445f!important;
+}
+
+/* Buttons and focus */
+body.v62Terminal button{transition:transform .16s ease,box-shadow .16s ease,border-color .16s ease,background .16s ease}
+body.v62Terminal button:focus-visible,
+body.v62Terminal input:focus-visible,
+body.v62Terminal select:focus-visible,
+body.v62Terminal textarea:focus-visible{
+  outline:2px solid rgba(94,168,255,.65);
+  outline-offset:2px;
+}
+
+/* Mobile — lighter, roomier, less cramped */
+@media(max-width:760px){
+  body.v62Terminal .wrap{padding:8px 9px 92px}
+  body.v62Terminal .v62Header{
+    padding:9px 10px;
+    border-radius:18px;
+  }
+  body.v62Terminal .v62HeaderBrand b{font-size:16px}
+  body.v62Terminal .v62HeaderActions button{padding:8px 9px}
+  body.v62Terminal .v62Hero{
+    padding:16px;
+    border-radius:22px;
+    min-height:285px;
+  }
+  body.v62Terminal .v62HeroPrice{font-size:clamp(40px,10vw,54px)}
+  body.v62Terminal .v62MarketCards{gap:9px}
+  body.v62Terminal .v62MarketCard{
+    padding:13px;
+    min-height:88px;
+    border-radius:17px;
+  }
+  body.v62Terminal .v62MarketCard b{font-size:16px}
+  body.v62Terminal .v62ExtraStats{grid-template-columns:1fr 1fr}
+  body.v62Terminal .adminRevenueStrip{grid-template-columns:1fr 1fr}
+  body.v62Terminal .adminPlanGrid{grid-template-columns:1fr 1fr}
+  body.v62Terminal .adminMonetizationHead{flex-direction:column}
+}
+@media(max-width:430px){
+  body.v62Terminal .v62HeroPrice{font-size:38px}
+  body.v62Terminal .v62MarketCard{min-height:82px}
+  body.v62Terminal .adminRevenueCard b{font-size:17px}
+}
 </style>
 
 <style>
@@ -230,6 +582,8 @@ body.authLocked .floatingMenuBtn,body.authLocked .menuBackdrop,body.authLocked .
 <link rel="stylesheet" href="v66.css">
 <link rel="stylesheet" href="v67.css">
 <link rel="stylesheet" href="v68.css">
+  <link rel="stylesheet" href="/gold2-theme.css?v=75.4">
+  <link rel="stylesheet" href="/gold2-terminal-layout.css?v=75.4">
 </head>
 <body class="v62Terminal">
 <div id="updateBanner" style="display:none;position:sticky;top:0;z-index:900;background:#17140d;border-bottom:1px solid #4a3a19;padding:10px 14px;text-align:center">
@@ -321,9 +675,9 @@ body.authLocked .floatingMenuBtn,body.authLocked .menuBackdrop,body.authLocked .
 <div class="dashboardHead"><div><div class="eyebrow">مرکز فرمان بازار</div><h2>پیشخوان امروز طلا</h2></div><div class="liveBadge">● داده‌خوانی خودکار فعال</div></div>
 <div class="liveTicker" id="liveTicker"><div class="tickerMain"><span class="tickerPulse"></span><div><div class="tickerLabel">قیمت زنده طلای ۱۸ عیار</div><div id="tickerPrice" class="tickerPrice">—</div></div></div><div class="tickerSide"><div id="tickerChange" class="tickerChange">—</div><div id="tickerTime" class="tickerTime">در حال اتصال...</div></div></div>
 <div class="livePanel menuSection" id="livePricePanel"><div class="livePriceRow"><div><div class="label">⚡ قیمت زنده • هر گرم طلای ۱۸ عیار</div><div id="livePriceBig" class="livePriceBig">—</div><div class="liveUnit">ریال</div></div><div style="text-align:left"><div id="liveChange" class="change">—</div><div id="liveStatus" class="small" style="margin-top:7px">در حال اتصال...</div></div></div><div class="liveMeta"><div class="liveMetaBox"><span>اونس جهانی</span><b id="liveXau">—</b></div><div class="liveMetaBox"><span>دلار</span><b id="liveDollar">—</b></div><div class="liveMetaBox"><span>به‌روزرسانی</span><b id="liveAge">—</b></div></div><div class="phoneCta"><div style="flex:1">📲 با نصب روی گوشی، همین صفحه را مثل یک اپلیکیشن باز کن. برای اعلان قیمت و هشدارها هم Push را فعال کن.</div><button class="secondary" onclick="enablePush()">🔔 فعال‌سازی اعلان</button></div><div class="installHero"><button id="installBtnHero" class="blue" style="display:none" onclick="installApp()">📲 نصب روی صفحه گوشی</button><button class="secondary" onclick="manualRefresh()">↻ دریافت قیمت جدید</button></div><div class="mobileHint">نمایش قیمت داخل برنامه هر ۱۰ ثانیه تازه می‌شود؛ اعلان گوشی برای جلوگیری از مزاحمت، فقط برای هشدارهای مهم و به‌روزرسانی‌های انتخاب‌شده ارسال می‌شود.</div></div>
-<div class="v62TerminalShell" id="v62TerminalShell">
+<div class="v62TerminalShell categorySection category-dashboard" id="v62TerminalShell">
   <aside class="v62Sidebar" id="v62Sidebar">
-    <div class="v62Brand"><div class="v62BrandMark">Au</div><div class="v62BrandText"><b>Gold2 Pro</b><small>V65 Market Terminal</small></div></div>
+    <div class="v62Brand"><div class="v62BrandMark">Au</div><div class="v62BrandText"><b>Gold2 Pro</b><small>V75 Market Terminal</small></div></div>
     <nav class="v62Nav" id="v62Nav">
       <button class="active" data-v62cat="dashboard" type="button"><span class="v62Icon">⌂</span><span><b>پیشخوان</b><small>نمای اصلی بازار</small></span></button>
       <button data-v62cat="market" type="button"><span class="v62Icon">↗</span><span><b>بازار</b><small>نمودار و قیمت</small></span></button>
@@ -340,7 +694,7 @@ body.authLocked .floatingMenuBtn,body.authLocked .menuBackdrop,body.authLocked .
   </aside>
   <main class="v62Main">
     <header class="v62Header">
-      <div class="v62HeaderBrand"><div class="v62BrandMark" style="width:34px;height:34px;border-radius:10px;font-size:16px">Au</div><div><b>Gold2 Pro</b><span>Market Terminal • V65</span></div></div>
+      <div class="v62HeaderBrand"><div class="v62BrandMark" style="width:34px;height:34px;border-radius:10px;font-size:16px">Au</div><div><b>Gold2 Pro</b><span>Market Terminal • V75</span></div></div>
       <div class="v62MarketStatus"><span class="v62LiveDot"></span><b id="v62MarketState">LIVE</b><span id="v62UpdateAge">آخرین بروزرسانی —</span></div>
       <div class="v62HeaderActions"><button class="v62Notif" type="button" onclick="applyCategory('alerts')">🔔<i id="v62NotifCount">0</i></button><button type="button" onclick="applyCategory('account')">👤 <span id="v62AccountName">حساب کاربری</span></button><button class="v62CopilotBtn" type="button" onclick="document.getElementById('v62CopilotQuestion')?.focus();document.getElementById('v62Copilot')?.scrollIntoView({behavior:'smooth',block:'center'})">AI Copilot</button></div>
     </header>
@@ -348,7 +702,7 @@ body.authLocked .floatingMenuBtn,body.authLocked .menuBackdrop,body.authLocked .
       <div>
         <section class="v62Hero">
           <div class="v62HeroTop"><div><div class="v62Kicker">MARKET HERO • GOLD 18K / 750</div><div class="v62HeroTitle">طلای ۱۸ عیار</div><div class="v62HeroPrice" id="v62GoldPrice">—</div><div class="v62Unit">ریال / هر گرم</div></div><div class="v62HeroLive"><span class="v62LiveDot" style="display:inline-block;margin-left:5px"></span> LIVE</div></div>
-          <div class="v62HeroMeta"><div class="v62Pill">تغییر <b id="v62GoldChange">—</b></div><div class="v62Pill">آخرین قیمت <b id="v62GoldTime">—</b></div><div class="v62Pill">منبع <b>TGJU</b></div></div>
+          <div class="v62HeroMeta"><div class="v62Pill">تغییر <b id="v62GoldChange">—</b></div><div class="v62Pill">آخرین قیمت <b id="v62GoldTime">—</b></div><div class="v62Pill">منبع <b id="v62GoldSource">در حال اتصال</b></div></div>
           <div class="v62HeroBottom"><div class="v62Source">وضعیت داده: <strong id="v62DataQuality">در حال بررسی</strong></div><div class="v62HeroChart" id="v62HeroChart"></div></div>
         </section>
         <section class="v62MarketCards" id="v62MarketCards">
@@ -357,6 +711,12 @@ body.authLocked .floatingMenuBtn,body.authLocked .menuBackdrop,body.authLocked .
           <div class="v62MarketCard"><span>اونس جهانی</span><b id="v62CardXau">—</b><em id="v62CardXauCh">—</em></div>
           <div class="v62MarketCard"><span>سکه امامی</span><b id="v62CardCoin">—</b><em>قیمت تک‌فروشی/بازار</em></div>
         </section>
+        <div class="g2DashboardQuick" aria-label="دسترسی سریع">
+          <button type="button" onclick="applyCategory('market')"><span class="g2qIcon">📊</span><span><b>بازار و نمودار</b><small>قیمت، تکنیکال و تایم‌فریم</small></span></button>
+          <button type="button" onclick="applyCategory('ai')"><span class="g2qIcon">✦</span><span><b>AI Decision Room</b><small>سناریو و تحلیل هوشمند</small></span></button>
+          <button type="button" onclick="applyCategory('alerts')"><span class="g2qIcon">🔔</span><span><b>هشدارها</b><small>هدف قیمت و رویدادها</small></span></button>
+          <button type="button" onclick="applyCategory('portfolio')"><span class="g2qIcon">▣</span><span><b>پرتفوی</b><small>دارایی و عملکرد</small></span></button>
+        </div>
         <section class="v62ExtraStats">
           <div class="v62Stat"><span>بالاترین بازه نمودار</span><b id="v62GoldHigh">—</b><small>بر اساس داده‌های دریافت‌شده</small></div>
           <div class="v62Stat"><span>پایین‌ترین بازه نمودار</span><b id="v62GoldLow">—</b><small>بر اساس داده‌های دریافت‌شده</small></div>
@@ -413,6 +773,12 @@ body.authLocked .floatingMenuBtn,body.authLocked .menuBackdrop,body.authLocked .
   </main>
 </div>
 <div class="v65QuickActions"><button type="button" onclick="applyCategory('market')"><span>📈</span><b>تحلیل بازار</b><small>نمودار و اندیکاتورها</small></button><button type="button" onclick="applyCategory('ai')"><span>🧠</span><b>AI Copilot</b><small>تحلیل ساده و سریع</small></button><button type="button" onclick="applyCategory('alerts')"><span>🔔</span><b>هشدارها</b><small>رویدادهای مهم</small></button><button type="button" onclick="applyCategory('tools')"><span>🧮</span><b>ماشین‌حساب</b><small>ارزش روز طلا</small></button></div>
+<div class="g2PageHeader" id="g2PageHeader">
+  <div><div class="eyebrow" id="g2PageEyebrow">GOLD2 PRO • MARKET TERMINAL</div>
+  <h2 id="g2PageHeading">پیشخوان بازار</h2>
+  <p id="g2PageSubheading">نمای خلاصه و زنده بازار؛ جزئیات هر بخش از منوی کناری باز می‌شود.</p></div>
+  <button class="g2Back" type="button" onclick="applyCategory('dashboard')">← بازگشت به پیشخوان</button>
+</div>
 <div class="sectionIntro" id="categoryIntro"><b id="categoryTitle">پیشخوان</b><span id="categoryDesc">قیمت زنده، وضعیت امروز و سیگنال کلی بازار</span></div><div class="accountQuick"><div><span class="small">وضعیت حساب</span><b id="quickAccountStatus">در حال بررسی...</b></div><div class="quickActions"><button class="secondary smallBtn" onclick="openAccountQuickMenu()">👤 حساب من</button><button class="secondary smallBtn" onclick="logoutAndRelogin()">🚪 خروج و ورود مجدد</button></div></div>
 
 <section class="card commandCenter categorySection category-dashboard"><div class="sectionTitle"><div><h3>✨ مرکز کنترل سرمایه</h3><span>نمای سریع بازار، دارایی و هشدارها</span></div><div class="liveBadge">LIVE</div></div><div class="commandGrid"><div class="commandBox"><span>ارزش سبد</span><b id="ccPortfolioValue">—</b><small id="ccPortfolioPnl">—</small></div><div class="commandBox"><span>روند بازار</span><b id="ccTrend">—</b><small id="ccTrendMeta">—</small></div><div class="commandBox"><span>ریسک</span><b id="ccRisk">—</b><small>بر پایه داده‌های موجود</small></div><div class="commandBox"><span>هشدارهای فعال</span><b id="ccAlerts">—</b><small>هدف قیمت و بازار</small></div></div><div class="quickFeatureGrid"><button class="featureTile" onclick="applyCategory('market')">📊<b>بازار</b><small>نمودار و تکنیکال</small></button><button class="featureTile" onclick="applyCategory('ai')">🤖<b>AI</b><small>تحلیل و دستیار</small></button><button class="featureTile" onclick="applyCategory('alerts')">🔔<b>هشدار</b><small>قیمت و Push</small></button><button class="featureTile" onclick="applyCategory('tools')">💼<b>دارایی</b><small>سبد و سناریو</small></button><button class="featureTile" onclick="applyCategory('decision')">🧠<b>اتاق تصمیم</b><small>سناریو و کنترل</small></button><button class="featureTile" onclick="applyCategory('account')">👤<b>حساب</b><small>پشتیبانی و بکاپ</small></button></div></section>
@@ -619,7 +985,25 @@ body.authLocked .floatingMenuBtn,body.authLocked .menuBackdrop,body.authLocked .
 <main class="adminMain">
 <div class="adminCommandBar"><div><div class="eyebrow">مرکز فرمان مدیریت</div><h2 style="margin:3px 0 0">🚀 کنترل هوشمند Gold Alert Pro</h2><div class="small">کاربران، درآمد، پشتیبانی، سلامت سرویس و امنیت در یک نمای مدیریتی</div></div><div class="adminLive"><span>●</span> پنل فعال <b id="adminLastSync">—</b></div></div>
 <div class="adminQuickGrid"><button onclick="adminRefreshAll()">↻ <b>بروزرسانی همه</b><small>آمار و تیکت‌ها</small></button><button onclick="adminFocus('users')">👥 <b>کاربران</b><small>جستجو و مدیریت</small></button><button onclick="adminFocus('tickets')">🎫 <b>پشتیبانی</b><small>تیکت‌های باز</small></button><button onclick="adminFocus('payments')">💳 <b>پرداخت</b><small>ثبت تراکنش</small></button><button onclick="adminFocus('security')">🛡️ <b>امنیت</b><small>گزارش فعالیت</small></button><button onclick="adminDownloadBackup()">💾 <b>پشتیبان</b><small>خروجی داده‌ها</small></button></div>
-<div class="adminStats"><div class="adminStat"><span>کل کاربران</span><b id="adminUsersCount">—</b></div><div class="adminStat"><span>فعال</span><b id="adminActiveCount">—</b></div><div class="adminStat"><span>Pro</span><b id="adminProCount">—</b></div><div class="adminStat"><span>Premium</span><b id="adminPremiumCount">—</b></div></div><div class="card adminBusinessCard" style="margin-top:10px"><div class="sectionTitle"><h3>💰 داشبورد مالی و کاربران</h3><button class="secondary" onclick="adminLoadBusinessDashboard()">↻ بروزرسانی</button></div><div id="adminBusinessDashboard"></div></div><div id="adminOverviewGrid" class="adminOverviewGrid"></div><div class="card adminProCard" style="margin-top:10px"><div class="sectionTitle"><h3>🧠 مرکز سلامت و هوش مصنوعی</h3><span>کنترل سرویس‌ها</span></div><div class="adminGrid"><button class="secondary" onclick="testAIConnection()">🧪 تست اتصال AI</button><button class="secondary" onclick="adminLoadOverview()">↻ بروزرسانی سلامت</button></div><div id="adminHealthDetails" class="small" style="margin-top:8px">وضعیت سرویس‌ها را بررسی کنید.</div></div>
+<div class="adminStats"><div class="adminStat"><span>کل کاربران</span><b id="adminUsersCount">—</b></div><div class="adminStat"><span>فعال</span><b id="adminActiveCount">—</b></div><div class="adminStat"><span>Pro</span><b id="adminProCount">—</b></div><div class="adminStat"><span>Premium</span><b id="adminPremiumCount">—</b></div></div>
+<div class="adminRevenueStrip" id="adminRevenueStrip">
+  <div class="adminRevenueCard adminRevenuePrimary"><span>درآمد ماه جاری</span><b id="adminMonthRevenue">—</b><small>بر اساس پرداخت‌های ثبت‌شده</small></div>
+  <div class="adminRevenueCard"><span>میانگین هر پرداخت</span><b id="adminAvgPayment">—</b><small>از تراکنش‌های تأییدشده</small></div>
+  <div class="adminRevenueCard"><span>کاربران پولی</span><b id="adminPaidUsers">—</b><small>Pro + Premium</small></div>
+  <div class="adminRevenueCard"><span>فرصت تمدید</span><b id="adminExpiringUsers">—</b><small>انقضا در ۷ روز آینده</small></div>
+</div>
+<div class="adminMonetizationHub">
+  <div class="adminMonetizationHead">
+    <div><span class="eyebrow">REVENUE ENGINE</span><h3>💰 مرکز درآمد و رشد</h3><p>کنترل مدل اشتراک، پرداخت و فرصت‌های تبدیل کاربر؛ بدون نمایش تبلیغات مزاحم در ترمینال.</p></div>
+    <button class="secondary" onclick="document.getElementById('commerceSettingsCard')?.scrollIntoView({behavior:'smooth',block:'center'})">تنظیم اشتراک ↗</button>
+  </div>
+  <div class="adminPlanGrid">
+    <div class="adminPlan"><span>FREE</span><b>جذب و آشنایی</b><small>قیمت بازار، امکانات پایه و محدودیت مصرف</small></div>
+    <div class="adminPlan featured"><span>PRO</span><b>درآمد اشتراکی</b><small>تحلیل پیشرفته، هشدار و ابزارهای حرفه‌ای</small></div>
+    <div class="adminPlan"><span>PREMIUM</span><b>کاربر حرفه‌ای</b><small>AI بیشتر، گزارش و امکانات پیشرفته‌تر</small></div>
+    <div class="adminPlan"><span>AI CREDITS</span><b>درآمد مصرفی</b><small>اعتبار تحلیل AI برای مصرف‌های سنگین</small></div>
+  </div>
+</div><div class="card adminBusinessCard" style="margin-top:10px"><div class="sectionTitle"><h3>💰 داشبورد مالی و کاربران</h3><button class="secondary" onclick="adminLoadBusinessDashboard()">↻ بروزرسانی</button></div><div id="adminBusinessDashboard"></div></div><div id="adminOverviewGrid" class="adminOverviewGrid"></div><div class="card adminProCard" style="margin-top:10px"><div class="sectionTitle"><h3>🧠 مرکز سلامت و هوش مصنوعی</h3><span>کنترل سرویس‌ها</span></div><div class="adminGrid"><button class="secondary" onclick="testAIConnection()">🧪 تست اتصال AI</button><button class="secondary" onclick="adminLoadOverview()">↻ بروزرسانی سلامت</button></div><div id="adminHealthDetails" class="small" style="margin-top:8px">وضعیت سرویس‌ها را بررسی کنید.</div></div>
 <div class="card" style="margin-top:10px"><div class="sectionTitle"><h3>🎨 مدیریت پوسته سیستم</h3><span>فقط مدیر</span></div><select id="themeSelect"><option value="gold-light">Gold Pro Light</option><option value="gold-dark">Gold Trader Dark</option><option value="enterprise">Enterprise Blue</option></select><button class="secondary" onclick="adminSaveTheme()">اعمال پوسته</button><div id="themeStatus" class="small"></div></div>
 <div class="card" id="commerceSettingsCard" style="margin-top:10px;background:#0b1017">
 <div class="sectionTitle"><h3>💳 تنظیمات اشتراک و دریافت وجه</h3><span>قابل ویرایش توسط مدیر</span></div>
@@ -750,6 +1134,29 @@ body.authLocked .floatingMenuBtn,body.authLocked .menuBackdrop,body.authLocked .
     <div><span class="v72Eyebrow">GOLD2 PRO V72</span><h2>⚡ مرکز فرمان بازار</h2><p>نمایش یکپارچه بازار، وضعیت منابع، هوش تحلیلی و هشدارها.</p></div>
     <div class="v72Live"><i></i><b id="v72LiveText">در حال اتصال</b><small id="v72UpdateTime">—</small></div>
   </div>
+  <div class="v75MobileHero" aria-label="نمایش سریع بازار">
+    <div class="v75MobileHeroTop">
+      <div>
+        <span class="v75MobileEyebrow">بازار زنده</span>
+        <h3>طلای ۱۸ عیار</h3>
+        <span class="v75MobileSource" id="v75MobileSource">در حال دریافت قیمت…</span>
+      </div>
+      <span class="v75MobileLive"><i></i> LIVE</span>
+    </div>
+    <div class="v75MobilePriceRow">
+      <strong id="v75MobileGold">—</strong>
+      <span id="v75MobileChange" class="neutral">—</span>
+    </div>
+    <div class="v75MobileMeta">
+      <span>ریال / گرم</span>
+      <span id="v75MobileUpdated">آخرین بروزرسانی —</span>
+    </div>
+    <div class="v75MobileQuickActions">
+      <button data-v72-go="market">نمودار</button>
+      <button data-v72-go="alerts">هشدار</button>
+      <button data-v72-go="ai">تحلیل AI</button>
+    </div>
+  </div>
   <div class="v72MarketGrid">
     <button class="v72MarketCard" data-v72-go="market"><span>🥇 طلای ۱۸</span><b id="v72Gold">—</b><small id="v72GoldCh">—</small></button>
     <button class="v72MarketCard" data-v72-go="market"><span>💵 دلار</span><b id="v72Dollar">—</b><small id="v72DollarCh">—</small></button>
@@ -759,6 +1166,7 @@ body.authLocked .floatingMenuBtn,body.authLocked .menuBackdrop,body.authLocked .
   </div>
   <div class="v72MainGrid">
     <div class="v72Panel v72ChartPanel"><div class="v72PanelHead"><div><h3>📈 نمودار زنده</h3><span>نمودار حرفه‌ای V71</span></div><button data-v72-go="market">باز کردن بازار ↗</button></div><div class="v72ChartHint">برای مشاهده نمودار کامل، بخش بازار را باز کنید.</div></div>
+    <div class="v72Panel v72SignalPanel"><div class="v72PanelHead"><div><h3>🎯 سیگنال بازار</h3><span>تحلیل خودکار؛ نه تضمین سود</span></div><button data-v72-go="market">جزئیات ↗</button></div><div class="v72SignalHero"><div><small>پیشنهاد فعلی</small><b id="v72Signal">در انتظار داده</b></div><div class="v72SignalScore"><span>امتیاز</span><strong id="v72SignalScore">—</strong></div></div><p id="v72SignalText">هنوز داده کافی برای صدور سیگنال نداریم.</p><div id="v72SignalReasons" class="v72SignalReasons"></div><div class="v72SignalNote">این سیگنال بر اساس داده‌های تکنیکال سامانه ساخته می‌شود و تصمیم نهایی با خودت است.</div></div>
     <div class="v72Panel v72DecisionPanel"><div class="v72PanelHead"><div><h3>🧠 وضعیت هوشمند بازار</h3><span>بر پایه داده‌های موجود</span></div><button data-v72-go="ai">AI ↗</button></div><div class="v72DecisionState"><b id="v72Bias">—</b><span id="v72Confidence">اعتماد: —</span></div><div class="v72Metrics"><div><span>روند</span><b id="v72Trend">—</b></div><div><span>مومنتوم</span><b id="v72Momentum">—</b></div><div><span>نوسان</span><b id="v72Volatility">—</b></div></div><p id="v72DecisionText">در انتظار داده...</p></div>
     <div class="v72Panel"><div class="v72PanelHead"><div><h3>🔌 وضعیت منابع</h3><span>اولویت قیمت: Forgod</span></div><button data-v72-go="settings">جزئیات</button></div><div id="v72Sources" class="v72Sources"></div></div>
     <div class="v72Panel"><div class="v72PanelHead"><div><h3>🔔 هشدارهای اخیر</h3><span>آخرین رویدادها</span></div><button data-v72-go="alerts">همه ↗</button></div><div id="v72Alerts" class="v72List"></div></div>
@@ -767,27 +1175,50 @@ body.authLocked .floatingMenuBtn,body.authLocked .menuBackdrop,body.authLocked .
   <div class="v72Quick"><button data-v72-go="market">📊 بازار</button><button data-v72-go="ai">🧠 AI Decision Room</button><button data-v72-go="alerts">🔔 هشدارها</button><button data-v72-go="portfolio">▣ پرتفوی</button><button data-v72-go="news">📰 اخبار</button><button data-v72-go="calculator">🧮 ماشین‌حساب</button><button data-v72-go="settings">⚙ تنظیمات</button></div>
 </section>
 
+<nav class="v75MobileNav" aria-label="ناوبری سریع موبایل">
+  <button class="active" data-v72-go="dashboard"><span>⌂</span><b>خانه</b></button>
+  <button data-v72-go="market"><span>◒</span><b>بازار</b></button>
+  <button data-v72-go="ai"><span>✦</span><b>AI</b></button>
+  <button data-v72-go="alerts"><span>↗</span><b>هشدار</b></button>
+  <button data-v72-go="portfolio"><span>▣</span><b>پرتفوی</b></button>
+</nav>
 <footer class="footer">Gold Alert Pro © 2026<br><strong>طراح و توسعه: عباس صدیق آرانی</strong><br>۰۹۱۳۰۱۱۵۹۲۰<br>این سامانه ابزار پایش و تحلیل است؛ سیگنال‌ها قطعی و تضمین‌کننده سود نیستند.</footer>
 </div>
-<link rel="stylesheet" href="/v69.css?v=69.0.0">
-<script src="/app.js?v=61.0.0" defer></script>
-<script src="/gold-intelligence.js?v=61.0.0" defer></script>
-
+<link rel="stylesheet" href="/v69.css?build=75.4">
 <script>
-const APP_BUILD_VERSION='v61-ai-decision-smart-alerts';
-if('serviceWorker' in navigator){
- window.addEventListener('load',()=>{
-  navigator.serviceWorker.register('/sw.js?v='+APP_BUILD_VERSION);
-  navigator.serviceWorker.addEventListener('message',e=>{
-    if(e.data?.type==='APP_UPDATED') location.reload();
+(function(){
+  const RELEASE='75.4';
+  const KEY='g2-release-migrated';
+  if(!('serviceWorker' in navigator)) return;
+  window.addEventListener('load',async()=>{
+    try{
+      const regs=await navigator.serviceWorker.getRegistrations();
+      const stale=regs.filter(r=>!String(r.active?.scriptURL||r.installing?.scriptURL||r.waiting?.scriptURL||'').includes('v75.4'));
+      if(!stale.length) return;
+      await Promise.all(stale.map(r=>r.unregister()));
+      if('caches' in window){
+        const keys=await caches.keys();
+        await Promise.all(keys.map(k=>caches.delete(k)));
+      }
+      if(sessionStorage.getItem(KEY)!==RELEASE){
+        sessionStorage.setItem(KEY,RELEASE);
+        location.reload();
+      }
+    }catch{}
   });
- });
-}
+})();
 </script>
-<script src="v67.js"></script>
-<script src="v68.js"></script>
-<script src="v69.js"></script>
-<link rel="stylesheet" href="/v72.css?v=72.0.0">
-<script src="v71.js"></script>
-<script src="v72.js"></script>
+<script src="/app.js?build=75.4" defer></script>
+<script src="/gold-intelligence.js?build=75.4" defer></script>
+
+
+<script src="/v67.js?build=75.4"></script>
+<script src="/v68.js?build=75.4"></script>
+<script src="/v69.js?build=75.4"></script>
+<link rel="stylesheet" href="/v72.css?build=75.4">
+<link rel="stylesheet" href="/v75.2-mobile.css?build=75.4">
+<link rel="stylesheet" href="/gold2-v754-final.css?v=75.4">
+<link rel="stylesheet" href="/gold2-v754-market-polish.css?v=75.4">
+<script src="/v71.js?build=75.4"></script>
+<script src="/v72.js?build=75.4"></script>
 </body></html>

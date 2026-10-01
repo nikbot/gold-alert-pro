@@ -1,0 +1,160 @@
+
+/* Gold2 Pro — Unified Financial Terminal Design System
+   V75.3 UI Color System
+   No application logic / secrets changed.
+*/
+:root{
+  color-scheme:dark;
+
+  --g2-bg:#08111F;
+  --g2-bg-deep:#060D18;
+  --g2-surface:#0F1B2D;
+  --g2-surface-2:#14243A;
+  --g2-surface-3:#192B43;
+  --g2-border:#243650;
+  --g2-border-soft:rgba(148,163,184,.14);
+
+  --g2-text:#F1F5F9;
+  --g2-text-strong:#FFFFFF;
+  --g2-muted:#94A3B8;
+  --g2-muted-2:#64748B;
+
+  --g2-gold:#D6A84F;
+  --g2-gold-light:#F2C866;
+  --g2-gold-soft:rgba(214,168,79,.14);
+
+  --g2-green:#22C55E;
+  --g2-green-soft:rgba(34,197,94,.13);
+  --g2-red:#EF4444;
+  --g2-red-soft:rgba(239,68,68,.13);
+  --g2-blue:#38BDF8;
+  --g2-blue-soft:rgba(56,189,248,.13);
+  --g2-purple:#A78BFA;
+  --g2-purple-soft:rgba(167,139,250,.13);
+  --g2-orange:#F59E0B;
+
+  --g2-shadow:0 18px 55px rgba(0,0,0,.28);
+  --g2-shadow-soft:0 10px 30px rgba(0,0,0,.18);
+  --g2-radius-sm:10px;
+  --g2-radius-md:16px;
+  --g2-radius-lg:22px;
+  --g2-radius-xl:28px;
+  --g2-focus:0 0 0 3px rgba(56,189,248,.18);
+
+  /* Compatibility aliases for newer components */
+  --terminal-bg:var(--g2-bg);
+  --terminal-surface:var(--g2-surface);
+  --terminal-surface-2:var(--g2-surface-2);
+  --terminal-border:var(--g2-border);
+  --terminal-text:var(--g2-text);
+  --terminal-muted:var(--g2-muted);
+  --terminal-gold:var(--g2-gold);
+  --terminal-green:var(--g2-green);
+  --terminal-red:var(--g2-red);
+  --terminal-blue:var(--g2-blue);
+}
+
+html,body{
+  background-color:var(--g2-bg);
+  color:var(--g2-text);
+}
+
+body{
+  background:
+    radial-gradient(900px 420px at 50% -180px,rgba(56,189,248,.08),transparent 70%),
+    radial-gradient(700px 360px at 100% 0,rgba(214,168,79,.055),transparent 68%),
+    linear-gradient(180deg,var(--g2-bg) 0%,var(--g2-bg-deep) 100%);
+}
+
+/* Common financial-terminal surfaces */
+.card,.panel,.box,.market-card,.stat-card,.terminal-card{
+  border-color:var(--g2-border-soft);
+  background:var(--g2-surface);
+}
+
+button,.btn{
+  transition:background-color .18s ease,border-color .18s ease,color .18s ease,
+             transform .18s ease,box-shadow .18s ease;
+}
+
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{
+  outline:none;
+  box-shadow:var(--g2-focus);
+}
+
+::selection{
+  background:rgba(214,168,79,.28);
+  color:#fff;
+}
+
+/* Market semantics */
+.buy,.positive,.up,.profit,[data-side="buy"]{color:var(--g2-green)}
+.sell,.negative,.down,.loss,[data-side="sell"]{color:var(--g2-red)}
+.ai,.copilot,.ai-accent{color:var(--g2-purple)}
+.info,.live,.online{color:var(--g2-blue)}
+
+/* Gold2 brand accents */
+.gold,.brand-gold,.price-highlight{
+  color:var(--g2-gold-light);
+}
+
+/* Chart / data-viz guidance */
+.chart-up{stroke:var(--g2-green);color:var(--g2-green)}
+.chart-down{stroke:var(--g2-red);color:var(--g2-red)}
+.chart-grid{stroke:var(--g2-border)}
+.chart-label{fill:var(--g2-muted);color:var(--g2-muted)}
+
+/* Mobile terminal consistency */
+@media(max-width:700px){
+  :root{
+    --g2-radius-lg:20px;
+    --g2-radius-xl:24px;
+  }
+
+  body{
+    background:
+      radial-gradient(600px 300px at 50% -90px,rgba(56,189,248,.085),transparent 68%),
+      radial-gradient(500px 280px at 100% 10%,rgba(214,168,79,.045),transparent 70%),
+      linear-gradient(180deg,var(--g2-bg) 0%,var(--g2-bg-deep) 100%) !important;
+  }
+}
+
+/* Optional light mode. Activate by adding data-theme="light" to <html>. */
+html[data-theme="light"]{
+  color-scheme:light;
+
+  --g2-bg:#F4F7FA;
+  --g2-bg-deep:#EAF0F5;
+  --g2-surface:#FFFFFF;
+  --g2-surface-2:#F1F5F9;
+  --g2-surface-3:#E8EEF5;
+  --g2-border:#D4DEE9;
+  --g2-border-soft:rgba(100,116,139,.20);
+
+  --g2-text:#172033;
+  --g2-text-strong:#0F172A;
+  --g2-muted:#64748B;
+  --g2-muted-2:#94A3B8;
+
+  --g2-gold:#B88718;
+  --g2-gold-light:#9A7110;
+  --g2-gold-soft:rgba(184,135,24,.12);
+
+  --g2-green:#159957;
+  --g2-green-soft:rgba(21,153,87,.10);
+  --g2-red:#D9363E;
+  --g2-red-soft:rgba(217,54,62,.10);
+  --g2-blue:#1683D8;
+  --g2-blue-soft:rgba(22,131,216,.10);
+  --g2-purple:#7655C7;
+  --g2-purple-soft:rgba(118,85,199,.10);
+
+  --g2-shadow:0 18px 45px rgba(15,23,42,.10);
+  --g2-shadow-soft:0 10px 28px rgba(15,23,42,.07);
+}
+
+html[data-theme="light"] body{
+  background:
+    radial-gradient(800px 380px at 50% -180px,rgba(22,131,216,.07),transparent 70%),
+    linear-gradient(180deg,var(--g2-bg) 0%,var(--g2-bg-deep) 100%);
+}
