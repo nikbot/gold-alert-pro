@@ -1,1 +1,1 @@
-gold-alert-pro-v60-auto-update
+v60.1-admin-auth
