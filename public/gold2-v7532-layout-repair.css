@@ -1,0 +1,84 @@
+
+/* ============================================================
+   V75.3.2 — Terminal Layout Repair
+   Fixes oversized sidebar tracks, stretched dashboard hero and
+   keeps the dashboard content compact when live data is delayed.
+   ============================================================ */
+
+body.v62Terminal .v62TerminalShell{
+  align-items:start !important;
+}
+
+body.v62Terminal .v62Sidebar{
+  height:max-content !important;
+  min-height:0 !important;
+  align-self:start !important;
+}
+
+body.v62Terminal .v62Nav{
+  display:grid !important;
+  grid-auto-rows:max-content !important;
+  align-content:start !important;
+  height:max-content !important;
+  min-height:0 !important;
+}
+
+body.v62Terminal .v62Nav button{
+  min-height:46px !important;
+  height:auto !important;
+}
+
+body.g2Dashboard .v62Main,
+body.g2Dashboard .v62MainGrid{
+  min-height:0 !important;
+  height:auto !important;
+}
+
+body.g2Dashboard .v62Hero{
+  height:auto !important;
+  min-height:245px !important;
+  max-height:none !important;
+}
+
+body.g2Dashboard .v62HeroTop,
+body.g2Dashboard .v62HeroMeta,
+body.g2Dashboard .v62HeroBottom{
+  height:auto !important;
+}
+
+body.g2Dashboard .v62MarketCards{
+  height:auto !important;
+  min-height:0 !important;
+}
+
+body.g2Dashboard .g2DashboardQuick{
+  height:auto !important;
+  align-content:start !important;
+}
+
+@media(max-width:1100px) and (min-width:761px){
+  body.v62Terminal .v62Nav button{
+    min-height:42px !important;
+    padding:8px !important;
+  }
+}
+
+@media(max-width:760px){
+  body.v62Terminal .v62Sidebar{
+    height:auto !important;
+    min-height:0 !important;
+  }
+  body.v62Terminal .v62Nav{
+    height:auto !important;
+    display:flex !important;
+    align-content:normal !important;
+  }
+  body.v62Terminal .v62Nav button{
+    min-height:49px !important;
+  }
+}
+
+/* Prevent an accidental literal newline escape from becoming visible text. */
+body > .literal-newline-artifact{
+  display:none !important;
+}
