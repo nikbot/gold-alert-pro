@@ -506,4 +506,16 @@ body.authLocked .floatingMenuBtn,body.authLocked .menuBackdrop,body.authLocked .
 </div>
 <script src="/app.js?v=59.3.0" defer></script>
 <script src="/gold-intelligence.js?v=60.0.0" defer></script>
+
+<script>
+const APP_BUILD_VERSION='v60-auto-cache';
+if('serviceWorker' in navigator){
+ window.addEventListener('load',()=>{
+  navigator.serviceWorker.register('/sw.js?v='+APP_BUILD_VERSION);
+  navigator.serviceWorker.addEventListener('message',e=>{
+    if(e.data?.type==='APP_UPDATED') location.reload();
+  });
+ });
+}
+</script>
 </body></html>
