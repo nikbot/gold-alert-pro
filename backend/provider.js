@@ -1,7 +1,8 @@
-const TGJU_GOLD_URL = process.env.TGJU_GOLD_URL || "https://www.tgju.org/profile/geram18";
+const TGJU_GOLD_URL = process.env.TGJU_GOLD_URL || "https://gem.tgju.org/profile/geram18";
 const TGJU_GOLD_FALLBACK_URLS = [
   "https://www.tgju.org/profile/geram18/today",
-  "https://gem.tgju.org/profile/geram18"
+  "https://www.tgju.org/profile/geram18",
+  "https://gem.tgju.org/profile/geram18/today"
 ];
 // Optional structured TGJU-compatible endpoint. If configured, it is preferred over HTML
 // because structured data is less sensitive to page markup changes.
@@ -115,8 +116,8 @@ function extractFirst(text, patterns){for(const re of patterns){const m=text.mat
 export function parseIran18PriceFromText(text){
   const normalized=normalizeDigits(String(text||""));
   const direct=extractFirst(normalized,[
-    /نرخ\s*فعلی\s*:{1,2}\s*((?:\d{1,3}(?:[,٬،]\d{3})+)|(?:\d{7,}))/i,
-    /نرخ\s*فعلی[^\d]{0,160}((?:\d{1,3}(?:[,٬،]\d{3})+)|(?:\d{7,}))/i,
+    /نرخ\s*فعلی\s*[:：|]{1,3}\s*((?:\d{1,3}(?:[,٬،]\d{3})+)|(?:\d{7,}))/i,
+    /نرخ\s*فعلی[^\d]{0,220}((?:\d{1,3}(?:[,٬،]\d{3})+)|(?:\d{7,}))/i,
     /(?:طلای\s*18\s*عیار\s*\/\s*750|طلای\s*۱۸\s*عیار|Gram\s*Gold\s*18)[^\d]{0,300}((?:\d{1,3}(?:[,٬،]\d{3})+)|(?:\d{7,}))/i
   ]);
   if(plausibleGoldPrice(direct)) return Math.round(direct);

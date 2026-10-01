@@ -97,6 +97,9 @@ body.v62Terminal .v62Sidebar,body.v62Terminal .v62Main{direction:rtl}
 @media(max-width:1100px){body.v62Terminal .v62TerminalShell{grid-template-columns:82px minmax(0,1fr)}.v62Sidebar .v62BrandText,.v62Sidebar .v62Nav b,.v62Sidebar .v62Nav small,.v62SideFoot{display:none}.v62Nav button{justify-content:center}.v62MainGrid{grid-template-columns:1fr}.v62Copilot{position:relative;top:auto;min-height:0}.v62BottomGrid{grid-template-columns:1fr}}
 @media(max-width:760px){body.v62Terminal .wrap{padding:10px 10px 30px}.v62TerminalShell{display:block!important}.v62Sidebar{position:fixed;z-index:60;right:10px;left:10px;bottom:10px;top:auto;padding:7px;border-radius:18px}.v62Brand,.v62SideFoot,.v62Collapse{display:none}.v62Nav{display:flex;overflow:auto;padding:0}.v62Nav button{min-width:52px;display:grid;gap:3px;padding:7px 5px;justify-items:center;border-radius:11px}.v62Nav .v62Icon{width:25px;height:25px}.v62Nav b{display:none}.v62Nav small{display:none}.v62Header{grid-template-columns:1fr auto}.v62MarketStatus{grid-column:1/-1;grid-row:2;justify-self:stretch;justify-content:center}.v62HeaderActions{grid-column:2}.v62HeaderBrand{grid-column:1}.v62Hero{padding:15px}.v62HeroBottom{display:block}.v62HeroChart{width:100%;height:70px;margin-top:10px}.v62MarketCards{grid-template-columns:1fr 1fr}.v62ChartViewport{height:300px}.v62Copilot{padding:13px}.v62BottomGrid{margin-bottom:70px}.v62MainGrid{gap:10px}}
 @media(max-width:430px){.v62MarketCards{grid-template-columns:1fr 1fr}.v62HeroPrice{font-size:36px}.v62ChartViewport{height:260px}.v62StateGrid{grid-template-columns:1fr 1fr}.v62StateGrid div:last-child{grid-column:1/-1}}
+
+.v62ExtraStats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}.v62Stat{background:#0a1018;border:1px solid #1b2738;border-radius:12px;padding:9px}.v62Stat span{display:block;font-size:8px;color:#728096}.v62Stat b{display:block;margin-top:4px;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.v62Stat small{display:block;margin-top:3px;color:#64748b;font-size:7px}.v62ChartTools{display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end}.v62ChartTools button{border:1px solid #25344a;background:#0b111b;color:#9eabc0;border-radius:8px;padding:5px 7px;font-size:8px;cursor:pointer}.v62ChartTools button.active{border-color:#d7ad55;color:#f4d98c;background:#17130a}.v62LevelLine{stroke:#d7ad55;stroke-width:1;stroke-dasharray:6 5;opacity:.75}.v62LevelLabel{fill:#d7ad55;font-size:10px;font-family:inherit}.v62ToolsRow{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}.v62ToolsRow button{border:1px solid #26344a;background:#0b111b;color:#9eabc0;border-radius:9px;padding:6px 9px;font-size:8px;cursor:pointer}.v62ToolsRow button.active{color:#fff;border-color:#d7ad55}.v62MiniCalc{margin-top:10px;padding:11px;background:#0a1018;border:1px solid #1b2738;border-radius:13px}.v62MiniCalc h4{margin:0 0 7px;font-size:10px}.v62MiniCalc input{width:100%;box-sizing:border-box;background:#0d1521;border:1px solid #26344a;color:#fff;border-radius:9px;padding:8px;font-size:10px}.v62MiniCalc button{margin-top:6px;width:100%;background:#c99b3c;color:#111;border:0;border-radius:9px;padding:8px;font-weight:700;cursor:pointer}.v62MiniCalc .result{margin-top:7px;font-size:9px;color:#cbd5e1;line-height:1.8}.v62MiniCalc .result b{color:#f4d98c}.v62Health{margin-top:10px;display:flex;justify-content:space-between;gap:8px;padding:8px 10px;border-radius:11px;background:#0a1018;border:1px solid #1b2738;font-size:8px;color:#8290a5}.v62Health strong{color:#22c55e}.v62CoinBadge{font-size:7px;color:#7f8da2}
+@media(max-width:760px){.v62ExtraStats{grid-template-columns:1fr 1fr}.v62ChartTools{justify-content:flex-start}}
 </style>
 
 <style>
@@ -306,7 +309,9 @@ body.authLocked .floatingMenuBtn,body.authLocked .menuBackdrop,body.authLocked .
       <button data-v62cat="tools" type="button"><span class="v62Icon">▣</span><span><b>پرتفوی</b><small>دارایی و ابزار</small></span></button>
       <button data-v62cat="news" type="button"><span class="v62Icon">≡</span><span><b>اخبار</b><small>اخبار بازار</small></span></button>
       <button data-v62cat="account" type="button"><span class="v62Icon">●</span><span><b>حساب</b><small>تنظیمات</small></span></button>
-    </nav>
+          <button data-v62cat="tools" type="button"><span class="v62Icon">🧮</span><span><b>ماشین‌حساب</b><small>محاسبه ارزش طلا</small></span></button>
+      <button data-v62cat="account" type="button"><span class="v62Icon">⚙</span><span><b>تنظیمات</b><small>حساب و تنظیمات</small></span></button>
+</nav>
     <button class="v62Collapse" id="v62Collapse" type="button">◀ جمع‌کردن منو</button>
     <div class="v62SideFoot">داده‌های بازار لحظه‌ای هستند. تحلیل‌ها سناریویی‌اند و تضمین نتیجه آینده نیستند.</div>
   </aside>
@@ -327,10 +332,16 @@ body.authLocked .floatingMenuBtn,body.authLocked .menuBackdrop,body.authLocked .
           <div class="v62MarketCard"><span>طلای ۱۸K</span><b id="v62CardGold">—</b><em id="v62CardGoldCh">—</em></div>
           <div class="v62MarketCard"><span>دلار آزاد</span><b id="v62CardDollar">—</b><em id="v62CardDollarCh">—</em></div>
           <div class="v62MarketCard"><span>اونس جهانی</span><b id="v62CardXau">—</b><em id="v62CardXauCh">—</em></div>
-          <div class="v62MarketCard"><span>مظنه / گرمی</span><b id="v62CardGram">—</b><em id="v62CardGramCh">—</em></div>
+          <div class="v62MarketCard"><span>سکه امامی</span><b id="v62CardCoin">—</b><em>قیمت تک‌فروشی/بازار</em></div>
+        </section>
+        <section class="v62ExtraStats">
+          <div class="v62Stat"><span>بالاترین بازه نمودار</span><b id="v62GoldHigh">—</b><small>بر اساس داده‌های دریافت‌شده</small></div>
+          <div class="v62Stat"><span>پایین‌ترین بازه نمودار</span><b id="v62GoldLow">—</b><small>بر اساس داده‌های دریافت‌شده</small></div>
+          <div class="v62Stat"><span>حرکت بازه انتخابی</span><b id="v62GoldMove">—</b><small>نسبت اولین نقطه به آخرین نقطه</small></div>
+          <div class="v62Stat"><span>منبع قیمت</span><b id="v62Source">—</b><small id="v62EngineReason">—</small></div>
         </section>
         <section class="v62ChartPanel">
-          <div class="v62PanelHead"><div><h3>LIVE GOLD CHART</h3><small>نمودار زنده • حمایت • مقاومت • سیگنال</small></div><div class="v62ChartTools"><button class="active" type="button" onclick="v62ChartRange(this,60)">1H</button><button type="button" onclick="v62ChartRange(this,120)">4H</button><button type="button" onclick="v62ChartRange(this,240)">1D</button><button type="button" onclick="v62ChartRange(this,480)">1W</button></div></div>
+          <div class="v62PanelHead"><div><h3>LIVE GOLD CHART</h3><small>نمودار زنده • حمایت • مقاومت • سیگنال</small></div><div class="v62ChartTools"><button class="active" type="button" onclick="v62ChartRange(this,60)">1H</button><button type="button" onclick="v62ChartRange(this,120)">4H</button><button type="button" onclick="v62ChartRange(this,240)">1D</button><button type="button" onclick="v62ChartRange(this,480)">1W</button><button type="button" data-v62-mode="area" class="active" onclick="v62ChartMode('area')">AREA</button><button type="button" data-v62-mode="line" onclick="v62ChartMode('line')">LINE</button><button type="button" class="active" onclick="v62ToggleLevels(this)">سطوح</button></div></div>
           <div class="v62ChartViewport"><div class="goldChart" id="v62GoldChart"><div class="chartWrap"><div class="chartEmpty">در حال دریافت نمودار...</div></div></div></div>
         </section>
       </div>
@@ -346,6 +357,8 @@ body.authLocked .floatingMenuBtn,body.authLocked .menuBackdrop,body.authLocked .
     <section class="v62BottomGrid">
       <div class="v62Timeline"><div class="v62PanelHead"><div><h3>SMART ALERTS • TIMELINE</h3><small>آخرین رویدادهای مهم بازار</small></div><button class="secondary" style="padding:6px 9px;font-size:8px" type="button" onclick="applyCategory('alerts')">همه هشدارها</button></div><div class="v62TimelineList" id="v62TimelineList"><div class="v62TimelineItem"><span class="v62TimelineTime">—</span><span class="v62TimelineDot">⏳</span><span class="v62TimelineText">در حال دریافت رویدادها...</span></div></div></div>
       <div class="v62PulsePanel"><div class="v62PanelHead"><div><h3>MARKET PULSE</h3><small>وضعیت بازار در یک نگاه</small></div></div><div class="v62PulseRows"><div class="v62PulseRow"><span>طلای ۱۸K</span><b id="v62PulseGold">—</b><span id="v62PulseGoldCh">—</span></div><div class="v62PulseRow"><span>دلار</span><b id="v62PulseDollar">—</b><span id="v62PulseDollarCh">—</span></div><div class="v62PulseRow"><span>اونس</span><b id="v62PulseXau">—</b><span id="v62PulseXauCh">—</span></div><div class="v62PulseRow"><span>گرمی</span><b id="v62PulseGram">—</b><span id="v62PulseGramCh">—</span></div></div>
+        <div class="v62MiniCalc"><h4>🧮 محاسبه سریع ارزش طلا</h4><input id="v62CalcWeight" type="number" step="0.01" min="0" placeholder="وزن به گرم"><button type="button" onclick="v62MiniCalc()">محاسبه ارزش روز</button><div class="result" id="v62CalcResult">وزن را وارد کنید.</div></div>
+        <div class="v62Health"><span>کیفیت داده: <strong id="v62DataSource">—</strong></span><span id="v62DataSourceLabel">منبع: —</span></div>
         <details class="v62Customize"><summary>⚙ شخصی‌سازی داشبورد</summary><div class="v62Checks"><label><input type="checkbox" checked data-v62-widget="hero"> طلای 18K</label><label><input type="checkbox" checked data-v62-widget="pulse"> Market Pulse</label><label><input type="checkbox" checked data-v62-widget="ai"> AI Copilot</label><label><input type="checkbox" checked data-v62-widget="alerts"> هشدارها</label><label><input type="checkbox" checked data-v62-widget="portfolio"> پرتفوی</label></div></details>
       </div>
     </section>

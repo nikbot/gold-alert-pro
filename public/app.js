@@ -809,26 +809,48 @@ window.adminLogin = adminLogin;
   const faNum=v=>{try{return Number(v||0).toLocaleString('fa-IR')}catch{return String(v??'—')}};
   const safeMoney=v=>{try{return moneyIRR(v)}catch{return faNum(v)}};
   const set=(id,v)=>{const e=$(id);if(e)e.textContent=v??'—'};
+  let chartMode='area', showLevels=true;
   function syncChart(){
     const src=$('goldChart'),dst=$('v62GoldChart');
     if(!src||!dst)return;
     dst.innerHTML=src.innerHTML;
-    const svg=dst.querySelector('svg');if(svg){svg.style.width='100%';svg.style.height='100%'}
-    const hero=$('v62HeroChart'); if(hero){hero.innerHTML=src.innerHTML;const hs=hero.querySelector('svg');if(hs){hs.style.width='100%';hs.style.height='100%'}}
+    const decorate=(root)=>{
+      const svg=root?.querySelector('svg'); if(!svg)return;
+      svg.style.width='100%';svg.style.height='100%';
+      const raw=(latest?.prices||[]).map(Number).filter(Number.isFinite).slice(-chartRange);
+      if(raw.length<2)return;
+      const min=Math.min(...raw),max=Math.max(...raw),range=max-min||1,w=900,h=230,padX=12,padY=18;
+      if(chartMode==='line'){svg.querySelectorAll('.chartArea').forEach(x=>x.style.display='none')}
+      else svg.querySelectorAll('.chartArea').forEach(x=>x.style.display='');
+      svg.querySelectorAll('.v62LevelLine,.v62LevelLabel').forEach(x=>x.remove());
+      if(showLevels){
+        const levels=[{v:Math.min(...raw),name:'حمایت'},{v:Math.max(...raw),name:'مقاومت'}];
+        levels.forEach((lv,i)=>{const y=h-padY-(lv.v-min)/range*(h-2*padY);const line=document.createElementNS('http://www.w3.org/2000/svg','line');line.setAttribute('x1',padX);line.setAttribute('x2',w-padX);line.setAttribute('y1',y);line.setAttribute('y2',y);line.setAttribute('class','v62LevelLine');line.setAttribute('data-level',i);svg.appendChild(line);const t=document.createElementNS('http://www.w3.org/2000/svg','text');t.setAttribute('x',w-padX-4);t.setAttribute('y',Math.max(12,y-4));t.setAttribute('text-anchor','end');t.setAttribute('class','v62LevelLabel');t.textContent=lv.name+' '+faNum(lv.v);svg.appendChild(t);});
+      }
+    };
+    decorate(dst);
+    const hero=$('v62HeroChart'); if(hero){hero.innerHTML=src.innerHTML;decorate(hero)}
+    const raw=(latest?.prices||[]).map(Number).filter(Number.isFinite).slice(-chartRange);
+    const high=raw.length?Math.max(...raw):0,low=raw.length?Math.min(...raw):0,last=raw.at(-1)||0,first=raw[0]||0,delta=first?((last/first-1)*100):0;
+    set('v62GoldHigh',high?safeMoney(high):'—');set('v62GoldLow',low?safeMoney(low):'—');set('v62GoldMove',first?((delta>=0?'▲ +':'▼ ')+f2(Math.abs(delta))+'٪'):'—');
+    set('v62Source',latest?.iran?.source||'—');
   }
   window.v62ChartRange=function(btn,n){
     document.querySelectorAll('.v62Range button,.v62ChartTools button').forEach(x=>x.classList.remove('active'));btn?.classList.add('active');
     const target=document.querySelector(`#goldChartCard button[data-range="${n}"]`);if(target)target.click();
     setTimeout(syncChart,80);
   };
+  window.v62ChartMode=function(mode){chartMode=mode==='line'?'line':'area';document.querySelectorAll('[data-v62-mode]').forEach(x=>x.classList.toggle('active',x.dataset.v62Mode===chartMode));syncChart()};
+  window.v62ToggleLevels=function(btn){showLevels=!showLevels;if(btn)btn.classList.toggle('active',showLevels);syncChart()};
+  window.v62MiniCalc=function(){const w=Number($('v62CalcWeight')?.value||0),p=Number(latest?.iran?.priceIRR||0),out=$('v62CalcResult');if(!out)return;if(!w||!p){out.textContent='وزن و قیمت بازار لازم است.';return}out.innerHTML=`ارزش تقریبی: <b>${safeMoney(w*p)}</b><br><span>بر مبنای طلای ۱۸ عیار و بدون اجرت، سود و مالیات.</span>`};
   function updatePulse(s){
-    const price=Number(s?.iran?.priceIRR||0), dollar=Number(s?.dollar?.priceIRR||0), xau=Number(s?.global?.xauUsd||0), gram=Number(s?.coins?.gram?.priceIRR||0);
+    const price=Number(s?.iran?.priceIRR||0), dollar=Number(s?.dollar?.priceIRR||0), xau=Number(s?.global?.xauUsd||0), gram=Number(s?.coins?.gram||0), emami=Number(s?.coins?.emami||0);
     const prev=window.__v62Prev||{};
     const pct=(a,b)=>b>0?((a/b-1)*100):null;
     const goldD=pct(price,prev.price), dollarD=pct(dollar,prev.dollar), xauD=pct(xau,prev.xau), gramD=pct(gram,prev.gram);
     const fmtPct=d=>d==null?'—':(d>=0?'▲ +':'▼ ')+f2(Math.abs(d))+'٪';
     set('v62GoldPrice',safeMoney(price));set('v62GoldChange',fmtPct(goldD));set('v62GoldTime',s?.updatedAt?new Date(s.updatedAt).toLocaleTimeString('fa-IR'):'—');
-    set('v62CardGold',safeMoney(price));set('v62CardDollar',safeMoney(dollar));set('v62CardXau',xau?'$'+Number(xau).toLocaleString('en-US',{maximumFractionDigits:2}):'—');set('v62CardGram',safeMoney(gram));
+    set('v62CardGold',safeMoney(price));set('v62CardDollar',safeMoney(dollar));set('v62CardXau',xau?'$'+Number(xau).toLocaleString('en-US',{maximumFractionDigits:2}):'—');set('v62CardGram',safeMoney(gram));set('v62CardCoin',safeMoney(emami));
     set('v62CardGoldCh',fmtPct(goldD));set('v62CardDollarCh',fmtPct(dollarD));set('v62CardXauCh',fmtPct(xauD));set('v62CardGramCh',fmtPct(gramD));
     set('v62PulseGold',safeMoney(price));set('v62PulseDollar',safeMoney(dollar));set('v62PulseXau',xau?'$'+Number(xau).toLocaleString('en-US',{maximumFractionDigits:2}):'—');set('v62PulseGram',safeMoney(gram));
     set('v62PulseGoldCh',fmtPct(goldD));set('v62PulseDollarCh',fmtPct(dollarD));set('v62PulseXauCh',fmtPct(xauD));set('v62PulseGramCh',fmtPct(gramD));
@@ -836,7 +858,7 @@ window.adminLogin = adminLogin;
     const q=$('v62DataQuality');if(q)q.textContent=s?.dataReady?'آماده تحلیل':(es.status==='LIVE'?'داده زنده':'داده ناقص');
     const age=$('v62UpdateAge');if(age)age.textContent=s?.updatedAt?'آخرین بروزرسانی '+new Date(s.updatedAt).toLocaleTimeString('fa-IR'):'آخرین بروزرسانی —';
     const live=$('v62MarketState');if(live)live.style.color=es.status==='LIVE'?'#22c55e':es.status==='STALE'?'#f5c451':'#ef4444';
-    window.__v62Prev={price,dollar,xau,gram};
+    set('v62DataSource',s?.iran?.source||'—');set('v62EngineReason',s?.engineStatus?.reason||'اتصال فعال');window.__v62Prev={price,dollar,xau,gram};
     syncChart();
   }
   function renderCopilotFromDom(){
