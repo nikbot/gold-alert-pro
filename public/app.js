@@ -599,6 +599,14 @@ async function adminLoadBusinessDashboard(){
     const r=await adminFetch('/api/admin/business-dashboard'); const d=await r.json();
     if(!r.ok)throw new Error(d.error||'خطا');
     const maxRev=Math.max(1,...(d.daily||[]).map(x=>Number(x.revenue||0)));
+    const monthRevenue=document.getElementById('adminMonthRevenue');
+    const avgPayment=document.getElementById('adminAvgPayment');
+    const paidUsers=document.getElementById('adminPaidUsers');
+    const expiringUsers=document.getElementById('adminExpiringUsers');
+    if(monthRevenue)monthRevenue.textContent=formatIRR(d.revenue.month);
+    if(avgPayment)avgPayment.textContent=formatIRR(d.revenue.average);
+    if(paidUsers)paidUsers.textContent=fa(Number(d.users.pro||0)+Number(d.users.premium||0));
+    if(expiringUsers)expiringUsers.textContent=fa(d.users.expiring7);
     box.innerHTML=`
       <div class="bizCards">
         <div class="bizCard"><span>درآمد کل ثبت‌شده</span><b>${formatIRR(d.revenue.total)}</b><small>${fa(d.revenue.confirmedCount)} تراکنش تأییدشده</small></div>
@@ -833,7 +841,7 @@ window.adminLogin = adminLogin;
     const raw=(latest?.prices||[]).map(Number).filter(Number.isFinite).slice(-chartRange);
     const high=raw.length?Math.max(...raw):0,low=raw.length?Math.min(...raw):0,last=raw.at(-1)||0,first=raw[0]||0,delta=first?((last/first-1)*100):0;
     set('v62GoldHigh',high?safeMoney(high):'—');set('v62GoldLow',low?safeMoney(low):'—');set('v62GoldMove',first?((delta>=0?'▲ +':'▼ ')+f2(Math.abs(delta))+'٪'):'—');
-    set('v62Source',latest?.iran?.source||'—');
+    set('v62Source',latest?.iran?.source||'—');set('v62GoldSource',latest?.iran?.source||'—');
   }
   window.v62ChartRange=function(btn,n){
     document.querySelectorAll('.v62Range button,.v62ChartTools button').forEach(x=>x.classList.remove('active'));btn?.classList.add('active');
