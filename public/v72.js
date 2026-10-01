@@ -57,7 +57,7 @@
     box.innerHTML = sources.slice(0, 5).map((x) => {
       const ok = Boolean(x?.ok);
       const name = x?.name || 'Provider';
-      const label = name === primary ? 'Primary' : 'Fallback';
+      const label = name === primary ? 'منبع اصلی' : 'منبع پشتیبان';
       return `<div class="v72Source"><span>${name} <small>• ${label}</small></span><b class="${ok ? 'ok' : 'warn'}">${ok ? '● فعال' : '○ خطا'}</b></div>`;
     }).join('');
   }
@@ -78,6 +78,41 @@
     box.innerHTML = rows.map(([name, raw, value]) =>
       `<div><span>${name}</span><b>${value}</b><small>${raw ? 'LIVE' : 'بدون داده'}</small></div>`
     ).join('');
+  }
+
+
+  function signalMeta(analysis) {
+    const signal = analysis?.signal || 'WAIT';
+    const ready = analysis?.ready !== false && Number(analysis?.sampleSize || 0) >= 50;
+    const score = Number(analysis?.score || 0);
+    const meta = {
+      BUY: { label: 'خرید پله‌ای', cls: 'buy', text: 'نشانه‌های صعودی بیشتر شده‌اند؛ اگر قصد ورود داری، خرید را پله‌ای و با حد ریسک مشخص بررسی کن.' },
+      SELL: { label: 'کاهش ریسک / فروش پله‌ای', cls: 'sell', text: 'نشانه‌های نزولی بیشتر شده‌اند؛ کاهش ریسک یا فروش پله‌ای را بررسی کن، نه تصمیم عجولانه.' },
+      WATCH_BUY: { label: 'مراقب فرصت خرید باش', cls: 'watch-buy', text: 'کفه صعودی سنگین‌تر است، ولی هنوز تأیید کافی برای سیگنال خرید نداریم.' },
+      WATCH_SELL: { label: 'مراقب ضعف بازار باش', cls: 'watch-sell', text: 'کفه نزولی سنگین‌تر است، ولی هنوز تأیید کافی برای سیگنال فروش نداریم.' },
+      WAIT: { label: 'فعلاً صبر کن', cls: 'wait', text: 'فعلاً جهت بازار به‌اندازه کافی روشن نیست؛ عجله نکن و منتظر داده تازه‌تر بمان.' }
+    };
+    if (!ready) return { label: 'هنوز زوده', cls: 'wait', text: 'داده کافی برای یک سیگنال قابل اتکا جمع نشده؛ فعلاً فقط بازار را زیر نظر بگیر.', score: score, reasons: ['حداقل ۵۰ نقطه قیمت برای تحلیل لازم است.'] };
+    return { ...(meta[signal] || meta.WAIT), score, reasons: Array.isArray(analysis?.reasons) ? analysis.reasons.slice(-4) : [] };
+  }
+
+  function renderSignal(s) {
+    const a = s?.analysis;
+    const meta = signalMeta(a);
+    const signalEl = $('v72Signal');
+    if (signalEl) {
+      signalEl.textContent = meta.label;
+      signalEl.className = `v72SignalBadge ${meta.cls}`;
+    }
+    set('v72SignalScore', Number.isFinite(meta.score) && meta.score > 0 ? `${Math.round(meta.score)}٪` : '—');
+    set('v72SignalText', meta.text);
+
+    const box = $('v72SignalReasons');
+    if (box) {
+      box.innerHTML = meta.reasons.length
+        ? meta.reasons.map((r) => `<span>✓ ${r}</span>`).join('')
+        : '<span>• دلیل مشخصی برای سیگنال فعلی ثبت نشده است.</span>';
+    }
   }
 
   function renderAlerts(s) {
@@ -132,6 +167,7 @@
         : 'در انتظار داده قیمت...'
     );
 
+    renderSignal(s);
     renderSources(s);
     renderWatch(s);
     renderAlerts(s);
