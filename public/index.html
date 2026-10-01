@@ -77,7 +77,7 @@ body{background:radial-gradient(900px 420px at 85% -10%,#30220e55,transparent 65
 @media(max-width:760px){.adminShell{flex-direction:column}.adminSidebar{width:100%;position:static}}
 
 /* =========================================================
-   Gold2 Pro V72 Financial Terminal
+   Gold2 Pro V65 Market Terminal
    ========================================================= */
 :root{--v62-bg:#080b12;--v62-panel:#101522;--v62-panel2:#0c111b;--v62-line:#202a3b;--v62-text:#f5f7fa;--v62-muted:#8e9aae;--v62-live:#22c55e;--v62-red:#ef4444;--v62-gold:#d9ad55;--v62-blue:#6aa8ff;}
 body.v62Terminal{background:radial-gradient(circle at 70% -20%,#182033 0,#080b12 42%,#05070c 100%);}
@@ -230,131 +230,6 @@ body.authLocked .floatingMenuBtn,body.authLocked .menuBackdrop,body.authLocked .
 <link rel="stylesheet" href="v66.css">
 <link rel="stylesheet" href="v67.css">
 <link rel="stylesheet" href="v68.css">
-
-<style id="gold2-financial-terminal-v73">
-/* Gold2 Pro V73 — Bloomberg/TradingView-inspired terminal skin.
-   Visual layer only: no market values are fabricated and existing IDs remain intact. */
-:root{
-  --ft-bg:#070a0e;--ft-panel:#0c1117;--ft-panel2:#0f151c;--ft-line:#202a35;
-  --ft-line2:#2b3745;--ft-text:#e9eef4;--ft-muted:#778493;--ft-gold:#d9b45f;
-  --ft-green:#39d98a;--ft-red:#ff647c;--ft-blue:#65a9ff;--ft-cyan:#58d7e2;
-}
-body{
-  background:
-    radial-gradient(900px 380px at 75% -5%,rgba(217,180,95,.08),transparent 60%),
-    linear-gradient(180deg,#06090d 0%,#080b10 48%,#06090d 100%);
-}
-.wrap{max-width:1440px;padding:12px 16px 44px}
-.top{margin:2px 0 9px;padding:0 3px}
-.brand h1{font-size:19px;letter-spacing:.1px}
-.sub{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.5px}
-.logo{width:42px;height:42px;border-radius:11px;box-shadow:0 5px 20px #000}
-.status{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.2px}
-.premiumNav{background:#080c11e8;border-color:#18212a;border-radius:10px;box-shadow:0 7px 25px #000a}
-.premiumNav button{border-radius:7px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:9px}
-.v62TerminalShell{
-  display:grid!important;grid-template-columns:210px minmax(0,1fr)!important;
-  gap:0!important;background:#080c11;border:1px solid #1d2630;border-radius:12px;
-  box-shadow:0 24px 80px #000b;overflow:hidden;
-}
-.v62Sidebar{
-  width:210px!important;min-width:210px!important;border-left:1px solid #1d2630!important;
-  background:linear-gradient(180deg,#0a0f14,#080c11)!important;padding:12px 9px!important;
-}
-.v62Brand{padding:8px 7px 14px!important;border-bottom:1px solid #1a232d;margin-bottom:8px}
-.v62BrandMark{border-radius:8px!important;box-shadow:inset 0 0 0 1px #e0bb6433,0 5px 14px #000}
-.v62BrandText b{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px}
-.v62BrandText small{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:8px;color:#667483}
-.v62Nav{gap:3px!important}
-.v62Nav button{
-  min-height:46px!important;border-radius:7px!important;background:transparent!important;
-  border:1px solid transparent!important;color:#8996a5!important;
-}
-.v62Nav button:hover{background:#111820!important;border-color:#1e2a36!important;color:#dfe7ef!important}
-.v62Nav button.active{
-  background:linear-gradient(90deg,#151b22,#10161d)!important;border-color:#2b3743!important;
-  box-shadow:inset 3px 0 0 var(--ft-gold)!important;color:#f0f4f8!important;
-}
-.v62Icon{font-family:ui-monospace,SFMono-Regular,Menlo,monospace!important;color:#8e9baa!important}
-.v62SideFoot{font-size:8px!important;color:#5f6c79!important;border-top:1px solid #18212a;padding:10px 6px!important}
-.v62Main{min-width:0!important;background:#080c11!important}
-.v62Header{
-  min-height:52px!important;padding:8px 12px!important;border-bottom:1px solid #1d2630!important;
-  background:#0a0f14!important;position:sticky;top:0;z-index:40;
-}
-.v62HeaderBrand b,.v62HeaderBrand span{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
-.v62HeaderBrand b{font-size:11px}.v62HeaderBrand span{font-size:8px;color:#687684}
-.v62MarketStatus{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:9px}
-.v62HeaderActions button{border-radius:6px!important;padding:7px 9px!important;background:#111820!important;border:1px solid #25313d!important;color:#cbd5df!important}
-.v62HeaderActions .v62CopilotBtn{background:#16130c!important;border-color:#5b4922!important;color:#e8ca7c!important}
-.v62MainGrid{grid-template-columns:minmax(0,1fr) 310px!important;gap:10px!important;padding:10px!important}
-.v62Hero,.v62MarketCard,.v62Stat,.v65MarketState,.v66DecisionCard,.v66HeatmapCard,.v62ChartPanel,.v62Copilot,.v62Timeline,.v62PulsePanel{
-  border-radius:9px!important;border-color:#202b36!important;box-shadow:none!important;
-}
-.v62Hero{background:linear-gradient(145deg,#0e141b,#0a0e13)!important;padding:15px!important}
-.v62Kicker,.v62PanelHead h3,.v62PanelHead small,.v65StateHead span,.v66Head span{
-  font-family:ui-monospace,SFMono-Regular,Menlo,monospace!important;letter-spacing:.55px
-}
-.v62HeroTitle{font-size:16px!important}
-.v62HeroPrice{font-size:38px!important;letter-spacing:-1.5px;color:#f0d78e!important}
-.v62HeroLive{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:9px}
-.v62HeroMeta{gap:5px!important}.v62Pill{border-radius:5px!important;background:#0b1016!important;border-color:#1f2a35!important;font-size:8px!important}
-.v62MarketCards{gap:6px!important;margin-top:7px!important}
-.v62MarketCard{background:#0b1016!important;padding:10px!important}
-.v62MarketCard span,.v62Stat span{font-family:ui-monospace,SFMono-Regular,Menlo,monospace!important;font-size:8px!important}
-.v62MarketCard b{font-size:15px!important}.v62MarketCard em{font-size:8px!important}
-.v62ExtraStats{gap:6px!important;margin-top:7px!important}
-.v62Stat{background:#0b1016!important;padding:9px!important}.v62Stat b{font-size:12px!important}.v62Stat small{font-size:8px!important}
-.v65StateGrid{gap:5px!important}.v65StateGrid>div{background:#0b1016!important;border-color:#1d2833!important;border-radius:6px!important}
-.v66IntelligenceGrid{gap:7px!important}.v66DecisionCard,.v66HeatmapCard{background:#0b1016!important}
-.v62ChartPanel{background:#0b1016!important;padding:11px!important}
-.v62ChartTools{gap:3px!important}.v62ChartTools button{border-radius:5px!important;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:8px!important}
-.v62ChartViewport{border-radius:6px!important;background:#080d12!important;border:1px solid #1a252f}
-.v62Copilot{background:linear-gradient(180deg,#0d131a,#090d12)!important;padding:11px!important}
-.v62CopilotHead{border-bottom:1px solid #1b2630;padding-bottom:10px}
-.v62CopilotAvatar{border-radius:7px!important;background:#16130d!important;border:1px solid #4a3b20}
-.v62CopilotState{background:#0a0f14!important;border-color:#1c2731!important;border-radius:7px!important}
-.v62CopilotAsk input{border-radius:6px!important;background:#070b0f!important;border-color:#26313c!important}
-.v62CopilotAsk button{border-radius:6px!important;padding:8px 11px!important}
-.v62BottomGrid{gap:8px!important}.v62Timeline,.v62PulsePanel{background:#0b1016!important;padding:11px!important}
-.v62TimelineItem{border-color:#1b2630!important}
-.v62PulseRow{border-color:#1b2630!important}
-.ftRibbon{
-  display:grid;grid-template-columns:180px repeat(4,minmax(120px,1fr)) 130px;gap:1px;
-  margin:0 0 8px;background:#05080b;border:1px solid #1b242d;border-radius:8px;
-  overflow:hidden;box-shadow:0 8px 25px #0009
-}
-.ftRibbonBrand,.ftTicker,.ftSession{padding:8px 11px;background:#0b1015;min-width:0}
-.ftRibbonBrand{display:flex;align-items:center;gap:8px}.ftRibbonBrand b,.ftRibbonBrand small,.ftTicker,.ftSession{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
-.ftRibbonBrand b{display:block;font-size:11px;letter-spacing:1px}.ftRibbonBrand small{display:block;font-size:7px;color:#667483;letter-spacing:.6px;margin-top:2px}
-.ftAu{display:grid;place-items:center;width:27px;height:27px;border:1px solid #6e582b;border-radius:6px;color:#e7c873;font-size:11px}
-.ftTicker span{display:block;color:#687684;font-size:7px;letter-spacing:.4px}.ftTicker b{display:inline-block;font-size:11px;color:#e5ebf1;margin-top:3px}.ftTicker em{font-style:normal;font-size:8px;margin-right:6px;color:#7e8b99}
-.ftTicker em.pos{color:var(--ft-green)}.ftTicker em.neg{color:var(--ft-red)}
-.ftSession{display:flex;flex-direction:column;justify-content:center}.ftSession b{font-size:9px;color:#6fe1a5}.ftSession small{font-size:7px;color:#687684;margin-top:2px}
-.ftLiveDot{width:6px;height:6px;border-radius:50%;background:#42df91;box-shadow:0 0 10px #42df91;display:inline-block;margin-left:5px}
-.ftCommandStrip{
-  display:flex;align-items:stretch;gap:1px;margin:0 10px 8px;background:#05080b;border:1px solid #1b242d;
-  border-radius:7px;overflow:hidden
-}
-.ftCommand{padding:7px 10px;display:flex;align-items:center;gap:7px;background:#0b1015;min-width:0}
-.ftCommand:hover{background:#111820}.ftCommand b{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:8px;letter-spacing:.3px}
-.ftCommand small{color:#65727f;font-size:7px}.ftKey{font:700 7px ui-monospace,SFMono-Regular,Menlo,monospace;color:#d9b45f;border:1px solid #4d3e20;border-radius:4px;padding:2px 4px}
-.ftClock{margin-right:auto;padding:7px 10px;display:flex;align-items:center;gap:6px;background:#0a0f14;font:8px ui-monospace,SFMono-Regular,Menlo,monospace;color:#778493}.ftClock b{color:#dbe2e9}
-@media(max-width:1050px){.ftRibbon{grid-template-columns:150px repeat(4,minmax(100px,1fr))}.v62MainGrid{grid-template-columns:minmax(0,1fr) 270px!important}}
-@media(max-width:850px){
-  .v62TerminalShell{grid-template-columns:1fr!important}.v62Sidebar{width:auto!important;min-width:0!important;border-left:0!important;border-bottom:1px solid #1d2630!important}
-  .v62Nav{display:grid!important;grid-template-columns:repeat(5,1fr);overflow:auto}.v62Nav button{min-height:40px!important}.v62Nav button span:nth-child(2) small{display:none}.v62Collapse,.v62SideFoot{display:none}
-  .v62MainGrid{grid-template-columns:1fr!important}.v62Copilot{order:2}
-  .ftRibbon{grid-template-columns:repeat(4,1fr)}.ftRibbonBrand{display:none}.ftSession{display:none}.ftTicker{padding:7px}
-  .ftCommandStrip{overflow:auto}.ftCommand{flex:0 0 auto}
-}
-@media(max-width:560px){
-  .wrap{padding:8px 7px 30px}.v62Header{position:relative}.premiumNav{position:relative}
-  .ftRibbon{grid-template-columns:repeat(2,1fr)}.ftTicker{min-height:45px}
-  .ftCommand small{display:none}.ftCommand{padding:7px 8px}
-  .v62MainGrid{padding:6px!important}.v62HeroPrice{font-size:31px!important}
-}
-</style>
 </head>
 <body class="v62Terminal">
 <div id="updateBanner" style="display:none;position:sticky;top:0;z-index:900;background:#17140d;border-bottom:1px solid #4a3a19;padding:10px 14px;text-align:center">
@@ -446,17 +321,9 @@ body{
 <div class="dashboardHead"><div><div class="eyebrow">مرکز فرمان بازار</div><h2>پیشخوان امروز طلا</h2></div><div class="liveBadge">● داده‌خوانی خودکار فعال</div></div>
 <div class="liveTicker" id="liveTicker"><div class="tickerMain"><span class="tickerPulse"></span><div><div class="tickerLabel">قیمت زنده طلای ۱۸ عیار</div><div id="tickerPrice" class="tickerPrice">—</div></div></div><div class="tickerSide"><div id="tickerChange" class="tickerChange">—</div><div id="tickerTime" class="tickerTime">در حال اتصال...</div></div></div>
 <div class="livePanel menuSection" id="livePricePanel"><div class="livePriceRow"><div><div class="label">⚡ قیمت زنده • هر گرم طلای ۱۸ عیار</div><div id="livePriceBig" class="livePriceBig">—</div><div class="liveUnit">ریال</div></div><div style="text-align:left"><div id="liveChange" class="change">—</div><div id="liveStatus" class="small" style="margin-top:7px">در حال اتصال...</div></div></div><div class="liveMeta"><div class="liveMetaBox"><span>اونس جهانی</span><b id="liveXau">—</b></div><div class="liveMetaBox"><span>دلار</span><b id="liveDollar">—</b></div><div class="liveMetaBox"><span>به‌روزرسانی</span><b id="liveAge">—</b></div></div><div class="phoneCta"><div style="flex:1">📲 با نصب روی گوشی، همین صفحه را مثل یک اپلیکیشن باز کن. برای اعلان قیمت و هشدارها هم Push را فعال کن.</div><button class="secondary" onclick="enablePush()">🔔 فعال‌سازی اعلان</button></div><div class="installHero"><button id="installBtnHero" class="blue" style="display:none" onclick="installApp()">📲 نصب روی صفحه گوشی</button><button class="secondary" onclick="manualRefresh()">↻ دریافت قیمت جدید</button></div><div class="mobileHint">نمایش قیمت داخل برنامه هر ۱۰ ثانیه تازه می‌شود؛ اعلان گوشی برای جلوگیری از مزاحمت، فقط برای هشدارهای مهم و به‌روزرسانی‌های انتخاب‌شده ارسال می‌شود.</div></div>
-<section class="ftRibbon" aria-label="نوار بازار">
-  <div class="ftRibbonBrand"><span class="ftAu">Au</span><div><b>GOLD2</b><small>FINANCIAL TERMINAL</small></div></div>
-  <div class="ftTicker"><span>GOLD 18K</span><b id="ftGold">—</b><em id="ftGoldCh">—</em></div>
-  <div class="ftTicker"><span>USD / IRR</span><b id="ftDollar">—</b><em id="ftDollarCh">—</em></div>
-  <div class="ftTicker"><span>XAU / USD</span><b id="ftXau">—</b><em id="ftXauCh">—</em></div>
-  <div class="ftTicker"><span>BTC / USD</span><b id="ftBtc">—</b><em id="ftBtcCh">—</em></div>
-  <div class="ftSession"><span class="ftLiveDot"></span><b id="ftSessionState">LIVE</b><small id="ftSessionTime">—</small></div>
-</section>
 <div class="v62TerminalShell" id="v62TerminalShell">
   <aside class="v62Sidebar" id="v62Sidebar">
-    <div class="v62Brand"><div class="v62BrandMark">Au</div><div class="v62BrandText"><b>Gold2 Pro</b><small>V72 Financial Terminal</small></div></div>
+    <div class="v62Brand"><div class="v62BrandMark">Au</div><div class="v62BrandText"><b>Gold2 Pro</b><small>V65 Market Terminal</small></div></div>
     <nav class="v62Nav" id="v62Nav">
       <button class="active" data-v62cat="dashboard" type="button"><span class="v62Icon">⌂</span><span><b>پیشخوان</b><small>نمای اصلی بازار</small></span></button>
       <button data-v62cat="market" type="button"><span class="v62Icon">↗</span><span><b>بازار</b><small>نمودار و قیمت</small></span></button>
@@ -473,17 +340,10 @@ body{
   </aside>
   <main class="v62Main">
     <header class="v62Header">
-      <div class="v62HeaderBrand"><div class="v62BrandMark" style="width:34px;height:34px;border-radius:10px;font-size:16px">Au</div><div><b>Gold2 Pro</b><span>Financial Terminal • V72</span></div></div>
+      <div class="v62HeaderBrand"><div class="v62BrandMark" style="width:34px;height:34px;border-radius:10px;font-size:16px">Au</div><div><b>Gold2 Pro</b><span>Market Terminal • V65</span></div></div>
       <div class="v62MarketStatus"><span class="v62LiveDot"></span><b id="v62MarketState">LIVE</b><span id="v62UpdateAge">آخرین بروزرسانی —</span></div>
       <div class="v62HeaderActions"><button class="v62Notif" type="button" onclick="applyCategory('alerts')">🔔<i id="v62NotifCount">0</i></button><button type="button" onclick="applyCategory('account')">👤 <span id="v62AccountName">حساب کاربری</span></button><button class="v62CopilotBtn" type="button" onclick="document.getElementById('v62CopilotQuestion')?.focus();document.getElementById('v62Copilot')?.scrollIntoView({behavior:'smooth',block:'center'})">AI Copilot</button></div>
-    </header><div class="ftCommandStrip">
-  <div class="ftCommand"><span class="ftKey">MKT</span><b>MARKET OVERVIEW</b><small>نمای زنده بازار</small></div>
-  <div class="ftCommand"><span class="ftKey">CHT</span><b>CHART WORKSPACE</b><small>نمودار و اندیکاتورها</small></div>
-  <div class="ftCommand"><span class="ftKey">AI</span><b>DECISION ROOM</b><small>تحلیل سناریویی</small></div>
-  <div class="ftCommand"><span class="ftKey">ALT</span><b>ALERT MONITOR</b><small>هشدارهای فعال</small></div>
-  <div class="ftClock"><span>LOCAL</span><b id="ftClock">—</b></div>
-</div>
-
+    </header>
     <section class="v62MainGrid">
       <div>
         <section class="v62Hero">
@@ -885,123 +745,27 @@ body{
 
 
 
-
 <section class="v72CommandCenter categorySection category-dashboard" id="v72CommandCenter">
   <div class="v72Topbar">
-    <div class="v72BrandBlock">
-      <div class="v72Eyebrow"><span class="v72LiveDot"></span> GOLD2 PRO • V72 COMMAND CENTER</div>
-      <h2>مرکز فرمان بازار</h2>
-      <p>یک نمای سریع برای قیمت‌ها، روند، هوش تحلیلی، منابع و هشدارهای بازار.</p>
-    </div>
-    <div class="v72Live">
-      <div class="v72LiveMain"><i></i><b id="v72LiveText">در حال اتصال</b></div>
-      <small id="v72UpdateTime">آخرین بروزرسانی: —</small>
-    </div>
+    <div><span class="v72Eyebrow">GOLD2 PRO V72</span><h2>⚡ مرکز فرمان بازار</h2><p>نمایش یکپارچه بازار، وضعیت منابع، هوش تحلیلی و هشدارها.</p></div>
+    <div class="v72Live"><i></i><b id="v72LiveText">در حال اتصال</b><small id="v72UpdateTime">—</small></div>
   </div>
-
   <div class="v72MarketGrid">
-    <button class="v72MarketCard v72PrimaryMarket" data-v72-go="market">
-      <span class="v72CardLabel"><em>●</em> طلای ۱۸ عیار</span>
-      <b id="v72Gold">—</b>
-      <small id="v72GoldCh">قیمت لحظه‌ای</small>
-      <strong>مشاهده بازار ↗</strong>
-    </button>
-    <button class="v72MarketCard" data-v72-go="market">
-      <span class="v72CardLabel">💵 دلار</span>
-      <b id="v72Dollar">—</b>
-      <small id="v72DollarCh">قیمت لحظه‌ای</small>
-    </button>
-    <button class="v72MarketCard" data-v72-go="market">
-      <span class="v72CardLabel">🌎 اونس جهانی</span>
-      <b id="v72Xau">—</b>
-      <small id="v72XauCh">XAU / USD</small>
-    </button>
-    <button class="v72MarketCard" data-v72-go="market">
-      <span class="v72CardLabel">₿ بیت‌کوین</span>
-      <b id="v72Btc">—</b>
-      <small id="v72BtcCh">BTC / USD</small>
-    </button>
-    <button class="v72MarketCard v72PortfolioCard" data-v72-go="portfolio">
-      <span class="v72CardLabel">💼 ارزش پرتفوی</span>
-      <b id="v72Portfolio">—</b>
-      <small id="v72Pnl">—</small>
-      <strong>مدیریت پرتفوی ↗</strong>
-    </button>
+    <button class="v72MarketCard" data-v72-go="market"><span>🥇 طلای ۱۸</span><b id="v72Gold">—</b><small id="v72GoldCh">—</small></button>
+    <button class="v72MarketCard" data-v72-go="market"><span>💵 دلار</span><b id="v72Dollar">—</b><small id="v72DollarCh">—</small></button>
+    <button class="v72MarketCard" data-v72-go="market"><span>🌎 اونس</span><b id="v72Xau">—</b><small id="v72XauCh">—</small></button>
+    <button class="v72MarketCard" data-v72-go="market"><span>₿ بیت‌کوین</span><b id="v72Btc">—</b><small id="v72BtcCh">—</small></button>
+    <button class="v72MarketCard" data-v72-go="portfolio"><span>💼 ارزش پرتفوی</span><b id="v72Portfolio">—</b><small id="v72Pnl">—</small></button>
   </div>
-
   <div class="v72MainGrid">
-    <div class="v72Panel v72ChartPanel v72ChartWide">
-      <div class="v72PanelHead">
-        <div><h3>📈 نمای زنده طلای ۱۸</h3><span>روند قیمت از داده‌های دریافت‌شده سامانه</span></div>
-        <div class="v72PanelActions">
-          <span class="v72DataBadge">LIVE DATA</span>
-          <button data-v72-go="market">بازار ↗</button>
-        </div>
-      </div>
-      <div class="v72ChartStats">
-        <div><span>آخرین قیمت</span><b id="v72ChartLast">—</b></div>
-        <div><span>کف بازه</span><b id="v72ChartLow">—</b></div>
-        <div><span>سقف بازه</span><b id="v72ChartHigh">—</b></div>
-        <div><span>تغییر بازه</span><b id="v72ChartChange">—</b></div>
-      </div>
-      <div id="v72MiniChart" class="v72MiniChart" aria-label="نمودار قیمت طلای ۱۸"></div>
-      <div id="v72ChartEmpty" class="v72ChartEmpty">در انتظار داده قیمت...</div>
-    </div>
-
-    <div class="v72Panel v72DecisionPanel">
-      <div class="v72PanelHead">
-        <div><h3>🧠 وضعیت هوشمند بازار</h3><span>تحلیل توصیفی بر اساس داده‌های فعلی</span></div>
-        <button data-v72-go="ai">AI ↗</button>
-      </div>
-      <div class="v72DecisionState">
-        <div><span>سوگیری فعلی</span><b id="v72Bias">—</b></div>
-        <div class="v72Confidence"><small>سطح اعتماد</small><strong id="v72Confidence">—</strong></div>
-      </div>
-      <div class="v72Metrics">
-        <div><span>روند</span><b id="v72Trend">—</b></div>
-        <div><span>مومنتوم</span><b id="v72Momentum">—</b></div>
-        <div><span>نوسان</span><b id="v72Volatility">—</b></div>
-      </div>
-      <div class="v72DecisionNote" id="v72DecisionText">در انتظار داده برای تحلیل...</div>
-      <button class="v72FullButton" data-v72-go="ai">ورود به اتاق تحلیل هوشمند <span>←</span></button>
-    </div>
-
-    <div class="v72Panel">
-      <div class="v72PanelHead">
-        <div><h3>🔌 سلامت منابع</h3><span>اولویت قیمت: Forgod</span></div>
-        <button data-v72-go="settings">جزئیات</button>
-      </div>
-      <div id="v72Sources" class="v72Sources"></div>
-    </div>
-
-    <div class="v72Panel">
-      <div class="v72PanelHead">
-        <div><h3>🔔 رویدادهای اخیر</h3><span>آخرین هشدارها و اتفاقات</span></div>
-        <button data-v72-go="alerts">همه ↗</button>
-      </div>
-      <div id="v72Alerts" class="v72List"></div>
-    </div>
-
-    <div class="v72Panel v72Wide">
-      <div class="v72PanelHead">
-        <div><h3>⭐ Watchlist</h3><span>نمای سریع دارایی‌های کلیدی</span></div>
-        <button data-v72-go="market">بازار ↗</button>
-      </div>
-      <div id="v72Watch" class="v72Watch"></div>
-    </div>
+    <div class="v72Panel v72ChartPanel"><div class="v72PanelHead"><div><h3>📈 نمودار زنده</h3><span>نمودار حرفه‌ای V71</span></div><button data-v72-go="market">باز کردن بازار ↗</button></div><div class="v72ChartHint">برای مشاهده نمودار کامل، بخش بازار را باز کنید.</div></div>
+    <div class="v72Panel v72DecisionPanel"><div class="v72PanelHead"><div><h3>🧠 وضعیت هوشمند بازار</h3><span>بر پایه داده‌های موجود</span></div><button data-v72-go="ai">AI ↗</button></div><div class="v72DecisionState"><b id="v72Bias">—</b><span id="v72Confidence">اعتماد: —</span></div><div class="v72Metrics"><div><span>روند</span><b id="v72Trend">—</b></div><div><span>مومنتوم</span><b id="v72Momentum">—</b></div><div><span>نوسان</span><b id="v72Volatility">—</b></div></div><p id="v72DecisionText">در انتظار داده...</p></div>
+    <div class="v72Panel"><div class="v72PanelHead"><div><h3>🔌 وضعیت منابع</h3><span>اولویت قیمت: Forgod</span></div><button data-v72-go="settings">جزئیات</button></div><div id="v72Sources" class="v72Sources"></div></div>
+    <div class="v72Panel"><div class="v72PanelHead"><div><h3>🔔 هشدارهای اخیر</h3><span>آخرین رویدادها</span></div><button data-v72-go="alerts">همه ↗</button></div><div id="v72Alerts" class="v72List"></div></div>
+    <div class="v72Panel v72Wide"><div class="v72PanelHead"><div><h3>⭐ Watchlist</h3><span>دسترسی سریع</span></div><button data-v72-go="market">بازار ↗</button></div><div id="v72Watch" class="v72Watch"></div></div>
   </div>
-
-  <div class="v72Quick">
-    <button data-v72-go="market">📊 <span>بازار</span></button>
-    <button data-v72-go="ai">🧠 <span>AI Decision Room</span></button>
-    <button data-v72-go="alerts">🔔 <span>هشدارها</span></button>
-    <button data-v72-go="portfolio">💼 <span>پرتفوی</span></button>
-    <button data-v72-go="news">📰 <span>اخبار</span></button>
-    <button data-v72-go="calculator">🧮 <span>ماشین‌حساب</span></button>
-    <button data-v72-go="settings">⚙️ <span>تنظیمات</span></button>
-  </div>
+  <div class="v72Quick"><button data-v72-go="market">📊 بازار</button><button data-v72-go="ai">🧠 AI Decision Room</button><button data-v72-go="alerts">🔔 هشدارها</button><button data-v72-go="portfolio">▣ پرتفوی</button><button data-v72-go="news">📰 اخبار</button><button data-v72-go="calculator">🧮 ماشین‌حساب</button><button data-v72-go="settings">⚙ تنظیمات</button></div>
 </section>
-
 
 <footer class="footer">Gold Alert Pro © 2026<br><strong>طراح و توسعه: عباس صدیق آرانی</strong><br>۰۹۱۳۰۱۱۵۹۲۰<br>این سامانه ابزار پایش و تحلیل است؛ سیگنال‌ها قطعی و تضمین‌کننده سود نیستند.</footer>
 </div>
@@ -1023,42 +787,7 @@ if('serviceWorker' in navigator){
 <script src="v67.js"></script>
 <script src="v68.js"></script>
 <script src="v69.js"></script>
-<link rel="stylesheet" href="/v72.css?v=72.1.0">
+<link rel="stylesheet" href="/v72.css?v=72.0.0">
 <script src="v71.js"></script>
-<script src="v72.js?v=72.1.0"></script>
-
-<script id="gold2-financial-terminal-v73-js">
-(function(){
-  'use strict';
-  const $=id=>document.getElementById(id);
-  const n=v=>Number(v||0);
-  const fmt=(v,dec=0)=>Number.isFinite(n(v))?n(v).toLocaleString('fa-IR',{maximumFractionDigits:dec}):'—';
-  const usd=v=>Number.isFinite(n(v))?'$'+n(v).toLocaleString('en-US',{maximumFractionDigits:2}):'—';
-  function change(cur,prev){
-    if(!Number.isFinite(n(cur))||!Number.isFinite(n(prev))||!n(prev)) return '—';
-    const d=(n(cur)/n(prev)-1)*100;
-    return (d>=0?'▲ ':'▼ ')+Math.abs(d).toFixed(2)+'٪';
-  }
-  function cls(el,val){if(!el)return;el.classList.remove('pos','neg');if(String(val).startsWith('▲'))el.classList.add('pos');if(String(val).startsWith('▼'))el.classList.add('neg')}
-  function render(){
-    const s=window.latest;
-    if(!s)return;
-    const gold=n(s?.iran?.priceIRR), dollar=n(s?.dollar?.priceIRR), xau=n(s?.global?.xauUsd), btc=n(s?.crypto?.btcUsd||s?.btcUsd);
-    const prices=(s?.prices||[]).map(n).filter(Number.isFinite);
-    const prev=prices.length>1?prices.at(-2):null;
-    const vals=[
-      ['ftGold',fmt(gold), 'ftGoldCh',change(gold,prev)],
-      ['ftDollar',fmt(dollar), 'ftDollarCh',''],
-      ['ftXau',usd(xau), 'ftXauCh',''],
-      ['ftBtc',usd(btc), 'ftBtcCh','']
-    ];
-    vals.forEach(([id,v,cid,ch])=>{if($(id))$(id).textContent=v;if($(cid)){ $(cid).textContent=ch;cls($(cid),ch); }});
-    const state=s?.engineStatus?.status||'LIVE';
-    if($('ftSessionState'))$('ftSessionState').textContent=state==='LIVE'?'LIVE':state;
-    if($('ftSessionTime'))$('ftSessionTime').textContent=s.updatedAt?new Date(s.updatedAt).toLocaleTimeString('fa-IR'):'—';
-  }
-  function clock(){if($('ftClock'))$('ftClock').textContent=new Date().toLocaleTimeString('fa-IR',{hour:'2-digit',minute:'2-digit',second:'2-digit'})}
-  document.addEventListener('DOMContentLoaded',()=>{render();clock();setInterval(render,1000);setInterval(clock,1000)});
-})();
-</script>
+<script src="v72.js"></script>
 </body></html>
