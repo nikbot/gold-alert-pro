@@ -42,7 +42,17 @@ function renderGoldChart(prices){
 function initChartControls(){document.querySelectorAll('[data-range]').forEach(btn=>btn.addEventListener('click',()=>{chartRange=Number(btn.dataset.range)||60;document.querySelectorAll('[data-range]').forEach(x=>x.classList.remove('active'));btn.classList.add('active');renderGoldChart(latest?.prices||[])}))}
 
 function openAccountQuickMenu(){ applyCategory('account'); setTimeout(()=>document.getElementById('account')?.scrollIntoView({behavior:'smooth',block:'start'}),50); }
-function logoutAndRelogin(){ logoutAccount(); setTimeout(()=>showAuthMode('login'),120); }
+
+async function forgotPasswordPrompt(){
+ const mobile=prompt('شماره موبایل حساب را وارد کنید:');
+ if(!mobile)return;
+ try{
+  const r=await fetch('/api/account/forgot-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone:mobile})});
+  const d=await r.json(); alert(d.message||d.error||'درخواست ارسال شد.');
+ }catch(e){alert('خطا در ارتباط با سرور');}
+}
+
+function logoutAndRelogin(){ logoutAccount(); setTimeout(()=>{showAuthGate(true);showAuthMode('login');},120); }
 function updateCommandCenter(){
  const set=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v};
  const p=window.__lastPortfolioSnapshot||null, a=latest?.analysis||{}, r=latest?.portfolioRisk||null;
@@ -220,9 +230,16 @@ document.addEventListener('DOMContentLoaded',()=>{loadTheme(); updateCommandCent
 
 // v22: clean professional side menu. The dashboard is the only category shown at first load.
 const categoryLabels={
- dashboard:'پیشخوان', market:'بازار و نمودار', ai:'هوش و تحلیل', alerts:'هشدارها', tools:'دارایی و ابزار', news:'اخبار بازار', sms:'سرویس SMS', account:'حساب و پشتیبان', decision:'اتاق تصمیم', calendar:'تقویم اقتصادی', admin:'پنل مدیریت'
+ dashboard:'پیشخوان', market:'بازار و نمودار', ai:'هوش و تحلیل', alerts:'هشدارها', tools:'دارایی و ابزار', portfolio:'پرتفوی', calculator:'ماشین‌حساب', settings:'تنظیمات', news:'اخبار بازار', sms:'سرویس SMS', account:'حساب و پشتیبان', decision:'اتاق تصمیم', intelligence:'مرکز هوش طلا', calendar:'تقویم اقتصادی', admin:'پنل مدیریت'
 };
+const PUBLIC_CATEGORIES=new Set(['dashboard','account']);
+let pendingProtectedCategory='';
 function applyCategory(category,scroll=true){
+ if(category!=='dashboard' && category!=='admin' && !PUBLIC_CATEGORIES.has(category) && !accountToken){
+   pendingProtectedCategory=category;
+   showAuthGate(true,'برای استفاده از این بخش ابتدا وارد حساب شوید.');
+   return false;
+ }
  document.querySelectorAll('.categorySection').forEach(el=>{el.classList.remove('categoryVisible');el.style.display='none';});
  document.body.classList.toggle('categoryView',category!=='dashboard');
  document.querySelectorAll('.menuItem').forEach(b=>b.classList.toggle('active',b.dataset.category===category));
@@ -230,14 +247,16 @@ function applyCategory(category,scroll=true){
  const title=document.getElementById('categoryTitle');
  const desc=document.getElementById('categoryDesc');
  if(title) title.textContent=categoryLabels[category]||'بخش';
- if(desc) desc.textContent=category==='dashboard'?'قیمت زنده، وضعیت امروز و سیگنال کلی بازار': 'فقط ابزارهای مرتبط با '+(categoryLabels[category]||'این بخش')+' نمایش داده می‌شوند.';
+ if(desc) desc.textContent=category==='dashboard'?'قیمت زنده، وضعیت امروز و سیگنال کلی بازار':'فقط ابزارهای مرتبط با '+(categoryLabels[category]||'این بخش')+' نمایش داده می‌شوند.';
  if(scroll){
    const first=document.querySelector('.category-'+category);
    if(first) setTimeout(()=>first.scrollIntoView({behavior:'smooth',block:'start'}),40);
    else window.scrollTo({top:0,behavior:'smooth'});
  }
+ aiCopilotPage=category;
+ if(typeof refreshAICopilot==='function') refreshAICopilot(false,category);
+ return true;
 }
- aiCopilotPage=category; if(typeof refreshAICopilot==='function') refreshAICopilot(false,category);
 function closeSideMenu(){
  const menu=document.getElementById('sideMenu'),back=document.getElementById('menuBackdrop'),btn=document.getElementById('floatingMenuBtn');
  if(menu)menu.classList.remove('open'); if(back)back.classList.remove('open');
@@ -388,37 +407,102 @@ async function loadPortfolioReport(){
 }
 function downloadBackup(){window.location.href='/api/export?deviceId='+encodeURIComponent(deviceId);}
 async function runNewsAI(){const box=document.getElementById('newsAiResult');if(!box)return;box.style.display='block';box.textContent='⏳ در حال خلاصه‌سازی اخبار...';try{const r=await fetch('/api/news-ai',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({deviceId,accountToken})});const d=await r.json();if(!r.ok)throw new Error(d.error||'خطا');box.textContent=d.text||'پاسخی دریافت نشد.';}catch(e){box.textContent='⚠️ '+e.message;}}
-function showAuthMode(mode){const login=mode==='login';document.getElementById('authLoginForm').style.display=login?'grid':'none';document.getElementById('authRegisterForm').style.display=login?'none':'grid';document.getElementById('authLoginTab').classList.toggle('active',login);document.getElementById('authRegisterTab').classList.toggle('active',!login);document.getElementById('authError').textContent='';}
-function showAuthGate(show=true){const g=document.getElementById('authGate');if(g)g.classList.toggle('hidden',!show);document.body.classList.toggle('authLocked',show);if(show)showAuthMode('login');}
-function showAdminLoginGate(){const g=document.getElementById('authGate');if(g)g.classList.add('hidden');document.body.classList.remove('authLocked');adminSession='';localStorage.removeItem('gold-alert-pro-admin-session-v38');showAdminMenu(false);const box=document.getElementById('adminLoginBox');if(box){box.style.display='block';const u=document.getElementById('adminUsernameInput'),pw=document.getElementById('adminPasswordInput');if(u)u.value='';if(pw)pw.value='';}const c=document.getElementById('adminContent');if(c)c.style.display='none';applyCategory('admin',false);}
-function normalizeDigits(v){return String(v||'').replace(/[۰-۹]/g,d=>'۰۱۲۳۴۵۶۷۸۹'.indexOf(d)).replace(/[٠-٩]/g,d=>'٠١٢٣٤٥٦٧٨٩'.indexOf(d));}
-function normalizeMobile(v){return normalizeDigits(v).replace(/[\s-]/g,'').trim();}
-async function gateLogin(){const mobile=normalizeMobile(document.getElementById('authMobile')?.value),password=document.getElementById('authPass')?.value||'';const err=document.getElementById('authError');if(!/^09\d{9}$/.test(mobile)||password.length<6){if(err)err.textContent='شماره موبایل یا رمز عبور معتبر نیست.';return;}try{const r=await fetch('/api/account/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:mobile,password,deviceId})});const d=await r.json();if(!r.ok)throw new Error(d.error||'ورود ناموفق');accountToken=d.token;localStorage.setItem(ACCOUNT_TOKEN_KEY_V26,accountToken);showAuthGate(false);setAccountStatus('🟢 وارد شدید.');await loadTickets();await loadUserSettings();}catch(e){if(err)err.textContent='⚠️ '+e.message;}}
-async function gateRegister(){const mobile=normalizeMobile(document.getElementById('regMobile')?.value),p1=document.getElementById('regPass')?.value||'',p2=document.getElementById('regPass2')?.value||'',err=document.getElementById('authError');if(!/^09\d{9}$/.test(mobile)){if(err)err.textContent='شماره موبایل باید مثل 09123456789 باشد.';return}if(p1.length<6||p1!==p2){if(err)err.textContent='رمز باید حداقل ۶ کاراکتر باشد و دو بار یکسان وارد شود.';return}try{const r=await fetch('/api/account/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone:mobile,password:p1,deviceId})});const d=await r.json();if(!r.ok)throw new Error(d.error||'ثبت‌نام ناموفق');accountToken=d.token;localStorage.setItem(ACCOUNT_TOKEN_KEY_V26,accountToken);showAuthGate(false);setAccountStatus('🟢 ثبت‌نام انجام شد و وارد شدید.');await loadTickets();await loadUserSettings();}catch(e){if(err)err.textContent='⚠️ '+e.message;}}
-async function registerAccount(){showAuthGate(true);showAuthMode('register');}
-async function loginAccount(){showAuthGate(true);showAuthMode('login');}
-async function syncAccount(){if(!accountToken){showAuthGate(true);return}try{const r=await fetch('/api/account/sync',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:accountToken,deviceId})});const d=await r.json();if(!r.ok)throw new Error(d.error||'همگام‌سازی ناموفق');setAccountStatus('☁️ همگام‌سازی انجام شد • '+new Date(d.syncedAt).toLocaleString('fa-IR'));}catch(e){setAccountStatus('⚠️ '+e.message);}}
-async function logoutAccount(){if(accountToken)await fetch('/api/account/logout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:accountToken})}).catch(()=>{});accountToken='';localStorage.removeItem(ACCOUNT_TOKEN_KEY_V26);showAuthGate(true);}
-function setAccountStatus(t){const e=document.getElementById('accountStatus');if(e)e.textContent=t;}
-async function saveProfileV25(){const payload={deviceId,name:document.getElementById('profileName')?.value||'',city:document.getElementById('profileCity')?.value||'',phone:document.getElementById('profilePhone')?.value||''};try{const r=await fetch('/api/profile',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});const d=await r.json();if(!r.ok)throw new Error(d.error||'ذخیره ناموفق');setAccountStatus('✅ مشخصات ذخیره شد.');}catch(e){setAccountStatus('⚠️ '+e.message);}}
-async function loadProfileV25(){try{const r=await fetch('/api/profile?deviceId='+encodeURIComponent(deviceId),{cache:'no-store'});const d=await r.json();const p=d.profile||{};for(const [id,v] of [['profileName',p.name],['profileCity',p.city],['profilePhone',p.phone]]){const e=document.getElementById(id);if(e&&v)e.value=v;}}catch{}}
-function initV25AutoSave(){['pfWeight','pfBuyPrice','pfPurity','pfNote'].forEach(id=>{const e=document.getElementById(id);if(e)e.addEventListener('change',()=>{const w=Number(document.getElementById('pfWeight')?.value),bp=Number(document.getElementById('pfBuyPrice')?.value);if(w>0&&bp>0)savePortfolioForm(true);});});loadAllocation();loadProfileV25();}
-window.addEventListener('load',()=>{initV25AutoSave();});
-
-// v26: commercial user/admin experience, decision room, market structure, AI chat and economic calendar.
-let adminSession=localStorage.getItem('gold-alert-pro-admin-session-v38')||'';
-const ACCOUNT_TOKEN_KEY_V26='gold-alert-pro-account-token-v28';
-if(!accountToken){accountToken=localStorage.getItem(ACCOUNT_TOKEN_KEY_V26)||localStorage.getItem('gold-alert-pro-account-token-v28')||'';}
+function showAuthMode(mode){
+ const login=mode==='login';
+ const lf=document.getElementById('authLoginForm'),rf=document.getElementById('authRegisterForm');
+ if(lf)lf.style.display=login?'grid':'none';
+ if(rf)rf.style.display=login?'none':'grid';
+ document.getElementById('authLoginTab')?.classList.toggle('active',login);
+ document.getElementById('authRegisterTab')?.classList.toggle('active',!login);
+ const e=document.getElementById('authError');if(e)e.textContent='';
+}
+function setAuthError(message=''){const e=document.getElementById('authError');if(e)e.textContent=message||'';}
+function showAuthGate(show=true,message=''){
+ const g=document.getElementById('authGate');
+ if(!g)return;
+ g.classList.toggle('hidden',!show);g.classList.toggle('authOpen',!!show);
+ g.setAttribute('aria-hidden',show?'false':'true');
+ document.body.classList.toggle('authLocked',!!show);
+ if(show){showAuthMode('login');setAuthError(message);setTimeout(()=>document.getElementById('authMobile')?.focus(),50);}
+}
+function closeAuthGate(){showAuthGate(false);pendingProtectedCategory='';}
 function accountHeaders(){return accountToken?{'x-account-token':accountToken}:{};}
-function fmtDate(v){try{return new Date(v).toLocaleString('fa-IR',{dateStyle:'short',timeStyle:'short'});}catch{return String(v||'—')}}
-async function loadMarketStructure(){
- try{const d=await fetch('/api/market-structure',{cache:'no-store'}).then(r=>r.json());
-  const set=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v};
-  set('dsTrend',d.trendFa||'—');set('dsSupport',moneyIRR(d.support));set('dsResistance',moneyIRR(d.resistance));set('dsConfidence',fa(d.confidence)+'٪');
-  set('dsSignal',latest?.analysis?.signal||'—');set('dsBuy',fa(latest?.marketPressure?.buy||0)+'٪');set('dsSell',fa(latest?.marketPressure?.sell||0)+'٪');
-  const stateText=d.breakout?'شکست مقاومت':d.breakdown?'شکست حمایت':d.trendFa||'خنثی';set('dsState',stateText);
-  const reason=document.getElementById('dsReason');if(reason)reason.innerHTML=`روند کوتاه‌مدت: <b>${esc(d.trendFa||'—')}</b> • تغییر کوتاه‌مدت ${f2(d.shortPct||0)}٪ • تغییر میان‌مدت ${f2(d.midPct||0)}٪<br>حمایت/مقاومت از نقاط چرخش داده‌های اخیر برآورد شده‌اند و حجم واقعی سفارشات در این نسخه در دسترس نیست.`;
- }catch(e){const r=document.getElementById('dsReason');if(r)r.textContent='⚠️ ساختار بازار فعلاً قابل دریافت نیست.';}
+const ACCOUNT_TOKEN_KEY_V26='gold-alert-pro-account-token-v28';
+function persistAccountToken(token){accountToken=String(token||'');if(accountToken)localStorage.setItem(ACCOUNT_TOKEN_KEY_V26,accountToken);else localStorage.removeItem(ACCOUNT_TOKEN_KEY_V26);}
+function setAccountStatus(text){const e=document.getElementById('accountStatus');if(e)e.textContent='وضعیت حساب: '+text;const q=document.getElementById('quickAccountStatus');if(q)q.textContent=accountToken?'🟢 وارد شده':'🔒 نیاز به ورود';}
+async function gateLogin(){
+ const username=String(document.getElementById('authMobile')?.value||'').trim();
+ const password=String(document.getElementById('authPass')?.value||'');
+ if(!username||!password){setAuthError('شماره موبایل و رمز عبور را وارد کنید.');return;}
+ const btn=document.querySelector('#authLoginForm button[onclick="gateLogin()"]');
+ if(btn){btn.disabled=true;btn.textContent='⏳ در حال ورود...';}
+ try{
+  const r=await fetch('/api/account/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username,password,deviceId})});
+  const d=await r.json().catch(()=>({}));
+  if(!r.ok)throw new Error(d.error||'ورود ناموفق بود.');
+  persistAccountToken(d.token);
+  setAccountStatus('🟢 '+(d.username||username));
+  const au=document.getElementById('accountUsername');if(au)au.value=d.username||username;
+  const ap=document.getElementById('accountPassword');if(ap)ap.value='';
+  closeAdminLoginGate();
+  await loadTickets();
+  await loadUserSettings();
+  toast('✅ ورود با موفقیت انجام شد.');
+  const target=pendingProtectedCategory||'dashboard';pendingProtectedCategory='';showAuthGate(false);applyCategory(target,true);
+ }catch(e){setAuthError('⚠️ '+e.message);}
+ finally{if(btn){btn.disabled=false;btn.textContent='🔐 ورود به حساب';}}
+}
+async function gateRegister(){
+ const phone=String(document.getElementById('regMobile')?.value||'').trim();
+ const password=String(document.getElementById('regPass')?.value||'');
+ const password2=String(document.getElementById('regPass2')?.value||'');
+ if(!/^09\d{9}$/.test(phone)){setAuthError('شماره موبایل باید با 09 شروع شود و 11 رقم باشد.');return;}
+ if(password.length<6){setAuthError('رمز عبور حداقل ۶ کاراکتر باشد.');return;}
+ if(password!==password2){setAuthError('تکرار رمز عبور با رمز اصلی یکسان نیست.');return;}
+ try{
+  const r=await fetch('/api/account/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone,password,nationalId:document.getElementById('regNationalId')?.value||'',recoveryQuestion:document.getElementById('regRecoveryQuestion')?.value||'',recoveryAnswer:document.getElementById('regRecoveryAnswer')?.value||'',deviceId})});
+  const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||'ثبت‌نام ناموفق بود.');
+  persistAccountToken(d.token);setAccountStatus('🟢 '+(d.username||phone));toast('✅ حساب شما ساخته شد.');
+  const target=pendingProtectedCategory||'dashboard';pendingProtectedCategory='';showAuthGate(false);applyCategory(target,true);
+ }catch(e){setAuthError('⚠️ '+e.message);}
+}
+async function loginAccount(){
+ const u=String(document.getElementById('accountUsername')?.value||'').trim();
+ const p=String(document.getElementById('accountPassword')?.value||'');
+ if(!u||!p){showAuthGate(true,'شماره موبایل و رمز عبور را وارد کنید.');return;}
+ const target=pendingProtectedCategory;
+ document.getElementById('authMobile').value=u;document.getElementById('authPass').value=p;
+ if(target){} await gateLogin();
+}
+function registerAccount(){showAuthGate(true);showAuthMode('register');}
+async function syncAccount(){
+ if(!accountToken){showAuthGate(true,'برای همگام‌سازی ابتدا وارد شوید.');return;}
+ try{
+  const r=await fetch('/api/account/sync',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:accountToken,deviceId})});
+  const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||'همگام‌سازی ناموفق بود.');toast('☁️ حساب با موفقیت همگام شد.');
+ }catch(e){toast('⚠️ '+e.message,'error');}
+}
+async function logoutAccount(){
+ const token=accountToken;persistAccountToken('');
+ try{await fetch('/api/account/logout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token})});}catch{}
+ setAccountStatus('بدون ورود');
+}
+async function saveProfileV25(){
+ try{
+  const body={deviceId,name:document.getElementById('profileName')?.value||'',city:document.getElementById('profileCity')?.value||'',phone:document.getElementById('profilePhone')?.value||''};
+  const r=await fetch('/api/profile',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const d=await r.json();if(!r.ok)throw new Error(d.error||'ذخیره ناموفق');
+  alert('✅ مشخصات ذخیره شد.');
+ }catch(e){alert('⚠️ '+e.message);}
+}
+function showAdminLoginGate(){
+ const m=document.getElementById('adminLoginModal');
+ if(m){m.style.display='block';}
+ const e=document.getElementById('authError');
+ if(e)e.textContent='';
+}
+function closeAdminLoginGate(){
+ const m=document.getElementById('adminLoginModal');
+ if(m)m.style.display='none';
 }
 async function loadEconomicCalendar(){
  const box=document.getElementById('calendarList');if(!box)return;try{const d=await fetch('/api/economic-calendar',{cache:'no-store'}).then(r=>r.json());const events=Array.isArray(d.events)?d.events:[];if(!events.length){box.innerHTML='<div class="note">رویداد اقتصادی در فید فعلی ثبت نشده است. برنامه رویداد جعلی تولید نمی‌کند.</div>';return;}box.innerHTML=events.map(x=>`<div class="calendarItem"><div><b>${esc(x.title||'رویداد')}</b><div class="small">${esc(x.note||x.description||'')}</div></div><div><div class="calendarTime">${esc(fmtDate(x.date||x.datetime))}</div><div class="calendarImpact">${esc(x.impact||'watch')}</div></div></div>`).join('');}catch(e){box.textContent='⚠️ تقویم اقتصادی فعلاً در دسترس نیست.';}}
@@ -502,7 +586,7 @@ function runLadderSimulation(){const capital=Number(document.getElementById('lad
 async function saveInvoiceRecord(){const status=document.getElementById('invoiceStatus');const data={deviceId,weight:Number(document.getElementById('invoiceWeight')?.value||0),purity:Number(document.getElementById('invoicePurity')?.value||750),amount:Number(document.getElementById('invoiceAmount')?.value||0),date:document.getElementById('invoiceDate')?.value||''};if(!data.weight||!data.amount)return status.textContent='وزن و مبلغ را وارد کن.';status.textContent='اطلاعات فاکتور آماده ثبت است؛ برای جلوگیری از داده ساختگی، OCR خودکار هنوز فعال نشده است.';}
 async function changePasswordPrompt(){const old=prompt('رمز فعلی را وارد کن:');if(old===null)return;const next=prompt('رمز جدید حداقل ۶ کاراکتر:');if(next===null)return;try{const r=await fetch('/api/account/change-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({oldPassword:old,newPassword:next,accountToken})});const d=await r.json();if(!r.ok)throw new Error(d.error||'خطا');alert('✅ رمز تغییر کرد. دوباره وارد شوید.');await logoutAndRelogin();}catch(e){alert('⚠️ '+e.message);}}
 
-async function adminLogin(){const username=normalizeDigits(document.getElementById('adminUsernameInput')?.value.trim()||''),password=normalizeDigits(document.getElementById('adminPasswordInput')?.value||'');if(!username||!password)return alert('نام کاربری و رمز مدیریت را وارد کن.');try{const r=await fetch('/api/admin/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username,password})});const d=await r.json();if(!r.ok)throw new Error(d.error||'ورود مدیریت ناموفق');adminSession=d.token;localStorage.setItem('gold-alert-pro-admin-session-v38',adminSession);document.getElementById('adminLoginBox').style.display='none';document.getElementById('adminContent').style.display='block';showAdminMenu(true);applyCategory('admin',false);await adminLoadStats();await adminLoadOverview();await adminLoadBusinessDashboard();await adminLoadCommerceSettings();await adminLoadUsers();await adminLoadTickets();await adminLoadCalendar();}catch(e){alert('⚠️ '+e.message);}}
+async function adminLogin(){const username=String(document.getElementById('adminUsernameInput')?.value||'').trim(),password=String(document.getElementById('adminPasswordInput')?.value||'');if(!username||!password)return alert('نام کاربری و رمز مدیریت را وارد کن.');try{const r=await fetch('/api/admin/login',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({username,password})});const d=await r.json();if(!r.ok)throw new Error(d.error||'ورود مدیریت ناموفق');window.location.href='/admin';}catch(e){alert('⚠️ '+e.message);}}
 async function adminLoadOverview(){try{const r=await adminFetch('/api/admin/overview');const d=await r.json();if(!r.ok)throw new Error(d.error||'خطا');const el=document.getElementById('adminOverviewGrid');if(el)el.innerHTML=[['تیکت باز',d.openTickets],['پرداخت ثبت‌شده',d.payments],['AI',d.aiConfigured?'فعال':'تنظیم نشده'],['SMS',d.smsConfigured?'فعال':'تنظیم نشده'],['Uptime',d.uptime+'s'],['نسخه',d.version]].map(x=>`<div class="ov"><span>${x[0]}</span><b>${esc(String(x[1]))}</b></div>`).join('');}catch(e){}}
 
 
@@ -563,9 +647,15 @@ async function restoreAdminSession(){if(!adminSession)return;try{const r=await a
 Object.assign(categoryLabels,{decision:'اتاق تصمیم',calendar:'تقویم اقتصادی',admin:'پنل مدیریت'});
 const oldApplyCategory=applyCategory;
 applyCategory=function(category,scroll=true){ oldApplyCategory(category,scroll); };
-window.askGoldAI=askGoldAI;window.runProfessionalAI=runProfessionalAI;window.loadUserSettings=loadUserSettings;window.saveInvestorSettings=saveInvestorSettings;window.addStorageLocation=addStorageLocation;window.addHouseholdPortfolio=addHouseholdPortfolio;window.runLadderSimulation=runLadderSimulation;window.saveInvoiceRecord=saveInvoiceRecord;window.changePasswordPrompt=changePasswordPrompt;window.adminLoadOverview=adminLoadOverview;window.adminLoadBusinessDashboard=adminLoadBusinessDashboard;window.adminCheckUpdate=adminCheckUpdate;window.adminLogin=adminLogin;window.adminCreateUser=adminCreateUser;window.adminLoadUsers=adminLoadUsers;window.adminSaveUser=adminSaveUser;window.adminResetPassword=adminResetPassword;window.adminDeleteUser=adminDeleteUser;window.adminLoadCalendar=adminLoadCalendar;window.adminSaveCalendar=adminSaveCalendar;window.adminLogout=adminLogout;window.showAuthMode=showAuthMode;window.gateLogin=gateLogin;window.gateRegister=gateRegister;window.loadTickets=loadTickets;window.createTicket=createTicket;window.replyTicket=replyTicket;window.adminLoadTickets=adminLoadTickets;window.adminReplyTicket=adminReplyTicket;window.adminSetTicketStatus=adminSetTicketStatus;window.adminBroadcast=adminBroadcast;window.adminAddPayment=adminAddPayment;window.adminLoadAudit=adminLoadAudit;window.adminDownloadBackup=adminDownloadBackup;
-async function restoreAccountSession(){if(!accountToken){showAuthGate(true);return}try{const r=await fetch('/api/account/me',{headers:accountHeaders(),cache:'no-store'});if(!r.ok)throw new Error('invalid');showAuthGate(false);setAccountStatus('🟢 وارد حساب: '+(await r.json()).user.username);await loadTickets();await loadUserSettings();}catch{accountToken='';localStorage.removeItem(ACCOUNT_TOKEN_KEY_V26);showAuthGate(true);}}
-setInterval(loadMarketStructure,10000);setInterval(loadEconomicCalendar,180000);loadMarketStructure();loadEconomicCalendar();restoreAdminSession();restoreAccountSession();
+window.askGoldAI=askGoldAI;window.runProfessionalAI=runProfessionalAI;window.loadUserSettings=loadUserSettings;window.saveInvestorSettings=saveInvestorSettings;window.addStorageLocation=addStorageLocation;window.addHouseholdPortfolio=addHouseholdPortfolio;window.runLadderSimulation=runLadderSimulation;window.saveInvoiceRecord=saveInvoiceRecord;window.changePasswordPrompt=changePasswordPrompt;window.adminLoadOverview=adminLoadOverview;window.adminLoadBusinessDashboard=adminLoadBusinessDashboard;window.adminCheckUpdate=adminCheckUpdate;window.adminLogin=adminLogin;window.adminCreateUser=adminCreateUser;window.adminLoadUsers=adminLoadUsers;window.adminSaveUser=adminSaveUser;window.adminResetPassword=adminResetPassword;window.adminDeleteUser=adminDeleteUser;window.adminLoadCalendar=adminLoadCalendar;window.adminSaveCalendar=adminSaveCalendar;window.adminLogout=adminLogout;window.forgotPasswordPrompt=forgotPasswordPrompt;window.showAuthMode=showAuthMode;window.gateLogin=gateLogin;window.gateRegister=gateRegister;window.loadTickets=loadTickets;window.createTicket=createTicket;window.replyTicket=replyTicket;window.adminLoadTickets=adminLoadTickets;window.adminReplyTicket=adminReplyTicket;window.adminSetTicketStatus=adminSetTicketStatus;window.adminBroadcast=adminBroadcast;window.adminAddPayment=adminAddPayment;window.adminLoadAudit=adminLoadAudit;window.adminDownloadBackup=adminDownloadBackup;
+async function restoreAccountSession(){
+ if(!accountToken){showAuthGate(false);setAccountStatus('بدون ورود');return;}
+ try{
+  const r=await fetch('/api/account/me',{headers:accountHeaders(),cache:'no-store'});if(!r.ok)throw new Error('invalid');
+  const d=await r.json();showAuthGate(false);setAccountStatus('🟢 '+(d.user?.username||'وارد شده'));await loadTickets();await loadUserSettings();
+ }catch{persistAccountToken('');setAccountStatus('بدون ورود');showAuthGate(false);}
+}
+setInterval(loadMarketStructure,10000);setInterval(loadEconomicCalendar,180000);loadMarketStructure();loadEconomicCalendar();restoreAdminSession();restoreAccountSession();if(localStorage.getItem('gold-alert-pro-admin-logged')==='1'&&adminSession){showAdminMenu(true);}
 
 // v35: real in-app notification center + unread badge
 let appNotifications=[];
@@ -647,3 +737,219 @@ function initG59(){
  g59LoadEngine();g59LoadCandles();g59RenderPortfolio();setInterval(g59LoadEngine,5000);setInterval(g59LoadCandles,15000);setInterval(g59RenderPortfolio,5000);
 }
 window.addEventListener('load',initG59);
+
+
+
+// v61: AI Decision Room + Smart Alerts + Portfolio Guard
+function v61FmtPct(v){return Number.isFinite(Number(v))?`${Number(v).toFixed(1)}٪`:'—'}
+async function loadV61DecisionRoom(){
+  try{
+    const r=await fetch('/api/decision-room',{cache:'no-store'});const d=await r.json();if(!r.ok)throw new Error(d.error||'خطا');
+    const set=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v};
+    set('v61Regime',d.regime||'—');set('v61TrendMeta',d.trend?.confidence?`اعتماد ساختار ${fa(d.trend.confidence)}٪`:'—');
+    const sigFa={BUY:'خرید',SELL:'فروش',WATCH_BUY:'مراقبت برای خرید',WATCH_SELL:'مراقبت برای فروش',WAIT:'انتظار'};
+    set('v61Signal',sigFa[d.analysis?.signal]||'انتظار');set('v61Score',`امتیاز ${fa(d.analysis?.score||0)}٪`);
+    set('v61Risk',d.risk?.label||'—');set('v61RiskMeta',`امتیاز ${fa(d.risk?.score||0)} از ۱۰۰`);set('v61Quality',d.quality==='GOOD'?'خوب':d.quality==='STALE'?'قدیمی':'قطع');set('v61QualityMeta',d.engineStatus?.source?`منبع: ${d.engineStatus.source}`:'—');
+    set('v61Action',d.action||'—');set('v61Support',d.trend?.support?moneyIRR(d.trend.support):'—');set('v61Resistance',d.trend?.resistance?moneyIRR(d.trend.resistance):'—');set('v61SupportDistance',d.distanceToSupport!=null?v61FmtPct(d.distanceToSupport):'—');set('v61ResistanceDistance',d.distanceToResistance!=null?v61FmtPct(d.distanceToResistance):'—');
+    set('v61BullCond',d.scenarios?.bullish?.condition||'—');set('v61BullRisk',`ریسک: ${d.scenarios?.bullish?.risk||'—'}`);set('v61BaseCond',d.scenarios?.base?.condition||'—');set('v61BaseRisk',`ریسک: ${d.scenarios?.base?.risk||'—'}`);set('v61BearCond',d.scenarios?.bearish?.condition||'—');set('v61BearRisk',`ریسک: ${d.scenarios?.bearish?.risk||'—'}`);
+    const live=document.getElementById('v61DecisionLive');if(live){live.textContent=d.quality==='GOOD'?'● LIVE • داده تازه':d.quality==='STALE'?'● STALE • داده قدیمی':'● OFFLINE';live.style.color=d.quality==='GOOD'?'#86e4b4':d.quality==='STALE'?'#f2d58b':'#ff9aa5';}
+  }catch(e){const x=document.getElementById('v61DecisionLive');if(x)x.textContent='⚠️ داده در دسترس نیست';}
+}
+async function runV61AIDecision(){
+ const box=document.getElementById('v61DecisionAIResult');if(!box)return;
+ if(!accountToken){showAuthGate(true,'برای توضیح AI اتاق تصمیم ابتدا وارد حساب شوید.');pendingProtectedCategory='decision';return;}
+ box.textContent='⏳ دارم وضعیت بازار را به زبان ساده توضیح می‌دهم...';
+ try{const q='از روی وضعیت فعلی بازار خیلی ساده بگو الان چه خبر است، سناریوی اصلی چیست، چه چیزی باید تأیید شود، مهم‌ترین هشدار چیست و ریسک اصلی کجاست.';const r=await fetch('/api/ai-decision',{method:'POST',headers:{'Content-Type':'application/json',...accountHeaders()},body:JSON.stringify({deviceId,accountToken,question:q})});const d=await r.json();if(!r.ok)throw new Error(d.error||'تحلیل AI ناموفق');box.textContent=d.text||'پاسخ دریافت نشد.';}catch(e){box.textContent='⚠️ '+e.message;}
+}
+function v61SmartAlertPayload(){
+ const num=id=>{const v=Number(document.getElementById(id)?.value);return Number.isFinite(v)&&document.getElementById(id)?.value!==''?v:null};
+ return {deviceId,accountToken,name:document.getElementById('v61AlertName')?.value.trim()||'هشدار هوشمند',conditions:{priceAbove:num('v61AlertAbove'),priceBelow:num('v61AlertBelow'),trend:document.getElementById('v61AlertTrend')?.value||null,signal:document.getElementById('v61AlertSignal')?.value||null,minScore:num('v61AlertScore'),minRsi:num('v61AlertMinRsi'),maxRsi:num('v61AlertMaxRsi'),pressure:document.getElementById('v61AlertPressure')?.value||null,changePct:num('v61AlertChange')}};
+}
+function v61SmartConditionText(c){const x=[];if(c.priceAbove!=null)x.push('قیمت > '+moneyIRR(c.priceAbove));if(c.priceBelow!=null)x.push('قیمت < '+moneyIRR(c.priceBelow));const t={UP:'صعودی',DOWN:'نزولی',SIDEWAYS:'خنثی'};const s={BUY:'خرید',SELL:'فروش',WATCH_BUY:'مراقبت خرید',WATCH_SELL:'مراقبت فروش',WAIT:'انتظار'};if(c.trend)x.push('روند: '+(t[c.trend]||c.trend));if(c.signal)x.push('سیگنال: '+(s[c.signal]||c.signal));if(c.minScore!=null)x.push('امتیاز ≥ '+fa(c.minScore));if(c.minRsi!=null)x.push('RSI ≥ '+fa(c.minRsi));if(c.maxRsi!=null)x.push('RSI ≤ '+fa(c.maxRsi));if(c.pressure)x.push('فشار: '+(c.pressure==='BUY'?'خرید':c.pressure==='SELL'?'فروش':'متعادل'));if(c.changePct!=null)x.push('تغییر ≥ '+v61FmtPct(c.changePct));return x.join(' • ')}
+async function loadV61SmartAlerts(){
+ const box=document.getElementById('v61SmartAlertList');if(!box)return;
+ try{const r=await fetch('/api/smart-alerts?deviceId='+encodeURIComponent(deviceId),{headers:accountHeaders(),cache:'no-store'});const d=await r.json();if(!r.ok)throw new Error(d.error||'خطا');const list=d.alerts||[];box.innerHTML=list.length?list.map(a=>`<div class="v61SmartRow"><div><b>${esc(a.name)}</b><small>${a.active?'🟢 فعال':'⚪ غیرفعال'}${a.lastTriggeredAt?' • آخرین اجرا: '+new Date(a.lastTriggeredAt).toLocaleString('fa-IR'):''}</small></div><div class="v61SmartChips"><span class="v61SmartChip">${esc(v61SmartConditionText(a.conditions))}</span></div><button class="secondary" onclick="deleteV61SmartAlert('${esc(a.id)}')">حذف</button></div>`).join(''):'<div class="emptyAlert">هنوز هشدار هوشمندی ثبت نشده است.</div>'}catch(e){box.innerHTML='<div class="emptyAlert">⚠️ '+esc(e.message)+'</div>';}
+}
+async function addV61SmartAlert(){
+ if(!accountToken){showAuthGate(true,'برای ثبت هشدار هوشمند ابتدا وارد حساب شوید.');pendingProtectedCategory='alerts';return;}
+ try{const body=v61SmartAlertPayload();const r=await fetch('/api/smart-alerts',{method:'POST',headers:{'Content-Type':'application/json',...accountHeaders()},body:JSON.stringify(body)});const d=await r.json();if(!r.ok)throw new Error(d.error||'ثبت هشدار ناموفق');toast('✅ هشدار هوشمند ثبت شد.');['v61AlertName','v61AlertAbove','v61AlertBelow','v61AlertScore','v61AlertMinRsi','v61AlertMaxRsi','v61AlertChange'].forEach(id=>{const e=document.getElementById(id);if(e)e.value=''});['v61AlertTrend','v61AlertSignal','v61AlertPressure'].forEach(id=>{const e=document.getElementById(id);if(e)e.value=''});await loadV61SmartAlerts();}catch(e){toast('⚠️ '+e.message,'error');}
+}
+async function deleteV61SmartAlert(id){
+ if(!accountToken){showAuthGate(true,'ابتدا وارد حساب شوید.');return;} try{const r=await fetch('/api/smart-alerts/'+encodeURIComponent(id)+'?deviceId='+encodeURIComponent(deviceId),{method:'DELETE',headers:accountHeaders()});const d=await r.json();if(!r.ok)throw new Error(d.error||'حذف ناموفق');await loadV61SmartAlerts();}catch(e){toast('⚠️ '+e.message,'error');}
+}
+async function loadV61PortfolioGuard(){
+ const box=document.getElementById('v61PortfolioText');if(!box)return;
+ try{const r=await fetch('/api/portfolio-allocation?deviceId='+encodeURIComponent(deviceId),{cache:'no-store'});const d=await r.json();if(!r.ok)throw new Error(d.error||'خطا');const set=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v};set('v61KeepPct',fa(d.keepPct)+'٪');set('v61ReducePct',fa(d.reducePct)+'٪');set('v61AddPct',fa(d.addPct)+'٪');set('v61PortScore',fa(d.score)+'٪');const kb=document.getElementById('v61KeepBar'),rb=document.getElementById('v61ReduceBar'),ab=document.getElementById('v61AddBar');if(kb)kb.style.width=d.keepPct+'%';if(rb)rb.style.width=d.reducePct+'%';if(ab)ab.style.width=d.addPct+'%';box.textContent=`وضعیت فعلی: ${d.signal||'WAIT'} • امتیاز ${fa(d.score)}٪ • فشار خرید ${fa(d.buyPressure)}٪ • فشار فروش ${fa(d.sellPressure)}٪. ${d.disclaimer||''}`;}catch(e){box.textContent='⚠️ '+e.message;}
+}
+function initV61(){
+ document.getElementById('v61DecisionAI')?.addEventListener('click',runV61AIDecision);
+ document.getElementById('v61SmartAlertAdd')?.addEventListener('click',addV61SmartAlert);
+ document.getElementById('v61PortfolioRefresh')?.addEventListener('click',loadV61PortfolioGuard);
+ loadV61DecisionRoom();loadV61SmartAlerts();loadV61PortfolioGuard();
+ setInterval(loadV61DecisionRoom,10000);setInterval(loadV61SmartAlerts,30000);setInterval(loadV61PortfolioGuard,15000);
+}
+window.deleteV61SmartAlert=deleteV61SmartAlert;window.loadV61DecisionRoom=loadV61DecisionRoom;window.runV61AIDecision=runV61AIDecision;
+window.addEventListener('load',initV61);
+
+// Ensure auth handlers are available for inline buttons after cache/version updates.
+window.showAuthMode = showAuthMode;
+window.showAdminLoginGate = showAdminLoginGate;
+window.gateLogin = gateLogin;
+window.gateRegister = gateRegister;
+window.loginAccount = loginAccount;
+window.registerAccount = registerAccount;
+window.forgotPasswordPrompt = forgotPasswordPrompt;
+window.adminLogin = adminLogin;
+
+/* =========================================================
+   Gold2 Pro V66 Intelligence Terminal
+   ========================================================= */
+(function initV62Terminal(){
+  const $=id=>document.getElementById(id);
+  const faNum=v=>{try{return Number(v||0).toLocaleString('fa-IR')}catch{return String(v??'—')}};
+  const safeMoney=v=>{try{return moneyIRR(v)}catch{return faNum(v)}};
+  const set=(id,v)=>{const e=$(id);if(e)e.textContent=v??'—'};
+  let chartMode='area', showLevels=true;
+  function syncChart(){
+    const src=$('goldChart'),dst=$('v62GoldChart');
+    if(!src||!dst)return;
+    dst.innerHTML=src.innerHTML;
+    const decorate=(root)=>{
+      const svg=root?.querySelector('svg'); if(!svg)return;
+      svg.style.width='100%';svg.style.height='100%';
+      const raw=(latest?.prices||[]).map(Number).filter(Number.isFinite).slice(-chartRange);
+      if(raw.length<2)return;
+      const min=Math.min(...raw),max=Math.max(...raw),range=max-min||1,w=900,h=230,padX=12,padY=18;
+      if(chartMode==='line'){svg.querySelectorAll('.chartArea').forEach(x=>x.style.display='none')}
+      else svg.querySelectorAll('.chartArea').forEach(x=>x.style.display='');
+      svg.querySelectorAll('.v62LevelLine,.v62LevelLabel').forEach(x=>x.remove());
+      if(showLevels){
+        const levels=[{v:Math.min(...raw),name:'حمایت'},{v:Math.max(...raw),name:'مقاومت'}];
+        levels.forEach((lv,i)=>{const y=h-padY-(lv.v-min)/range*(h-2*padY);const line=document.createElementNS('http://www.w3.org/2000/svg','line');line.setAttribute('x1',padX);line.setAttribute('x2',w-padX);line.setAttribute('y1',y);line.setAttribute('y2',y);line.setAttribute('class','v62LevelLine');line.setAttribute('data-level',i);svg.appendChild(line);const t=document.createElementNS('http://www.w3.org/2000/svg','text');t.setAttribute('x',w-padX-4);t.setAttribute('y',Math.max(12,y-4));t.setAttribute('text-anchor','end');t.setAttribute('class','v62LevelLabel');t.textContent=lv.name+' '+faNum(lv.v);svg.appendChild(t);});
+      }
+    };
+    decorate(dst);
+    const hero=$('v62HeroChart'); if(hero){hero.innerHTML=src.innerHTML;decorate(hero)}
+    const raw=(latest?.prices||[]).map(Number).filter(Number.isFinite).slice(-chartRange);
+    const high=raw.length?Math.max(...raw):0,low=raw.length?Math.min(...raw):0,last=raw.at(-1)||0,first=raw[0]||0,delta=first?((last/first-1)*100):0;
+    set('v62GoldHigh',high?safeMoney(high):'—');set('v62GoldLow',low?safeMoney(low):'—');set('v62GoldMove',first?((delta>=0?'▲ +':'▼ ')+f2(Math.abs(delta))+'٪'):'—');
+    set('v62Source',latest?.iran?.source||'—');
+  }
+  window.v62ChartRange=function(btn,n){
+    document.querySelectorAll('.v62Range button,.v62ChartTools button').forEach(x=>x.classList.remove('active'));btn?.classList.add('active');
+    const target=document.querySelector(`#goldChartCard button[data-range="${n}"]`);if(target)target.click();
+    setTimeout(syncChart,80);
+  };
+  window.v62ChartMode=function(mode){chartMode=mode==='line'?'line':'area';document.querySelectorAll('[data-v62-mode]').forEach(x=>x.classList.toggle('active',x.dataset.v62Mode===chartMode));syncChart()};
+  window.v62ToggleLevels=function(btn){showLevels=!showLevels;if(btn)btn.classList.toggle('active',showLevels);syncChart()};
+  window.v62MiniCalc=function(){const w=Number($('v62CalcWeight')?.value||0),p=Number(latest?.iran?.priceIRR||0),out=$('v62CalcResult');if(!out)return;if(!w||!p){out.textContent='وزن و قیمت بازار لازم است.';return}out.innerHTML=`ارزش تقریبی: <b>${safeMoney(w*p)}</b><br><span>بر مبنای طلای ۱۸ عیار و بدون اجرت، سود و مالیات.</span>`};
+  function updatePulse(s){
+    const price=Number(s?.iran?.priceIRR||0), dollar=Number(s?.dollar?.priceIRR||0), xau=Number(s?.global?.xauUsd||0), gram=Number(s?.coins?.gram||0), emami=Number(s?.coins?.emami||0);
+    const prev=window.__v62Prev||{};
+    const pct=(a,b)=>b>0?((a/b-1)*100):null;
+    const goldD=pct(price,prev.price), dollarD=pct(dollar,prev.dollar), xauD=pct(xau,prev.xau), gramD=pct(gram,prev.gram);
+    const fmtPct=d=>d==null?'—':(d>=0?'▲ +':'▼ ')+f2(Math.abs(d))+'٪';
+    set('v62GoldPrice',safeMoney(price));set('v62GoldChange',fmtPct(goldD));set('v62GoldTime',s?.updatedAt?new Date(s.updatedAt).toLocaleTimeString('fa-IR'):'—');
+    set('v62CardGold',safeMoney(price));set('v62CardDollar',safeMoney(dollar));set('v62CardXau',xau?'$'+Number(xau).toLocaleString('en-US',{maximumFractionDigits:2}):'—');set('v62CardGram',safeMoney(gram));set('v62CardCoin',safeMoney(emami));
+    set('v62CardGoldCh',fmtPct(goldD));set('v62CardDollarCh',fmtPct(dollarD));set('v62CardXauCh',fmtPct(xauD));set('v62CardGramCh',fmtPct(gramD));
+    set('v62PulseGold',safeMoney(price));set('v62PulseDollar',safeMoney(dollar));set('v62PulseXau',xau?'$'+Number(xau).toLocaleString('en-US',{maximumFractionDigits:2}):'—');set('v62PulseGram',safeMoney(gram));
+    set('v62PulseGoldCh',fmtPct(goldD));set('v62PulseDollarCh',fmtPct(dollarD));set('v62PulseXauCh',fmtPct(xauD));set('v62PulseGramCh',fmtPct(gramD));
+    const es=s?.engineStatus||{};set('v62MarketState',es.status==='LIVE'?'LIVE':es.status==='STALE'?'STALE':'OFFLINE');
+    const v65State=es.status==='LIVE'?'بازار زنده':es.status==='STALE'?'داده با تأخیر':'منبع داده قطع';
+    set('v65StateBadge',v65State);set('v65Quality',s?.dataReady?'مناسب':(es.status==='LIVE'?'قابل استفاده':'ناقص'));set('v65QualityMeta',es.reason||'منبع فعال');
+    const trend=$('ccTrend')?.textContent||$('quickTrend')?.textContent||'در حال بررسی';
+    const pressure=$('quickPressure')?.textContent||'—';
+    const rsi=Number(String($('quickRsi')?.textContent||'').replace(/[^0-9.\-]/g,''));
+    set('v65Trend',trend);set('v65TrendMeta',rsi?('RSI '+rsi):'تحلیل تکنیکال');set('v65Momentum',pressure);
+    const raw=(s?.prices||[]).map(Number).filter(Number.isFinite).slice(-60);const avg=raw.length?(raw.reduce((a,b)=>a+b,0)/raw.length):0;const vol=avg&&raw.length?((Math.max(...raw)-Math.min(...raw))/avg*100):0;set('v65Volatility',vol?vol.toFixed(2)+'٪':'—');
+    const an=$('v65StateBadge');if(an)an.style.color=es.status==='LIVE'?'#5ee7a0':es.status==='STALE'?'#f5c451':'#ef7373';
+    const q=$('v62DataQuality');if(q)q.textContent=s?.dataReady?'آماده تحلیل':(es.status==='LIVE'?'داده زنده':'داده ناقص');
+    const age=$('v62UpdateAge');if(age)age.textContent=s?.updatedAt?'آخرین بروزرسانی '+new Date(s.updatedAt).toLocaleTimeString('fa-IR'):'آخرین بروزرسانی —';
+    const live=$('v62MarketState');if(live)live.style.color=es.status==='LIVE'?'#22c55e':es.status==='STALE'?'#f5c451':'#ef4444';
+    set('v62DataSource',s?.iran?.source||'—');set('v62EngineReason',s?.engineStatus?.reason||'اتصال فعال');window.__v62Prev={price,dollar,xau,gram};
+    syncChart();
+  }
+  function renderCopilotFromDom(){
+    try{const u=localStorage.getItem('gold-alert-pro-account-user')||localStorage.getItem('gold-alert-pro-account');const name=u&&u.includes('@')?u.split('@')[0]:u;if(name&&$('v62AccountName'))$('v62AccountName').textContent=name;}catch{}
+    const trend=$('ccTrend')?.textContent||$('quickTrend')?.textContent||'در حال بررسی';
+    const risk=$('ccRisk')?.textContent||'—';
+    const summary=$('aiCopilotSummary')?.textContent||'در حال تحلیل داده‌های بازار...';
+    const alert=$('aiCopilotAlert')?.textContent||'مقاومت و حمایت نزدیک را زیر نظر بگیر.';
+    set('v62AiTrend',trend);set('v62AiTrendMeta',trend);set('v62AiMomentum',$('quickPressure')?.textContent||'—');set('v62AiRisk',risk);set('v62AiSummary',summary);set('v62AiWarning',alert?'⚠ '+alert:'⚠ هشدار فعالی ثبت نشده است.');
+  }
+  window.v62AskCopilot=function(){const q=$('v62CopilotQuestion')?.value.trim();if(!q)return;refreshAICopilot(true,'dashboard',q);setTimeout(renderCopilotFromDom,900);};
+  function renderTimeline(){
+    const box=$('v62TimelineList');if(!box)return;
+    const events=latest?.events||[];const targets=latest?.targetEvents||[];const rows=[];
+    targets.slice(0,3).forEach(e=>rows.push({at:e.at,icon:e.kind==='stop'?'🛑':e.kind==='target2'?'🏆':'🎯',text:(e.kind==='stop'?'حد ضرر':e.kind==='target2'?'هدف دوم':'هدف اول')+' • '+safeMoney(e.price)}));
+    events.slice(0,5).forEach(e=>rows.push({at:e.at,icon:e.type==='signal'?'🧠':'📈',text:e.text||e.message||e.kind||'رویداد بازار'}));
+    if(!rows.length){box.innerHTML='<div class="v62TimelineItem"><span class="v62TimelineTime">—</span><span class="v62TimelineDot">•</span><span class="v62TimelineText">هنوز رویداد مهمی ثبت نشده است.</span></div>';return;}
+    box.innerHTML=rows.slice(0,6).map(e=>`<div class="v62TimelineItem"><span class="v62TimelineTime">${e.at?new Date(e.at).toLocaleTimeString('fa-IR'):'—'}</span><span class="v62TimelineDot">${e.icon}</span><span class="v62TimelineText">${esc(String(e.text))}</span></div>`).join('');
+    const n=$('v62NotifCount');if(n)n.textContent=String(Math.min(rows.length,9));
+  }
+  function wireNav(){
+    document.querySelectorAll('[data-v62cat]').forEach(btn=>btn.addEventListener('click',()=>{const c=btn.dataset.v62cat;document.querySelectorAll('[data-v62cat]').forEach(x=>x.classList.toggle('active',x===btn));if(c==='dashboard'){applyCategory('dashboard');}else{applyCategory(c);}}));
+    $('v62Collapse')?.addEventListener('click',()=>document.body.classList.toggle('v62Collapsed'));
+    document.querySelectorAll('[data-v62-widget]').forEach(ch=>ch.addEventListener('change',()=>{const map={hero:'.v62Hero',pulse:'.v62PulsePanel',ai:'.v62Copilot',alerts:'.v62Timeline',portfolio:'.v62MarketCards'};const el=document.querySelector(map[ch.dataset.v62Widget]);if(el)el.style.display=ch.checked?'':'none';localStorage.setItem('gold2_v62_widgets',JSON.stringify([...document.querySelectorAll('[data-v62-widget]')].reduce((o,x)=>(o[x.dataset.v62Widget]=x.checked,o),{})));}));
+    try{const saved=JSON.parse(localStorage.getItem('gold2_v62_widgets')||'{}');document.querySelectorAll('[data-v62-widget]').forEach(ch=>{if(saved[ch.dataset.v62Widget]!==undefined){ch.checked=!!saved[ch.dataset.v62Widget];ch.dispatchEvent(new Event('change'));}})}catch{}
+  }
+  document.addEventListener('DOMContentLoaded',()=>{wireNav();setTimeout(()=>{syncChart();renderCopilotFromDom();renderTimeline();},500);});
+  const oldLoad=window.load;
+  // load is declared in the page scope; wrap through an interval to avoid changing the stable V61 engine.
+  setInterval(()=>{try{if(typeof latest!=='undefined'&&latest){updatePulse(latest);renderCopilotFromDom();renderTimeline();}}catch{}},1500);
+})();
+
+
+/* =========================================================
+   Gold2 Pro V66 Intelligence Layer
+   Uses the existing live state only; no new API/key is introduced.
+   ========================================================= */
+(function initV66Intelligence(){
+  const $=id=>document.getElementById(id);
+  const money=v=>{try{return moneyIRR(v)}catch{return Number(v||0).toLocaleString('fa-IR')}};
+  const num=v=>Number(v||0);
+  const pct=(a,b)=>b?((a/b-1)*100):0;
+  const fmtPct=v=>(v>=0?'▲ +':'▼ ')+Math.abs(v).toFixed(2).replace('.', '٫')+'٪';
+  const set=(id,v)=>{const e=$(id);if(e)e.textContent=v??'—'};
+  function marketItems(s){
+    const gold=num(s?.iran?.priceIRR), dollar=num(s?.dollar?.priceIRR), xau=num(s?.global?.xauUsd);
+    const gram=num(s?.coins?.gram), emami=num(s?.coins?.emami);
+    const prev=window.__v66Prev||{};
+    return [
+      ['طلای ۱۸K',gold,money(gold),pct(gold,prev.gold)],
+      ['دلار آزاد',dollar,money(dollar),pct(dollar,prev.dollar)],
+      ['اونس جهانی',xau,xau?'$'+xau.toLocaleString('en-US',{maximumFractionDigits:2}):'—',pct(xau,prev.xau)],
+      ['گرمی',gram,money(gram),pct(gram,prev.gram)],
+      ['سکه امامی',emami,money(emami),pct(emami,prev.emami)]
+    ];
+  }
+  function renderHeatmap(s){
+    const box=$('v66Heatmap'); if(!box)return;
+    const rows=marketItems(s);
+    box.innerHTML=rows.map(([name,value,label,d])=>{
+      const cls=d>0.08?'up':d<-0.08?'down':'flat';
+      return `<div class="v66Heat ${cls}"><div class="v66HeatTop"><span>${esc(name)}</span><b>${esc(label)}</b></div><div class="v66HeatPct">${value?fmtPct(d):'—'}</div><small>${value?'حرکت نسبت به داده قبلی':'داده در دسترس نیست'}</small></div>`;
+    }).join('');
+    set('v66HeatmapTime',s?.updatedAt?new Date(s.updatedAt).toLocaleTimeString('fa-IR'):'—');
+    window.__v66Prev={gold:num(s?.iran?.priceIRR),dollar:num(s?.dollar?.priceIRR),xau:num(s?.global?.xauUsd),gram:num(s?.coins?.gram),emami:num(s?.coins?.emami)};
+  }
+  function renderDecision(s){
+    const raw=(s?.prices||[]).map(Number).filter(Number.isFinite).slice(-120);
+    if(raw.length<3){set('v66Bias','در حال تحلیل');set('v66DecisionText','برای تحلیل ساختار بازار، داده بیشتری لازم است.');return;}
+    const first=raw[0],last=raw.at(-1),mid=raw[Math.floor(raw.length/2)];
+    const move=pct(last,first), short=pct(last,mid), high=Math.max(...raw), low=Math.min(...raw);
+    const momentum=(short*100);
+    let bias='خنثی';
+    if(move>0.35 && short>0.12)bias='سوگیری صعودی';
+    else if(move<-0.35 && short<-0.12)bias='سوگیری نزولی';
+    const es=s?.engineStatus?.status||'';
+    set('v66Bias',bias);set('v66Support',money(low));set('v66Resistance',money(high));
+    set('v66Bullish',money(last*(1+Math.max(0.003,Math.abs(move)/100))));
+    set('v66Bearish',money(last*(1-Math.max(0.003,Math.abs(move)/100))));
+    set('v66DecisionStatus',es==='LIVE'?'LIVE':es==='STALE'?'DELAYED':'OFFLINE');
+    const direction=move>=0?'حرکت کلی بازه مثبت':'حرکت کلی بازه منفی';
+    set('v66DecisionText',`${direction} است؛ تغییر بازه ${move.toFixed(2)}٪ و حرکت کوتاه‌تر ${momentum.toFixed(2)}٪ ثبت شده. سطوح بالا و پایین صرفاً از داده اخیر استخراج شده‌اند.`);
+  }
+  function tick(){try{if(typeof latest==='undefined'||!latest)return;renderHeatmap(latest);renderDecision(latest)}catch{}}
+  setTimeout(tick,1200);setInterval(tick,2000);
+})();

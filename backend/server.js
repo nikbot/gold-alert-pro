@@ -4,18 +4,18 @@ import path from "node:path";
 import crypto from "node:crypto";
 import { spawn } from "node:child_process";
 import express from "express";
-import { getIran18, getIran18Sources, getGlobalGold, getCoins, getDollar, getNews, getHistory } from "./provider.js";
+import { getIran18, getIran18Sources, getGlobalGold, getCoins, getDollar, getNews, getHistory, getBitcoin, getForgodCurrencies } from "./provider.js";
 import { runBacktest } from "./backtest.js";
 import { analyze } from "./indicators.js";
 import { initAlerts, sendTelegram, sendWebPush, sendWebPushToDevice, addSubscription, removeSubscription, removeDeviceSubscriptions, getPublicVapidKey, subscriptionCount } from "./alerts.js";
 import { plans, getSubscription, activateSubscription, validAdminKey, paymentUrl, supportUrl } from "./subscription.js";
 import { smsConfig, createPaymentRequest, issueActivationCode, activateWithCode, getStatus as getSmsStatus, sendPremiumPriceSMS, adminRequests as getSmsAdminRequests } from "./smsPremium.js";
 import { getCommerceSettings, setCommerceSettings } from "./commerceSettings.js";
-import { adminLogin, requireAdminToken, adminLogout, listUsers, createManagedUser, updateManagedUser, deleteManagedUser, adminStats, publicAccount, userIsActive, userPermissions, getUserByUsername, validUsername, FEATURE_KEYS, PRO_PERMISSIONS, PREMIUM_PERMISSIONS } from "./adminPanel.js";
+import { adminLogin, requireAdminToken, requireAdminSession, adminLogout, listUsers, createManagedUser, updateManagedUser, deleteManagedUser, adminStats, publicAccount, userIsActive, userPermissions, getUserByUsername, validUsername, FEATURE_KEYS, PRO_PERMISSIONS, PREMIUM_PERMISSIONS, ADMIN_COOKIE_NAME, ADMIN_ROLES, ADMIN_FEATURES, adminRolePermissions, getLoginLogs, listAdminSessions, revokeAdminSession, revokeAllAdminSessions, getAdminSettings, setAdminSettings, normalizeAdminRole } from "./adminPanel.js";
 import { analyzeGold } from "./ai/manager.js";
 import { getTheme, setTheme } from "./theme.js";
 
-const APP_VERSION = "59.3.0"
+const APP_VERSION = "70.0.0"
 const USER_SESSION_HOURS = Math.max(1, Number(process.env.USER_SESSION_HOURS || 72));
 const LOGIN_WINDOW_MS = 10 * 60_000;
 const LOGIN_MAX_ATTEMPTS = 12;
@@ -41,6 +41,7 @@ const PROFILES_FILE = path.join(DATA_DIR, "profiles.json");
 const ECONOMIC_EVENTS_FILE = path.join(DATA_DIR, "economic-events.json");
 const NOTIFICATIONS_FILE = path.join(DATA_DIR, "notifications.json");
 const AUDIT_FILE = path.join(DATA_DIR, "audit-log.json");
+const SMART_ALERTS_FILE = path.join(DATA_DIR, "smart-alerts.json");
 const PAYMENTS_FILE = path.join(DATA_DIR, "payments.json");
 const USER_SETTINGS_FILE = path.join(DATA_DIR, "user-settings.json");
 const UPDATE_MANIFEST_URL = String(process.env.UPDATE_MANIFEST_URL || "").trim();
@@ -99,20 +100,26 @@ const livePushIntervalMs = Math.max(60_000, Number(process.env.LIVE_PUSH_INTERVA
 const livePushChangePct = Math.max(0.01, Number(process.env.LIVE_PUSH_CHANGE_PCT || 0.25));
 
 app.disable("x-powered-by");
-app.use((req,res,next)=>{res.setHeader("X-Content-Type-Options","nosniff");res.setHeader("Referrer-Policy","strict-origin-when-cross-origin");res.setHeader("X-Frame-Options","SAMEORIGIN");next();});
+app.use((req,res,next)=>{res.setHeader("X-Content-Type-Options","nosniff");res.setHeader("Referrer-Policy","strict-origin-when-cross-origin");res.setHeader("X-Frame-Options","SAMEORIGIN");res.setHeader("Permissions-Policy","camera=(), microphone=(), geolocation=()");next();});
 console.log(`Gold Alert Pro v${APP_VERSION} booting`);
-app.use((req, res, next) => { res.setHeader("Access-Control-Allow-Origin", process.env.CORS_ORIGIN || "*"); res.setHeader("Access-Control-Allow-Headers", "Content-Type"); res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS"); if (req.method === "OPTIONS") return res.sendStatus(204); next(); });
+app.use((req, res, next) => {
+  const origin = process.env.CORS_ORIGIN || req.headers.origin;
+  if (origin) { res.setHeader("Access-Control-Allow-Origin", origin); res.setHeader("Vary", "Origin"); res.setHeader("Access-Control-Allow-Credentials", "true"); }
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, X-Account-Token, X-Admin-Session");
+  res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
+  if (req.method === "OPTIONS") return res.sendStatus(204); next();
+});
 app.use(express.json({ limit: "64kb" }));
-app.use(express.static("public", { maxAge: "1h", setHeaders: (res, filePath) => { if (/\/(app|sw)\.js$/.test(filePath) || /\/index\.html$/.test(filePath)) res.setHeader("Cache-Control", "no-store"); } }));
+app.use(express.static("public", { maxAge: "1h", setHeaders: (res, filePath) => { if (/\/(app|admin|sw)\.js$/.test(filePath) || /\/(index|admin)\.html$/.test(filePath) || /\/admin\.css$/.test(filePath)) res.setHeader("Cache-Control", "no-store"); } }));
 
 const state = {
-  iran: null, global: null, dollar: null, coins: null, marketPressure: null, analysis: null, prices: [], ticks: [], events: [], news: [], lastSignal: "WAIT", lastPressureAlert: "NEUTRAL",
+  iran: null, global: null, dollar: null, coins: null, bitcoin: null, forgodCurrencies: null, marketPressure: null, analysis: null, prices: [], ticks: [], events: [], news: [], lastSignal: "WAIT", lastPressureAlert: "NEUTRAL",
   updatedAt: null, error: null, startedAt: new Date().toISOString(), dataReady: false,
   livePush: { lastAt: 0, lastPrice: 0 },
   engineStatus: { status: "STARTING", label: "در حال راه‌اندازی", source: null, sourceAgeMs: null, reason: null },
   sourceDiagnostics: null,
   portfolioRisk: { lastKey: "", lastAt: 0 },
-  historyLoaded: false, activeTrade: null, targetEvents: [], personalAlerts: [], busy: false, consecutiveErrors: 0
+  historyLoaded: false, activeTrade: null, targetEvents: [], personalAlerts: [], smartAlerts: [], busy: false, consecutiveErrors: 0
 };
 
 const sseClients = new Set();
@@ -125,7 +132,9 @@ function publicStatePayload(){
     sourceDiagnostics: state.sourceDiagnostics,
     anomaly: state.anomaly || null,
     engineStatus: state.engineStatus,
-    units: { gold18: "IRR_PER_GRAM", dollar: "IRR_PER_USD", coins: "IRR" }
+    units: { gold18: "IRR_PER_GRAM", dollar: "IRR_PER_USD", coins: "IRR", bitcoin: "USD" },
+    bitcoin: state.bitcoin,
+    forgod: { enabled: Boolean(process.env.FORGOD_API_KEY), provider: "Forgod", priority: "first", fallback: "existing-providers" }
   };
 }
 function broadcastMarketState(force = false){
@@ -317,6 +326,66 @@ function schedulePersonalAlertSave() {
 }
 function cleanDeviceId(v) { return String(v || "").trim().slice(0, 120); }
 function cleanAlert(a) { return { id: String(a.id), deviceId: cleanDeviceId(a.deviceId), direction: a.direction === "below" ? "below" : "above", price: Number(a.price), label: String(a.label || "طلای ۱۸ عیار").slice(0, 80), createdAt: a.createdAt || new Date().toISOString(), triggeredAt: a.triggeredAt || null }; }
+function cleanSmartAlert(a) {
+  const c=a?.conditions||{};
+  const num=v=>{const n=Number(v);return Number.isFinite(n)?n:null};
+  return {
+    id:String(a.id||crypto.randomUUID()),
+    deviceId:cleanDeviceId(a.deviceId),
+    name:String(a.name||"هشدار هوشمند").slice(0,80),
+    active:a.active!==false,
+    createdAt:a.createdAt||new Date().toISOString(),
+    triggeredAt:a.triggeredAt||null,
+    lastTriggeredAt:a.lastTriggeredAt||null,
+    conditions:{
+      priceAbove:num(c.priceAbove), priceBelow:num(c.priceBelow),
+      trend:["UP","DOWN","SIDEWAYS"].includes(String(c.trend||''))?String(c.trend):null,
+      signal:["BUY","SELL","WATCH_BUY","WATCH_SELL","WAIT"].includes(String(c.signal||''))?String(c.signal):null,
+      minScore:num(c.minScore), minRsi:num(c.minRsi), maxRsi:num(c.maxRsi),
+      changePct:num(c.changePct), pressure:["BUY","SELL","BALANCED"].includes(String(c.pressure||''))?String(c.pressure):null
+    }
+  };
+}
+let smartAlertSaveTimer=null;
+function scheduleSmartAlertSave(){
+  clearTimeout(smartAlertSaveTimer);
+  smartAlertSaveTimer=setTimeout(async()=>{try{await fs.mkdir(DATA_DIR,{recursive:true});await fs.writeFile(SMART_ALERTS_FILE,JSON.stringify(state.smartAlerts.slice(0,5000)),"utf8");}catch(e){console.warn("Smart alert persistence unavailable:",e.message);}},200);
+}
+async function loadSmartAlerts(){try{const raw=await fs.readFile(SMART_ALERTS_FILE,"utf8");const saved=JSON.parse(raw);if(Array.isArray(saved))state.smartAlerts=saved.map(cleanSmartAlert).slice(0,5000);}catch{}}
+function smartAlertMatches(a){
+  const c=a.conditions||{}, price=Number(state.iran?.priceIRR||0), an=state.analysis||{}, ms=marketStructure(state.prices), mp=state.marketPressure||{};
+  if(!price)return {ok:false,reason:'price-unavailable'};
+  if(c.priceAbove!=null && price < c.priceAbove)return {ok:false};
+  if(c.priceBelow!=null && price > c.priceBelow)return {ok:false};
+  if(c.trend && ms.trend!==c.trend)return {ok:false};
+  if(c.signal && an.signal!==c.signal)return {ok:false};
+  if(c.minScore!=null && Number(an.score||0) < c.minScore)return {ok:false};
+  if(c.minRsi!=null && (an.rsi==null || Number(an.rsi) < c.minRsi))return {ok:false};
+  if(c.maxRsi!=null && (an.rsi==null || Number(an.rsi) > c.maxRsi))return {ok:false};
+  if(c.changePct!=null){const base=state.prices.length>6?Number(state.prices.at(-7)):0;const ch=base?(price/base-1)*100:0;if(Math.abs(ch)<Math.abs(c.changePct))return {ok:false};}
+  if(c.pressure==='BUY' && Number(mp.buy||0)<65)return {ok:false};
+  if(c.pressure==='SELL' && Number(mp.sell||0)<65)return {ok:false};
+  if(c.pressure==='BALANCED' && Math.abs(Number(mp.buy||50)-Number(mp.sell||50))>15)return {ok:false};
+  return {ok:true,price,analysis:an,market:ms,pressure:mp};
+}
+async function checkSmartAlerts(){
+  if(!state.smartAlerts.length)return;
+  const now=Date.now(); const cooldownMs=Math.max(5,Number(process.env.SMART_ALERT_COOLDOWN_MIN||20))*60000;
+  let changed=false;
+  for(const a of state.smartAlerts){
+    if(!a.active||!a.deviceId)continue;
+    const last=Date.parse(a.lastTriggeredAt||0)||0; if(now-last<cooldownMs)continue;
+    const hit=smartAlertMatches(a); if(!hit.ok)continue;
+    const price=hit.price; const signalFa={BUY:'خرید',SELL:'فروش',WATCH_BUY:'مراقبت برای خرید',WATCH_SELL:'مراقبت برای فروش',WAIT:'انتظار'}[hit.analysis?.signal]||'انتظار';
+    const body=`${a.name} فعال شد\nطلای ۱۸: ${rial(price)} ریال\nروند: ${hit.market.trendFa||'—'} | سیگنال: ${signalFa}\nامتیاز: ${Math.round(Number(hit.analysis?.score||0))}% | RSI: ${hit.analysis?.rsi==null?'—':Number(hit.analysis.rsi).toFixed(1)}\nاین هشدار خودکار است و تضمین نتیجه آینده نیست.`;
+    a.lastTriggeredAt=new Date().toISOString(); a.triggeredAt=a.triggeredAt||a.lastTriggeredAt; changed=true;
+    await safeAlert(()=>sendWebPushToDevice(a.deviceId,{title:`🧠 ${a.name}`,body,icon:'/icon-192.png',badge:'/icon-192.png',tag:`smart-alert-${a.id}`,renotify:true,data:{url:'/#smartAlertsV61'}},`SMART_${a.id}`,price));
+    try{const acc=await accountByDevice(a.deviceId);if(acc?.id)await addNotification(acc.id,`🧠 ${a.name}`,body,'smart-alert');}catch{}
+  }
+  if(changed)scheduleSmartAlertSave();
+}
+async function accountByDevice(deviceId){const store=await readJsonFile(ACCOUNTS_FILE,{});return Object.values(store).find(x=>cleanDeviceId(x?.deviceId)===cleanDeviceId(deviceId))||null;}
+
 async function checkPersonalPriceAlerts(price) {
   if (!Number.isFinite(price) || price <= 0) return;
   let changed = false;
@@ -481,8 +550,8 @@ async function tick() {
   if (state.busy) return;
   state.busy = true;
   try {
-    const providerNames = ["Iran18", "GlobalGold", "Dollar", "Coins"];
-    const results = await Promise.allSettled([getIran18(), getGlobalGold(), getDollar(), getCoins()]);
+    const providerNames = ["Iran18", "GlobalGold", "Dollar", "Coins", "Bitcoin", "ForgodAll"];
+    const results = await Promise.allSettled([getIran18(), getGlobalGold(), getDollar(), getCoins(), getBitcoin(), getForgodCurrencies()]);
     for (let i = 0; i < results.length; i++) {
       if (results[i].status === "rejected") console.warn(`Provider ${providerNames[i]} failed:`, results[i].reason?.message || "unknown error");
     }
@@ -490,6 +559,8 @@ async function tick() {
     const global = results[1].status === "fulfilled" ? results[1].value : null;
     const dollar = results[2].status === "fulfilled" ? results[2].value : null;
     const coins = results[3].status === "fulfilled" ? results[3].value : null;
+    const bitcoin = results[4].status === "fulfilled" ? results[4].value : null;
+    const forgodCurrencies = results[5].status === "fulfilled" ? results[5].value : null;
     if (!iran) {
       console.warn("Iran18 unavailable, keeping previous state");
       state.engineStatus = { status: "OFFLINE", label: "منبع قیمت در دسترس نیست", source: null, sourceAgeMs: null, reason: results[0].reason?.message || "Iran gold provider unavailable" };
@@ -505,7 +576,7 @@ async function tick() {
       broadcastMarketState(true);
       return;
     }
-    state.iran = iran; state.global = global; state.dollar = dollar; state.coins = coins;
+    state.iran = iran; state.global = global; state.dollar = dollar; state.coins = coins; state.bitcoin = bitcoin; state.forgodCurrencies = forgodCurrencies;
     if (!state.sourceDiagnostics || Date.now() - new Date(state.sourceDiagnostics.checkedAt || 0).getTime() > 60000) {
       try { state.sourceDiagnostics = await getIran18Sources(false); } catch (e) { state.sourceDiagnostics = { checkedAt:new Date().toISOString(), primary:iran.source || null, sources:[{name:iran.source||"active",priceIRR:iran.priceIRR,ok:true}], anomaly:false, error:e.message }; }
     }
@@ -518,7 +589,7 @@ async function tick() {
     const sourceStale = sourceAge > staleThresholdMs || transportAge > staleThresholdMs;
     state.anomaly = { detected: jumpPct > 5 || Boolean(state.sourceDiagnostics?.anomaly), jumpPct, thresholdPct:5, sourceSpreadPct:state.sourceDiagnostics?.spreadPct ?? null, checkedAt:new Date().toISOString() };
     state.engineStatus = { status: sourceStale ? "STALE" : "LIVE", label: sourceStale ? "قیمت منبع قدیمی است" : "LIVE • قیمت جدید", source: iran.source || null, sourceAgeMs: sourceAge, transportAgeMs: transportAge, reason: sourceStale ? `آخرین داده بیش از ${Math.round(staleThresholdMs/1000)} ثانیه قبل است` : null };
-    pushPrice(iran.priceIRR); pushTick({iran,global,dollar,coins});
+    pushPrice(iran.priceIRR); pushTick({iran,global,dollar,coins,bitcoin});
     state.marketPressure = calcMarketPressure();
     await emitPressureAlert(state.marketPressure, iran.priceIRR);
     state.analysis = analyze(state.prices); state.dataReady = state.prices.length >= 30;
@@ -527,7 +598,8 @@ async function tick() {
     await safeAlert(() => emitLivePricePush(iran, global, dollar));
     await safeAlert(() => checkTargets(iran.priceIRR));
     await safeAlert(() => checkPersonalPriceAlerts(iran.priceIRR));
-    await safeAlert(() => sendPremiumPriceSMS({ iran, global, dollar, coins, analysis: state.analysis }));
+    await safeAlert(() => checkSmartAlerts());
+    await safeAlert(() => sendPremiumPriceSMS({ iran, global, dollar, coins, bitcoin, analysis: state.analysis }));
     const a = state.analysis;
     if (a && ["BUY", "SELL"].includes(a.signal) && a.score >= minScore && a.signal !== state.lastSignal) await emitSignal(a);
     else if (!a || !["BUY", "SELL"].includes(a.signal)) { if (state.lastSignal !== "WAIT") { state.lastSignal = "WAIT"; scheduleSave(); } }
@@ -736,6 +808,55 @@ app.delete("/api/price-alerts/:id", async (req, res) => {
   if (state.personalAlerts.length !== before) schedulePersonalAlertSave();
   res.json({ ok: true, removed: before !== state.personalAlerts.length });
 });
+app.get("/api/smart-alerts", async (req,res)=>{
+  const deviceId=cleanDeviceId(req.query.deviceId);
+  const mine=state.smartAlerts.filter(a=>a.deviceId===deviceId).sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt)));
+  res.set("Cache-Control","no-store");
+  res.json({ok:true,alerts:mine});
+});
+app.post("/api/smart-alerts", async (req,res)=>{
+  try{
+    const deviceId=cleanDeviceId(req.body?.deviceId); if(!deviceId)return res.status(400).json({error:"deviceId required"});
+    if(!(await accountFromReq(req)))return res.status(401).json({error:"برای ثبت هشدار هوشمند ابتدا وارد حساب شوید."});
+    const max=Math.max(1,Number(process.env.SMART_ALERT_MAX_PER_DEVICE||12));
+    if(state.smartAlerts.filter(a=>a.deviceId===deviceId&&a.active).length>=max)return res.status(429).json({error:`حداکثر ${max} هشدار هوشمند فعال مجاز است.`});
+    const a=cleanSmartAlert({deviceId,name:req.body?.name,conditions:req.body?.conditions});
+    if(!Object.values(a.conditions).some(v=>v!==null&&v!==''))return res.status(400).json({error:"حداقل یک شرط برای هشدار تعیین کنید."});
+    state.smartAlerts.unshift(a); state.smartAlerts=state.smartAlerts.slice(0,5000); scheduleSmartAlertSave();
+    res.json({ok:true,alert:a});
+  }catch(e){res.status(400).json({error:e.message});}
+});
+app.delete("/api/smart-alerts/:id", async (req,res)=>{
+  const deviceId=cleanDeviceId(req.query.deviceId); const account=await accountFromReq(req); if(!account)return res.status(401).json({error:"ابتدا وارد حساب شوید."});
+  const id=String(req.params.id||''); const before=state.smartAlerts.length; state.smartAlerts=state.smartAlerts.filter(a=>!(a.deviceId===deviceId&&a.id===id));
+  if(before!==state.smartAlerts.length)scheduleSmartAlertSave(); res.json({ok:true,removed:before!==state.smartAlerts.length});
+});
+
+app.get("/api/decision-room", async (req,res)=>{
+  const ms=marketStructure(state.prices); const a=state.analysis||{}; const mp=state.marketPressure||{}; const price=Number(state.iran?.priceIRR||0);
+  const risk=Math.min(100,Math.max(0,Math.round((Number(a.rsi||50)>72||Number(a.rsi||50)<28?35:10)+(Number(a.score||0)<55?25:10)+(Number(state.anomaly?.detected?1:0)*20)+Math.max(0,Math.round(20-Math.abs(Number(mp.buy||50)-50))))));
+  const q=state.engineStatus?.status==='LIVE'?'GOOD':state.engineStatus?.status==='STALE'?'STALE':'OFFLINE';
+  let regime='نوسانی / خنثی'; if(ms.trend==='UP')regime='روند صعودی'; if(ms.trend==='DOWN')regime='روند نزولی';
+  const current=price; const support=Number(ms.support||0), resistance=Number(ms.resistance||0);
+  const distanceToResistance=current&&resistance?((resistance-current)/current*100):null; const distanceToSupport=current&&support?((current-support)/current*100):null;
+  const scenarios={bullish:{title:'سناریوی صعودی',condition:resistance&&current>resistance?'شکست مقاومت تأیید شده':'عبور از مقاومت با تثبیت قیمت',risk:'شکست ناموفق مقاومت و برگشت قیمت'},base:{title:'سناریوی پایه',condition:'نوسان بین حمایت و مقاومت',risk:'افزایش ناگهانی نوسان یا خبر مهم'},bearish:{title:'سناریوی نزولی',condition:support&&current<support?'شکست حمایت تأیید شده':'از دست رفتن حمایت',risk:'ادامه فشار فروش'}};
+  let action='صبر و مشاهده'; if(a.signal==='BUY'&&Number(a.score||0)>=70&&Number(mp.buy||0)>=60)action='خرید پله‌ای / بررسی ورود'; else if(a.signal==='SELL'&&Number(a.score||0)>=70&&Number(mp.sell||0)>=60)action='کاهش ریسک / بررسی فروش پله‌ای';
+  res.json({ok:true,generatedAt:new Date().toISOString(),dataAt:state.updatedAt,price,source:state.iran?.source||null,engineStatus:state.engineStatus,quality:q,regime,trend:ms,analysis:a,pressure:mp,risk:{score:risk,label:risk>=70?'بالا':risk>=45?'متوسط':'پایین'},action,distanceToResistance,distanceToSupport,scenarios,disclaimer:'این خروجی سناریویی و آموزشی است؛ دستور قطعی معامله یا تضمین سود نیست.'});
+});
+app.post("/api/ai-decision", async (req,res)=>{
+  const account=await accountFromReq(req); if(!account)return res.status(401).json({error:"برای تحلیل AI این بخش ابتدا وارد حساب شوید."});
+  if(!aiAllowed(req.ip||'unknown'))return res.status(429).json({error:'تعداد درخواست‌های AI زیاد است. کمی بعد دوباره امتحان کنید.'});
+  const q=String(req.body?.question||'').trim().slice(0,1000);
+  const context={price:state.iran?.priceIRR||null,source:state.iran?.source||null,engine:state.engineStatus,structure:marketStructure(state.prices),analysis:state.analysis,pressure:state.marketPressure,anomaly:state.anomaly,question:q};
+  try{
+    const out=await callGapGPT([{role:'system',content:'تو دستیار تصمیم Gold Alert Pro هستی. فارسی، ساده و خیلی قابل فهم توضیح بده. فقط از داده ارائه‌شده استفاده کن. نتیجه را سناریویی بگو و دستور قطعی خرید/فروش یا تضمین سود نده. اگر داده منبع قدیمی است اول آن را بگو.'},{role:'user',content:`این وضعیت بازار طلاست:\n${JSON.stringify(context,null,2)}\n\nتحلیل را با این ساختار بده: «الان چه خبر است؟»، «سناریوی محتمل فعلی»، «چه چیزی باید تأیید شود؟»، «چه هشداری فعال است؟»، «ریسک اصلی چیست؟». اگر کاربر سؤال داده، آخر پاسخ مستقیم جواب بده.`}],{temperature:0.2,max_tokens:900,timeoutMs:30000});
+    res.json({ok:true,provider:out.model,text:out.text,at:new Date().toISOString(),dataAt:state.updatedAt});
+  }catch(e){
+    const d=marketStructure(state.prices),a=state.analysis||{},mp=state.marketPressure||{};
+    const text=`الان بازار ${d.trendFa||'نامشخص'} است. سیگنال فعلی ${a.signal||'WAIT'} با امتیاز ${Math.round(Number(a.score||0))}٪ است. حمایت ${d.support?rial(d.support):'نامشخص'} و مقاومت ${d.resistance?rial(d.resistance):'نامشخص'} است. ${Number(mp.buy||0)>60?'فشار خرید بیشتر است':Number(mp.sell||0)>60?'فشار فروش بیشتر است':'فشار بازار متعادل است'}. اگر قصد معامله داری، سناریوی پله‌ای و تعیین حد ریسک را قبل از تصمیم در نظر بگیر. این توضیح قطعی نیست.`;
+    res.json({ok:true,provider:'rule-engine',text,at:new Date().toISOString(),dataAt:state.updatedAt,warning:'سرویس AI خارجی در دسترس نبود.'});
+  }
+});
 app.post("/api/push/unsubscribe", async (req, res) => { await removeSubscription(req.body?.endpoint); res.json({ ok: true }); });
 app.get("/api/portfolio", async (req,res)=>{
   try { const deviceId=cleanDeviceId(req.query.deviceId); if(!deviceId) return res.status(400).json({error:"deviceId required"}); const items=await getDevicePortfolio(deviceId); res.json({ok:true,items,snapshot:buildPortfolioSnapshot(items),market:state.marketPressure||null,analysis:state.analysis||null}); }
@@ -803,9 +924,24 @@ app.put("/api/user-settings", async (req,res)=>{
 app.get("/api/notifications", async (req,res)=>{ const a=await accountFromReq(req); if(!a)return res.status(401).json({error:'ابتدا وارد حساب شوید.'}); const all=await readJsonFile(NOTIFICATIONS_FILE,[]); res.json({ok:true,notifications:all.filter(x=>x.userId===a.id).slice(0,100)}); });
 app.post("/api/notifications/:id/read", async (req,res)=>{ const a=await accountFromReq(req); if(!a)return res.status(401).json({error:'ابتدا وارد حساب شوید.'}); const all=await readJsonFile(NOTIFICATIONS_FILE,[]),n=all.find(x=>x.id===req.params.id&&x.userId===a.id); if(n)n.read=true; await writeJsonFile(NOTIFICATIONS_FILE,all); res.json({ok:true}); });
 app.post("/api/account/change-password", async (req,res)=>{ const a=await accountFromReq(req); if(!a)return res.status(401).json({error:'ابتدا وارد حساب شوید.'}); const old=String(req.body?.oldPassword||''),next=String(req.body?.newPassword||''); if(next.length<6)return res.status(400).json({error:'رمز جدید حداقل ۶ کاراکتر باشد.'}); if(!verifyPassword(old,a.salt,a.hash))return res.status(403).json({error:'رمز فعلی صحیح نیست.'}); const store=await readJsonFile(ACCOUNTS_FILE,{}),key=Object.keys(store).find(k=>store[k]===a); Object.assign(a,hashPassword(next)); a.token=''; store[key]=a; await writeJsonFile(ACCOUNTS_FILE,store); await audit('user_password_changed',{userId:a.id}); res.json({ok:true,message:'رمز تغییر کرد؛ دوباره وارد شوید.'}); });
-app.post("/api/account/register", async (req,res)=>{ try { if(String(process.env.SELF_REGISTER_ENABLED||'true').toLowerCase()==='false') return res.status(403).json({error:'ثبت‌نام عمومی غیرفعال است؛ با مدیریت تماس بگیرید.'}); const phone=normalizePhone(req.body?.phone||req.body?.username); const username=phone; const password=String(req.body?.password||''); const deviceId=cleanDeviceId(req.body?.deviceId); if(!/^09\d{9}$/.test(phone)||password.length<6||!deviceId) return res.status(400).json({error:'شماره موبایل معتبر و رمز عبور حداقل ۶ کاراکتری لازم است.'}); const store=await readJsonFile(ACCOUNTS_FILE,{}); if(Object.values(store).some(x=>String(x.username||'').toLowerCase()===username || normalizePhone(x.phone)===phone)) return res.status(409).json({error:'این شماره موبایل قبلاً ثبت شده است.'}); const hp=hashPassword(password); const account={id:crypto.randomUUID(),username,phone,...hp,token:crypto.randomBytes(32).toString('hex'),createdAt:new Date().toISOString(),deviceId,role:'user',permissions:['dashboard','market','portfolio','alerts','account'],active:true}; store[account.id]=account; await writeJsonFile(ACCOUNTS_FILE,store); res.json({ok:true,token:account.token,username,user:userView(account)}); } catch(e){res.status(500).json({error:e.message});} });
+app.post("/api/account/register", async (req,res)=>{ try { if(String(process.env.SELF_REGISTER_ENABLED||'true').toLowerCase()==='false') return res.status(403).json({error:'ثبت‌نام عمومی غیرفعال است؛ با مدیریت تماس بگیرید.'}); const phone=normalizePhone(req.body?.phone||req.body?.username); const username=phone; const password=String(req.body?.password||''); const deviceId=cleanDeviceId(req.body?.deviceId); if(!/^09\d{9}$/.test(phone)||password.length<6||!deviceId) return res.status(400).json({error:'شماره موبایل معتبر و رمز عبور حداقل ۶ کاراکتری لازم است.'}); const store=await readJsonFile(ACCOUNTS_FILE,{}); if(Object.values(store).some(x=>String(x.username||'').toLowerCase()===username || normalizePhone(x.phone)===phone)) return res.status(409).json({error:'این شماره موبایل قبلاً ثبت شده است.'}); const hp=hashPassword(password); const account={id:crypto.randomUUID(),username,phone,...hp,nationalId:String(req.body?.nationalId||''),recoveryQuestion:String(req.body?.recoveryQuestion||''),recoveryAnswerHash:hashPassword(String(req.body?.recoveryAnswer||'')),token:crypto.randomBytes(32).toString('hex'),createdAt:new Date().toISOString(),deviceId,role:'user',permissions:['dashboard','market','portfolio','alerts','account'],active:true}; store[account.id]=account; await writeJsonFile(ACCOUNTS_FILE,store); res.json({ok:true,token:account.token,username,user:userView(account)}); } catch(e){res.status(500).json({error:e.message});} });
+app.post("/api/account/forgot-password", async (req,res)=>{
+ try {
+  const username=normalizePhone(req.body?.username||req.body?.phone);
+  const nationalId=String(req.body?.nationalId||'');
+  const answer=String(req.body?.recoveryAnswer||'');
+  const store=await readJsonFile(ACCOUNTS_FILE,{});
+  const a=Object.values(store).find(x=>normalizePhone(x.phone)===username && String(x.nationalId||'')===nationalId);
+  if(!a||!a.recoveryAnswerHash||!verifyPassword(answer,a.recoveryAnswerHash.salt,a.recoveryAnswerHash.hash)) return res.status(400).json({error:'اطلاعات بازیابی صحیح نیست.'});
+  const np=String(req.body?.newPassword||'');
+  if(np.length<6)return res.status(400).json({error:'رمز جدید حداقل ۶ کاراکتر باشد.'});
+  Object.assign(a,hashPassword(np));
+  const key=Object.keys(store).find(k=>store[k]===a); store[key]=a; await writeJsonFile(ACCOUNTS_FILE,store);
+  res.json({ok:true,message:'رمز عبور با موفقیت تغییر کرد.'});
+ } catch(e){res.status(500).json({error:e.message});}
+});
 app.post("/api/account/login", async (req,res)=>{ try { const username=normalizePhone(req.body?.username||req.body?.phone); const password=String(req.body?.password||''); const attemptKey=`user:${req.ip}:${username}`; if(!loginAllowed(attemptKey)) return res.status(429).json({error:'تلاش‌های ورود زیاد است؛ چند دقیقه بعد دوباره امتحان کنید.'}); const store=await readJsonFile(ACCOUNTS_FILE,{}); const a=Object.values(store).find(x=>normalizePhone(x.phone)===username || String(x.username||'').toLowerCase()===username.toLowerCase()) || store[username]; if(!a||!verifyPassword(password,a.salt,a.hash)) return res.status(401).json({error:'نام کاربری یا رمز عبور اشتباه است.'}); if(!userIsActive(a)) return res.status(403).json({error:'دسترسی این حساب غیرفعال یا منقضی شده است.'}); clearLoginAttempts(attemptKey); a.token=crypto.randomBytes(32).toString('hex'); a.tokenExpiresAt=new Date(Date.now()+USER_SESSION_HOURS*3600000).toISOString(); a.lastLoginAt=new Date().toISOString(); if(req.body?.deviceId)a.deviceId=cleanDeviceId(req.body.deviceId); if(!a.role)a.role='user'; if(!Array.isArray(a.permissions))a.permissions=['dashboard','market','portfolio','alerts','account']; const key=Object.keys(store).find(k=>store[k]===a); store[key]=a; await writeJsonFile(ACCOUNTS_FILE,store); await audit('user_login',{userId:a.id}); res.json({ok:true,token:a.token,expiresAt:a.tokenExpiresAt,username:a.username||username,user:userView(a)}); } catch(e){res.status(500).json({error:e.message});} });
-app.get("/api/account/me", async (req,res)=>{ const a=await accountFromReq(req); if(!a||!userIsActive(a)) return res.status(401).json({error:'حساب معتبر نیست.'}); res.json({ok:true,user:userView(a)}); });
+app.get("/api/account/me", async (req,res)=>{ const a=await accountFromReq(req); if(!a||!userIsActive(a)) return res.status(401).json({error:'حساب معتبر نیست.'}); try { a.lastSeenAt=new Date().toISOString(); const store=await readJsonFile(ACCOUNTS_FILE,{}); const key=Object.keys(store).find(k=>store[k]?.id===a.id); if(key){store[key]=a; await writeJsonFile(ACCOUNTS_FILE,store);} } catch {} res.json({ok:true,user:userView(a)}); });
 app.post("/api/account/logout", async (req,res)=>{ try { const a=await accountByToken(req.body?.token); if(a){ const store=await readJsonFile(ACCOUNTS_FILE,{}); const key=Object.keys(store).find(k=>store[k]===a); if(key) store[key].token=''; await writeJsonFile(ACCOUNTS_FILE,store); } res.json({ok:true}); } catch(e){res.status(500).json({error:e.message});} });
 app.post("/api/account/sync", async (req,res)=>{ try { const a=await accountByToken(req.body?.token); const deviceId=cleanDeviceId(req.body?.deviceId); if(!a||!deviceId) return res.status(401).json({error:'ابتدا وارد حساب شوید.'}); const portfolio=await getDevicePortfolio(deviceId); const store=await readJsonFile(ACCOUNTS_FILE,{}); const key=Object.keys(store).find(k=>store[k]===a); if(!key)return res.status(401).json({error:'حساب پیدا نشد.'}); store[key].cloudPortfolio=portfolio; store[key].cloudProfile=await profileFor(deviceId); store[key].syncedAt=new Date().toISOString(); await writeJsonFile(ACCOUNTS_FILE,store); res.json({ok:true,syncedAt:store[key].syncedAt,count:portfolio.length}); } catch(e){res.status(500).json({error:e.message});} });
 app.post("/api/news-ai", async (req,res)=>{
@@ -847,13 +983,30 @@ app.get("/api/subscription", async (req, res) => { try { res.json(await getSubsc
 app.post("/api/checkout", async (req, res) => { const url = paymentUrl(req.body?.planId, req.body?.deviceId); if (!url) return res.status(503).json({ error: "درگاه پرداخت هنوز در تنظیمات سرور فعال نشده است." }); res.json({ ok: true, url }); });
 app.post("/api/admin/activate", async (req, res) => { if (!(await adminAuth(req,res)) && !validAdminKey(req.headers["x-admin-key"])) return res.status(403).json({ error: "admin session invalid" }); try { res.json({ ok: true, subscription: await activateSubscription(req.body || {}) }); } catch (e) { res.status(400).json({ error: e.message }); } });
 // Commercial administration: user lifecycle, roles, permissions and access control.
-function adminAuth(req,res){ const token=String(req.headers["x-admin-session"]||req.body?.adminSession||req.query?.adminSession||""); return requireAdminToken(token); }
+function parseCookies(req){ const raw=String(req.headers.cookie||''); const out={}; for(const part of raw.split(';')){ const idx=part.indexOf('='); if(idx<0)continue; const k=part.slice(0,idx).trim(); const v=part.slice(idx+1).trim(); try{out[k]=decodeURIComponent(v);}catch{out[k]=v;} } return out; }
+function adminTokenFromReq(req){ const cookies=parseCookies(req); return String(cookies[ADMIN_COOKIE_NAME] || req.headers["x-admin-session"] || req.body?.adminSession || req.query?.adminSession || ''); }
+function setAdminCookie(req,res,token,maxAgeSeconds){ const secure=(req.secure || String(req.headers['x-forwarded-proto']||'').split(',')[0].trim()==='https'); const parts=[`${ADMIN_COOKIE_NAME}=${encodeURIComponent(token||'')}`,'Path=/','HttpOnly','SameSite=Lax',`Max-Age=${Math.max(0,Math.floor(maxAgeSeconds||0))}`]; if(secure)parts.push('Secure'); res.setHeader('Set-Cookie',parts.join('; ')); }
+async function adminAuth(req,res,roles=[]){ const session=await requireAdminSession(adminTokenFromReq(req)); if(!session){ if(res) res.status(403); return null; } const required=Array.isArray(roles)?roles.filter(Boolean):[]; if(required.length && !required.includes(normalizeAdminRole(session.role))){ if(res) res.status(403); return null; } req.adminSession=session; return session; }
+function ensureAdminMutationOrigin(req,res){ const origin=String(req.headers.origin||'').trim(); if(!origin)return true; try { const expected=`${req.protocol}://${req.get('host')}`; if(origin!==expected){res.status(403).json({error:'origin نامعتبر'});return false;} } catch {} return true; }
 
 app.get("/api/theme", async (req,res)=>{res.json(await getTheme());});
-app.get("/api/admin/theme", async (req,res)=>{if(!(await adminAuth(req,res)))return;res.json(await getTheme());});
-app.put("/api/admin/theme", async (req,res)=>{if(!(await adminAuth(req,res)))return;try{res.json({ok:true,theme:await setTheme(req.body?.theme)});}catch(e){res.status(400).json({error:e.message});}});
-app.post("/api/admin/login", async (req,res)=>{ try{ const out=await adminLogin(req.body?.username,req.body?.password); res.json({ok:true,...out}); }catch(e){res.status(403).json({error:e.message});} });
-app.post("/api/admin/logout", async (req,res)=>{ await adminLogout(req.headers["x-admin-session"]||req.body?.adminSession); res.json({ok:true}); });
+app.get("/api/admin/theme", async (req,res)=>{if(!(await adminAuth(req,res)))return res.status(403).json({error:"admin session invalid"});res.json(await getTheme());});
+app.put("/api/admin/theme", async (req,res)=>{if(!(await adminAuth(req,res,['SUPER_ADMIN','ADMIN'])))return;if(!ensureAdminMutationOrigin(req,res))return;try{res.json({ok:true,theme:await setTheme(req.body?.theme)});}catch(e){res.status(400).json({error:e.message});}});
+app.post("/api/admin/login", async (req,res)=>{ try{ const out=await adminLogin(req.body?.username,req.body?.password,{ip:req.ip,userAgent:req.get('user-agent')}); setAdminCookie(req,res,out.token,Math.max(60,Math.floor((new Date(out.expiresAt).getTime()-Date.now())/1000))); res.json({ok:true,username:out.username,role:out.role,permissions:out.permissions,expiresAt:out.expiresAt}); }catch(e){res.status(403).json({error:e.message});} });
+app.post("/api/admin/logout", async (req,res)=>{ const token=adminTokenFromReq(req); await adminLogout(token); setAdminCookie(req,res,'',0); res.json({ok:true}); });
+// v60 Production Admin Control Center APIs
+async function databaseReady(){ try { await fs.mkdir(DATA_DIR,{recursive:true}); await fs.access(DATA_DIR); return true; } catch { return false; } }
+async function adminUserCounts(){ const all=await readJsonFile(ACCOUNTS_FILE,{}); const users=Object.values(all); const now=Date.now(); return {total:users.length,active:users.filter(u=>u.active!==false&&(!u.expiresAt||Date.parse(u.expiresAt)>=now)).length,inactive:users.filter(u=>u.active===false).length,expired:users.filter(u=>u.expiresAt&&Date.parse(u.expiresAt)<now).length,onlineEstimate:users.filter(u=>u.active!==false&&u.lastSeenAt&&Date.now()-Date.parse(u.lastSeenAt)<15*60*1000).length}; }
+async function adminRevenueStats(){ const payments=await readJsonFile(PAYMENTS_FILE,[]); const valid=payments.filter(p=>Number.isFinite(Number(p.amount))&&Number(p.amount)>0); const successful=valid.filter(p=>String(p.status||'').toLowerCase()==='confirmed'); const failed=valid.filter(p=>['failed','declined','cancelled'].includes(String(p.status||'').toLowerCase())); const now=Date.now(); const monthStart=new Date(); monthStart.setDate(1);monthStart.setHours(0,0,0,0); return {total:successful.reduce((a,p)=>a+Number(p.amount),0),monthly:successful.filter(p=>Date.parse(p.at||0)>=monthStart.getTime()).reduce((a,p)=>a+Number(p.amount),0),successfulCount:successful.length,failedCount:failed.length,average:successful.length?Math.round(successful.reduce((a,p)=>a+Number(p.amount),0)/successful.length):0,last30:successful.filter(p=>Date.parse(p.at||0)>=now-30*86400000).reduce((a,p)=>a+Number(p.amount),0)}; }
+app.get("/api/admin/dashboard", async (req,res)=>{ const session=await adminAuth(req,res); if(!session)return res.status(403).json({error:"admin session invalid"}); try{ const users=await adminUserCounts(); const revenue=await adminRevenueStats(); const tickets=await ticketStore(); const auditLog=await readJsonFile(AUDIT_FILE,[]); const logs=await getLoginLogs(200); const successfulLogins=logs.filter(x=>x.success&&x.event!=='logout'); const recentLogins=successfulLogins.filter(x=>Date.parse(x.at||0)>=Date.now()-7*86400000); const activities=[...auditLog.map(x=>({type:'activity',at:x.at,action:x.action,meta:x.meta})),...logs.map(x=>({type:x.success?'login_success':'login_failed',at:x.at,action:x.event|| (x.success?'login':'failed'),meta:{username:x.username,ip:x.ip,role:x.role,reason:x.reason}}))].sort((a,b)=>Date.parse(b.at||0)-Date.parse(a.at||0)).slice(0,30); res.set('Cache-Control','no-store'); res.json({ok:true,version:APP_VERSION,system:{server:'ONLINE',database:await databaseReady()?'ONLINE':'OFFLINE',application:'ONLINE',uptime:Math.round(process.uptime()),startedAt:state.startedAt,dataReady:state.dataReady,error:state.error||null},users:{...users,newUsers7d:recentLogins.filter(x=>Date.parse(x.at||0)>=Date.now()-7*86400000).length},financial:revenue,support:{total:tickets.length,open:tickets.filter(t=>['open','pending'].includes(t.status)).length,answered:tickets.filter(t=>t.status==='answered').length},activity:activities,admin:{username:session.username,role:normalizeAdminRole(session.role),permissions:session.permissions},generatedAt:new Date().toISOString()}); }catch(e){res.status(500).json({error:'dashboard unavailable',detail:e.message});} });
+app.get("/api/admin/live-status", async (req,res)=>{ const session=await adminAuth(req,res,['SUPER_ADMIN','ADMIN','MODERATOR']); if(!session)return res.status(403).json({error:"admin session invalid"}); const started=Date.now(); const db=await databaseReady(); let site='ONLINE'; let health={ok:false}; try{ const r=await fetch(`http://127.0.0.1:${port}/health`,{cache:'no-store',signal:AbortSignal.timeout(2500)}); health=await r.json().catch(()=>({})); site=r.ok?'ONLINE':'OFFLINE'; }catch{site='OFFLINE';} res.set('Cache-Control','no-store'); res.json({ok:true,site,server:site,application:'ONLINE',database:db?'ONLINE':'OFFLINE',responseTimeMs:Math.max(0,Date.now()-started),uptime:Math.round(process.uptime()),health,previewUrl:`${String(process.env.PUBLIC_BASE_URL||'').replace(/\/$/,'')||''}/`}); });
+app.get("/api/admin/reports", async (req,res)=>{ const session=await adminAuth(req,res,['SUPER_ADMIN','ADMIN','MODERATOR']); if(!session)return res.status(403).json({error:"admin session invalid"}); const users=(await readJsonFile(ACCOUNTS_FILE,{})); const payments=await readJsonFile(PAYMENTS_FILE,[]); const audit=await readJsonFile(AUDIT_FILE,[]); const days=Math.max(7,Math.min(90,Number(req.query.days||30))); const now=new Date(); const daily=[]; for(let i=days-1;i>=0;i--){ const d=new Date(now.getTime()-i*86400000); const key=d.toISOString().slice(0,10); daily.push({date:key,newUsers:Object.values(users).filter(u=>String(u.createdAt||'').slice(0,10)===key).length,revenue:payments.filter(p=>String(p.status||'').toLowerCase()==='confirmed'&&String(p.at||'').slice(0,10)===key).reduce((a,p)=>a+Number(p.amount||0),0),activity:audit.filter(a=>String(a.at||'').slice(0,10)===key).length}); } const monthly={}; Object.values(users).forEach(u=>{const k=String(u.createdAt||'').slice(0,7);if(k)monthly[k]=(monthly[k]||0)+1;}); const revenueByMonth={}; payments.filter(p=>String(p.status||'').toLowerCase()==='confirmed').forEach(p=>{const k=String(p.at||'').slice(0,7);if(k)revenueByMonth[k]=(revenueByMonth[k]||0)+Number(p.amount||0);}); res.set('Cache-Control','no-store'); res.json({ok:true,rangeDays:days,daily,monthlyUsers:monthly,monthlyRevenue:revenueByMonth,generatedAt:new Date().toISOString()}); });
+app.get("/api/admin/security", async (req,res)=>{ const session=await adminAuth(req,res,['SUPER_ADMIN','ADMIN']); if(!session)return res.status(403).json({error:"admin session invalid"}); const logs=await getLoginLogs(250); const sessions=await listAdminSessions(); const audit=(await readJsonFile(AUDIT_FILE,[])).slice(0,250); const failed=logs.filter(x=>x.success===false); const successful=logs.filter(x=>x.success===true&&x.event==='login'); res.set('Cache-Control','no-store'); res.json({ok:true,summary:{failedLogins:failed.length,successfulLogins:successful.length,activeAdminSessions:sessions.length,adminActivities:audit.length},loginLogs:logs,sessions,audit,security:{httpOnlyCookie:true,sameSite:'Lax',rateLimitedLogin:true,csrfOriginCheck:true},generatedAt:new Date().toISOString()}); });
+app.post("/api/admin/security/revoke-session", async (req,res)=>{ const session=await adminAuth(req,res,['SUPER_ADMIN']); if(!session)return res.status(403).json({error:"admin session invalid"});if(!ensureAdminMutationOrigin(req,res))return;const ok=await revokeAdminSession(req.body?.idPrefix);res.json({ok}); });
+app.post("/api/admin/security/revoke-all-sessions", async (req,res)=>{ const session=await adminAuth(req,res,['SUPER_ADMIN']); if(!session)return res.status(403).json({error:"admin session invalid"});if(!ensureAdminMutationOrigin(req,res))return;const count=await revokeAllAdminSessions(adminTokenFromReq(req));res.json({ok:true,count}); });
+app.get("/api/admin/settings", async (req,res)=>{ const session=await adminAuth(req,res,['SUPER_ADMIN','ADMIN']); if(!session)return res.status(403).json({error:"admin session invalid"}); res.json({ok:true,settings:await getAdminSettings(),theme:await getTheme(),roles:ADMIN_ROLES,rolePermissions:Object.fromEntries(ADMIN_ROLES.map(r=>[r,adminRolePermissions(r)])),features:ADMIN_FEATURES}); });
+app.put("/api/admin/settings", async (req,res)=>{ const session=await adminAuth(req,res,['SUPER_ADMIN']); if(!session)return res.status(403).json({error:"admin session invalid"});if(!ensureAdminMutationOrigin(req,res))return;try{const settings=await setAdminSettings(req.body||{});await audit('admin_settings_updated',{by:session.username});res.json({ok:true,settings});}catch(e){res.status(400).json({error:e.message});} });
+app.get("/api/admin/roles", async (req,res)=>{ const session=await adminAuth(req,res,['SUPER_ADMIN','ADMIN']); if(!session)return res.status(403).json({error:"admin session invalid"}); res.json({ok:true,roles:ADMIN_ROLES,features:ADMIN_FEATURES,permissions:Object.fromEntries(ADMIN_ROLES.map(r=>[r,adminRolePermissions(r)]))}); });
 app.get("/api/admin/stats", async (req,res)=>{ if(!(await adminAuth(req,res)))return res.status(403).json({error:"admin session invalid"}); res.json({ok:true,...await adminStats()}); });
 app.get("/api/admin/overview", async (req,res)=>{
   if(!(await adminAuth(req,res)))return res.status(403).json({error:"admin session invalid"});
@@ -879,10 +1032,11 @@ app.get("/api/admin/business-dashboard", async (req,res)=>{
   res.json({ok:true,currency:"IRR",users:{total:users.length,active,pro:users.filter(u=>u.role==='pro').length,premium:users.filter(u=>u.role==='premium').length,new7,new30,expiring7},revenue:{total:totalRevenue,month:monthRevenue,last7:last7Revenue,confirmedCount:confirmed.length,average:confirmed.length?Math.round(totalRevenue/confirmed.length):0},support:{open:tickets.filter(t=>['open','pending'].includes(t.status)).length,answered:tickets.filter(t=>t.status==='answered').length,total:tickets.length},daily,generatedAt:new Date().toISOString()});
 });
 app.get("/api/admin/features", async (req,res)=>{ if(!(await adminAuth(req,res)))return res.status(403).json({error:"admin session invalid"}); res.json({ok:true,features:FEATURE_KEYS,roles:{user:['dashboard','market','portfolio','alerts','account'],pro:PRO_PERMISSIONS,premium:PREMIUM_PERMISSIONS,admin:FEATURE_KEYS}}); });
-app.get("/api/admin/users", async (req,res)=>{ if(!(await adminAuth(req,res)))return res.status(403).json({error:"admin session invalid"}); res.json({ok:true,users:await listUsers()}); });
-app.post("/api/admin/users", async (req,res)=>{ if(!(await adminAuth(req,res)))return res.status(403).json({error:"admin session invalid"}); try{res.json({ok:true,...await createManagedUser(req.body||{})});}catch(e){res.status(400).json({error:e.message});} });
-app.put("/api/admin/users/:identifier", async (req,res)=>{ if(!(await adminAuth(req,res)))return res.status(403).json({error:"admin session invalid"}); try{res.json({ok:true,user:await updateManagedUser(req.params.identifier,req.body||{})});}catch(e){res.status(400).json({error:e.message});} });
-app.delete("/api/admin/users/:identifier", async (req,res)=>{ if(!(await adminAuth(req,res)))return res.status(403).json({error:"admin session invalid"}); try{await deleteManagedUser(req.params.identifier);res.json({ok:true});}catch(e){res.status(400).json({error:e.message});} });
+app.get("/api/admin/users", async (req,res)=>{ const session=await adminAuth(req,res,['SUPER_ADMIN','ADMIN','MODERATOR']); if(!session)return res.status(403).json({error:"admin session invalid"}); const out=await listUsers({page:req.query.page,limit:req.query.limit,search:req.query.search||req.query.q,role:req.query.role,status:req.query.status}); res.json({ok:true,...out}); });
+app.get("/api/admin/users/:identifier", async (req,res)=>{ const session=await adminAuth(req,res,['SUPER_ADMIN','ADMIN','MODERATOR']); if(!session)return res.status(403).json({error:"admin session invalid"}); const out=await listUsers({page:1,limit:200}); const user=out.users.find(u=>u.id===req.params.identifier||u.username===req.params.identifier||u.phone===req.params.identifier); if(!user)return res.status(404).json({error:"کاربر پیدا نشد."}); res.json({ok:true,user}); });
+app.post("/api/admin/users", async (req,res)=>{ const session=await adminAuth(req,res,['SUPER_ADMIN','ADMIN']); if(!session)return res.status(403).json({error:"admin session invalid"}); if(!ensureAdminMutationOrigin(req,res))return; try{res.json({ok:true,...await createManagedUser(req.body||{})});}catch(e){res.status(400).json({error:e.message});} });
+app.put("/api/admin/users/:identifier", async (req,res)=>{ const session=await adminAuth(req,res,['SUPER_ADMIN','ADMIN']); if(!session)return res.status(403).json({error:"admin session invalid"}); if(!ensureAdminMutationOrigin(req,res))return; try{res.json({ok:true,user:await updateManagedUser(req.params.identifier,req.body||{})});}catch(e){res.status(400).json({error:e.message});} });
+app.delete("/api/admin/users/:identifier", async (req,res)=>{ const session=await adminAuth(req,res,['SUPER_ADMIN']); if(!session)return res.status(403).json({error:"admin session invalid"}); if(!ensureAdminMutationOrigin(req,res))return; try{await deleteManagedUser(req.params.identifier);res.json({ok:true});}catch(e){res.status(400).json({error:e.message});} });
 app.post("/api/admin/broadcast", async (req,res)=>{ if(!(await adminAuth(req,res)))return res.status(403).json({error:'admin session invalid'}); const title=String(req.body?.title||'اطلاعیه مدیریت').trim(),message=String(req.body?.message||'').trim(); if(!message)return res.status(400).json({error:'متن پیام الزامی است.'}); const users=await listUsers(); for(const u of users.filter(x=>x.active)) await addNotification(u.id,title,message,'broadcast'); await audit('broadcast',{title,count:users.filter(x=>x.active).length}); res.json({ok:true,count:users.filter(x=>x.active).length}); });
 app.get("/api/admin/audit", async (req,res)=>{ if(!(await adminAuth(req,res)))return res.status(403).json({error:'admin session invalid'}); res.json({ok:true,items:(await readJsonFile(AUDIT_FILE,[])).slice(0,200)}); });
 app.get("/api/admin/payments", async (req,res)=>{ if(!(await adminAuth(req,res)))return res.status(403).json({error:'admin session invalid'}); res.json({ok:true,payments:await readJsonFile(PAYMENTS_FILE,[])}); });
@@ -1019,10 +1173,14 @@ app.post("/api/ai-test", async(req,res)=>{
    res.status(500).json({ok:false,error:e.message});
  }
 });
+app.get('/admin', async (req,res)=>{ try{res.set('Cache-Control','no-store');res.sendFile(path.join(APP_ROOT,'public','admin.html'));}catch(e){res.status(500).send('Admin Control Center unavailable');} });
+app.get('/admin/', async (req,res)=>{res.redirect(302,'/admin');});
+
 const server = app.listen(port, "0.0.0.0", async () => {
   console.log(`Gold Alert Pro listening on 0.0.0.0:${port}`);
   await loadState();
   await loadPersonalAlerts();
+  await loadSmartAlerts();
   await initAlerts();
   try { await loadHistorySeed(); console.log(`History seed: ${state.prices.length} points`); } catch (e) { console.warn("History seed error:", e.message); }
   await tick();

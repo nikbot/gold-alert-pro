@@ -1,0 +1,9 @@
+{
+  "roles": {
+    "SUPER_ADMIN": ["dashboard","users","payments","reports","security","settings","live_status","support","broadcast","backups","theme","commerce","subscriptions"],
+    "ADMIN": ["dashboard","users","payments","reports","live_status","support","broadcast","backups","theme","commerce","subscriptions"],
+    "MODERATOR": ["dashboard","users","reports","live_status","support","broadcast"],
+    "PREMIUM_USER": ["dashboard","reports","live_status"],
+    "USER": ["dashboard"]
+  }
+}
