@@ -763,12 +763,9 @@ async function tick() {
     }
 
     state.updatedAt = new Date().toISOString();
-<<<<<<< HEAD
     // Persist the latest valid market snapshot so a temporary provider outage or
     // process restart does not leave the dashboard with a blank price.
     if (state.iran?.priceIRR) scheduleSave();
-=======
->>>>>>> 07d6999d04cbb1eb1d1276da050fd1848efedb65
 
     // Broadcast even when only XAU/USD, USD/IRR, coins or BTC changed.
     // Previously this was skipped by early returns from the Iran18 branch.
@@ -1391,12 +1388,15 @@ app.get('/admin/', async (req,res)=>{res.redirect(302,'/admin');});
 
 const server = app.listen(port, "0.0.0.0", async () => {
   console.log(`Gold Alert Pro listening on 0.0.0.0:${port}`);
-  await loadState();
-  await loadPersonalAlerts();
-  await loadSmartAlerts();
-  await initAlerts();
+  // Never let an optional startup task terminate the HTTP process. A provider,
+  // push-key store, history endpoint, or persisted-data issue must not turn
+  // into a platform-level "app exited during startup" failure.
+  try { await loadState(); } catch (e) { console.warn("State load error:", e.message); }
+  try { await loadPersonalAlerts(); } catch (e) { console.warn("Personal alerts load error:", e.message); }
+  try { await loadSmartAlerts(); } catch (e) { console.warn("Smart alerts load error:", e.message); }
+  try { await initAlerts(); } catch (e) { console.warn("Push initialization unavailable:", e.message); }
   try { await loadHistorySeed(); console.log(`History seed: ${state.prices.length} points`); } catch (e) { console.warn("History seed error:", e.message); }
-  await tick();
+  try { await tick(); } catch (e) { console.warn("Initial market tick error:", e.message); }
   setInterval(() => tick().catch(e => console.warn("Interval tick error:", e.message)), pollMs);
 });
 server.on("error", e => console.error("Server error:", e));
