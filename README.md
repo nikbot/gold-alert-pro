@@ -76,3 +76,14 @@ For the packaged V60 build:
 - Password: `Gold@2026`
 
 These credentials are intended for the packaged/demo build. Change them before production deployment.
+
+
+## V60 FULL ADMIN CONTROL CENTER
+- Dedicated admin route: `/admin`
+- Super Admin secure HttpOnly session cookie with persistent server-side session.
+- SaaS-style responsive dashboard with sidebar, live system status, users, revenue, reports, security, preview and settings.
+- Role model: `SUPER_ADMIN`, `ADMIN`, `MODERATOR`, `PREMIUM_USER`, `USER`.
+- Standard admin APIs: `/api/admin/dashboard`, `/api/admin/users`, `/api/admin/payments`, `/api/admin/reports`, `/api/admin/security`, `/api/admin/settings`, `/api/admin/live-status`.
+- Data persists under `DATA_DIR`; see `database/SCHEMA.md`.
+- Deployment checklist: `DEPLOY_CHECKLIST.md`.
+

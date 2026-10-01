@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#0a0d13">
+  <title>Gold Alert Pro — Admin Control Center</title>
+  <link rel="icon" href="/icon-192.png">
+  <link rel="stylesheet" href="/admin.css">
+</head>
+<body>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <section id="loginView" class="admin-login-view">
+    <div class="login-glow glow-one"></div><div class="login-glow glow-two"></div>
+    <div class="login-card">
+      <div class="brand-row">
+        <div class="brand-mark">G</div>
+        <div><div class="brand-name">Gold Alert Pro</div><div class="brand-sub">SUPER ADMIN • CONTROL CENTER</div></div>
+      </div>
+      <div class="login-copy"><h1>ورود به مرکز مدیریت</h1><p>مدیریت کاربران، پرداخت‌ها، امنیت، گزارش‌ها و وضعیت آنلاین سامانه در یکجا.</p></div>
+      <form id="loginForm" class="login-form">
+        <label>نام کاربری<input id="loginUsername" autocomplete="username" value="admin" required></label>
+        <label>رمز عبور<input id="loginPassword" autocomplete="current-password" type="password" placeholder="رمز مدیریت" required></label>
+        <button class="primary wide" type="submit">ورود امن به داشبورد <span>↗</span></button>
+        <div id="loginError" class="form-error" role="alert"></div>
+      </form>
+      <div class="security-note"><span>●</span> نشست مدیریتی با Cookie امن HttpOnly نگهداری می‌شود؛ Refresh باعث خروج نمی‌شود.</div>
+      <a class="back-link" href="/">بازگشت به سایت اصلی</a>
+    </div>
+  </section>
+
+  <section id="appView" class="admin-app hidden">
+    <aside id="sidebar" class="sidebar">
+      <div class="sidebar-brand"><div class="brand-mark small">G</div><div><b>Gold Alert Pro</b><small>Control Center</small></div></div>
+      <button id="sidebarClose" class="icon-btn mobile-only" aria-label="بستن منو">×</button>
+      <nav class="nav-list">
+        <button class="nav-item active" data-view="dashboard"><span>⌂</span> داشبورد</button>
+        <button class="nav-item" data-view="users"><span>◉</span> کاربران</button>
+        <button class="nav-item" data-view="payments"><span>₿</span> پرداخت‌ها</button>
+        <button class="nav-item" data-view="reports"><span>◫</span> گزارش‌ها</button>
+        <button class="nav-item" data-view="security"><span>◈</span> امنیت</button>
+        <button class="nav-item" data-view="preview"><span>▣</span> مشاهده سایت</button>
+        <button class="nav-item" data-view="settings"><span>⚙</span> تنظیمات</button>
+      </nav>
+      <div class="sidebar-footer"><div class="role-chip"><span class="dot live"></span><div><b id="adminRoleLabel">SUPER_ADMIN</b><small id="adminUserLabel">admin</small></div></div><button id="sidebarLogout" class="logout-btn">↪ خروج</button></div>
+    </aside>
+    <div id="sidebarOverlay" class="sidebar-overlay"></div>
+
+    <main class="main-shell">
+      <header class="topbar">
+        <div class="topbar-left"><button id="sidebarOpen" class="icon-btn">☰</button><div><div id="pageEyebrow" class="eyebrow">CONTROL CENTER</div><h2 id="pageTitle">داشبورد مدیریتی</h2></div></div>
+        <div class="topbar-actions"><div class="live-status"><span class="dot live"></span><span id="topLiveText">Online</span><b id="topLatency">— ms</b></div><button id="themeToggle" class="icon-btn" title="تغییر پوسته">◐</button><button id="refreshBtn" class="icon-btn" title="بروزرسانی">↻</button></div>
+      </header>
+
+      <div class="content">
+        <section id="view-dashboard" class="view active">
+          <div class="hero-banner"><div><div class="eyebrow">SUPER ADMIN DASHBOARD</div><h1>مرکز فرمان Gold Alert Pro</h1><p>وضعیت سامانه، کاربران، درآمد و فعالیت‌های اخیر را در یک نگاه ببینید.</p></div><div class="hero-time"><span>آخرین همگام‌سازی</span><b id="lastSync">—</b></div></div>
+          <div class="metric-grid" id="systemMetrics"></div>
+          <div class="grid-2">
+            <article class="panel"><div class="panel-head"><div><h3>وضعیت سرویس</h3><small>سلامت لحظه‌ای سیستم</small></div><button class="ghost" data-action="refresh-live">بروزرسانی</button></div><div id="systemHealth" class="health-grid"></div></article>
+            <article class="panel"><div class="panel-head"><div><h3>وضعیت مالی</h3><small>تراکنش‌های تأییدشده</small></div><button class="ghost" data-view-target="payments">مشاهده</button></div><div id="financeSummary" class="mini-stats"></div></article>
+          </div>
+          <article class="panel"><div class="panel-head"><div><h3>روند ۷ روز اخیر</h3><small>کاربر جدید و درآمد روزانه</small></div><button class="ghost" data-view-target="reports">گزارش کامل</button></div><canvas id="dashChart" class="chart" height="240"></canvas></article>
+          <article class="panel"><div class="panel-head"><div><h3>فعالیت‌های اخیر</h3><small>آخرین رویدادهای مدیریتی و ورودها</small></div><span id="activityCount" class="badge">0</span></div><div id="activityFeed" class="activity-feed"></div></article>
+        </section>
+
+        <section id="view-users" class="view">
+          <div class="section-hero"><div><div class="eyebrow">USER MANAGEMENT</div><h1>مدیریت کاربران</h1><p>جستجو، فیلتر، نقش، فعال‌سازی، ویرایش و حذف کاربر.</p></div><button id="newUserBtn" class="primary">+ کاربر جدید</button></div>
+          <div class="toolbar"><input id="userSearch" placeholder="جستجو با نام، موبایل یا نام کاربری…"><select id="userRoleFilter"><option value="all">همه نقش‌ها</option><option>SUPER_ADMIN</option><option>ADMIN</option><option>MODERATOR</option><option>PREMIUM_USER</option><option>USER</option></select><select id="userStatusFilter"><option value="all">همه وضعیت‌ها</option><option value="active">فعال</option><option value="inactive">غیرفعال</option><option value="expired">منقضی</option></select><button id="userSearchBtn" class="ghost">جستجو</button></div>
+          <div class="panel table-panel"><div class="table-wrap"><table><thead><tr><th>کاربر</th><th>نقش</th><th>وضعیت</th><th>آخرین ورود</th><th>انقضا</th><th>عملیات</th></tr></thead><tbody id="usersTable"></tbody></table></div><div class="pagination" id="usersPagination"></div></div>
+        </section>
+
+        <section id="view-payments" class="view">
+          <div class="section-hero"><div><div class="eyebrow">PAYMENT MANAGEMENT</div><h1>مدیریت پرداخت</h1><p>تراکنش‌ها، درآمد و وضعیت پرداخت‌ها.</p></div><button id="newPaymentBtn" class="primary">+ ثبت پرداخت</button></div>
+          <div id="paymentMetrics" class="metric-grid compact"></div>
+          <div class="toolbar"><input id="paymentSearch" placeholder="جستجوی شناسه، کاربر، پلن یا پیگیری…"><select id="paymentStatusFilter"><option value="all">همه وضعیت‌ها</option><option value="confirmed">تأییدشده</option><option value="pending">در انتظار</option><option value="failed">ناموفق</option><option value="cancelled">لغوشده</option></select><button id="paymentSearchBtn" class="ghost">جستجو</button></div>
+          <div class="panel table-panel"><div class="table-wrap"><table><thead><tr><th>Transaction ID</th><th>کاربر</th><th>مبلغ</th><th>وضعیت</th><th>تاریخ</th><th>عملیات</th></tr></thead><tbody id="paymentsTable"></tbody></table></div><div class="pagination" id="paymentsPagination"></div></div>
+        </section>
+
+        <section id="view-reports" class="view">
+          <div class="section-hero"><div><div class="eyebrow">REPORT CENTER</div><h1>گزارش‌ها</h1><p>روند رشد کاربران، درآمد و فعالیت روزانه به شکل پویا.</p></div><select id="reportRange"><option value="7">۷ روز</option><option value="30" selected>۳۰ روز</option><option value="60">۶۰ روز</option><option value="90">۹۰ روز</option></select></div>
+          <div class="grid-2"><article class="panel"><div class="panel-head"><div><h3>رشد کاربران</h3><small>ثبت‌نام روزانه</small></div></div><canvas id="usersChart" class="chart" height="280"></canvas></article><article class="panel"><div class="panel-head"><div><h3>درآمد</h3><small>تراکنش‌های تأییدشده</small></div></div><canvas id="revenueChart" class="chart" height="280"></canvas></article></div>
+          <article class="panel"><div class="panel-head"><div><h3>فعالیت روزانه</h3><small>تعداد رویدادهای مدیریتی</small></div></div><canvas id="activityChart" class="chart" height="240"></canvas></article>
+        </section>
+
+        <section id="view-security" class="view">
+          <div class="section-hero"><div><div class="eyebrow">SECURITY CENTER</div><h1>مرکز امنیت</h1><p>ورودها، نشست‌ها، IP، دستگاه‌ها و فعالیت مدیران.</p></div><button id="revokeAllBtn" class="danger">خروج همه نشست‌ها</button></div>
+          <div id="securityMetrics" class="metric-grid compact"></div>
+          <div class="grid-2"><article class="panel"><div class="panel-head"><div><h3>نشست‌های فعال</h3><small>Admin Sessions</small></div></div><div id="sessionsList" class="list"></div></article><article class="panel"><div class="panel-head"><div><h3>ورودهای اخیر</h3><small>موفق و ناموفق</small></div></div><div id="loginLogs" class="list"></div></article></div>
+          <article class="panel"><div class="panel-head"><div><h3>Activity Logs</h3><small>رویدادهای مدیریتی</small></div></div><div id="auditList" class="list"></div></article>
+        </section>
+
+        <section id="view-preview" class="view">
+          <div class="section-hero"><div><div class="eyebrow">LIVE SITE PREVIEW</div><h1>مشاهده سایت آنلاین</h1><p>نسخه فعلی سایت را در محیط مدیریتی مشاهده کنید.</p></div><a href="/" target="_blank" rel="noopener" class="primary link-btn">باز کردن سایت ↗</a></div>
+          <div class="grid-3" id="liveCards"></div>
+          <article class="panel preview-panel"><div class="panel-head"><div><h3>Live Preview</h3><small>نمایش نسخه فعلی سایت</small></div><button id="previewRefresh" class="ghost">↻ Refresh</button></div><iframe id="sitePreview" title="Live Site Preview" src="/"></iframe></article>
+        </section>
+
+        <section id="view-settings" class="view">
+          <div class="section-hero"><div><div class="eyebrow">SETTINGS</div><h1>تنظیمات سامانه</h1><p>تنظیمات عمومی، دسترسی‌ها و امنیت نشست مدیریت.</p></div><button id="settingsSaveBtn" class="primary">ذخیره تنظیمات</button></div>
+          <div class="grid-2"><article class="panel form-panel"><div class="panel-head"><div><h3>تنظیمات عمومی</h3><small>Site Settings</small></div></div><label>نام سایت<input id="settingSiteName"></label><label>آدرس لوگو<input id="settingLogoUrl"></label><label>نقش پیش‌فرض کاربران<select id="settingDefaultRole"></select></label><label class="check-row"><input id="settingMaintenance" type="checkbox"> حالت تعمیر و نگهداری</label></article><article class="panel form-panel"><div class="panel-head"><div><h3>امنیت مدیریت</h3><small>Session & Login Protection</small></div></div><label>مدت نشست مدیریت (ساعت)<input id="settingSessionHours" type="number" min="1" max="168"></label><label>بازه Rate Limit (دقیقه)<input id="settingLoginWindow" type="number" min="1" max="60"></label><label>حداکثر تلاش ورود<input id="settingMaxAttempts" type="number" min="3" max="30"></label></article></div>
+          <article class="panel"><div class="panel-head"><div><h3>Role & Permission Matrix</h3><small>سطح دسترسی مدیریتی</small></div></div><div id="rolesMatrix" class="roles-matrix"></div></article>
+        </section>
+      </div>
+    </main>
+  </section>
+
+  <dialog id="userDialog" class="modal-dialog"><form method="dialog" id="userForm"><div class="modal-head"><div><h3 id="userDialogTitle">کاربر جدید</h3><small>اطلاعات دسترسی و حساب</small></div><button value="cancel" class="icon-btn">×</button></div><input type="hidden" id="userEditId"><div class="form-grid"><label>نام کاربری<input id="formUsername" required></label><label>نام<input id="formName"></label><label>موبایل<input id="formPhone" inputmode="tel"></label><label>نقش<select id="formRole"></select></label><label>رمز عبور<input id="formPassword" type="password" autocomplete="new-password"></label><label>انقضا<input id="formExpiry" type="datetime-local"></label><label class="span-2">عنوان اشتراک<input id="formPlan"></label><label class="check-row span-2"><input id="formActive" type="checkbox" checked> حساب فعال باشد</label></div><div class="modal-actions"><button value="cancel" class="ghost">انصراف</button><button id="saveUserBtn" value="default" class="primary">ذخیره</button></div></form></dialog>
+  <dialog id="paymentDialog" class="modal-dialog"><form method="dialog" id="paymentForm"><div class="modal-head"><div><h3>ثبت پرداخت</h3><small>دفتر تراکنش‌ها</small></div><button value="cancel" class="icon-btn">×</button></div><div class="form-grid"><label>نام کاربری<input id="paymentUser"></label><label>مبلغ (ریال)<input id="paymentAmount" type="number" min="0"></label><label>پلن<input id="paymentPlan"></label><label>شماره پیگیری<input id="paymentReference"></label><label>وضعیت<select id="paymentStatus"><option value="confirmed">تأییدشده</option><option value="pending">در انتظار</option><option value="failed">ناموفق</option><option value="cancelled">لغوشده</option></select></label></div><div class="modal-actions"><button value="cancel" class="ghost">انصراف</button><button id="savePaymentBtn" value="default" class="primary">ثبت تراکنش</button></div></form></dialog>
+
+  <script src="/admin.js" defer></script>
+</body>
+</html>
