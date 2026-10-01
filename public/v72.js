@@ -34,12 +34,20 @@
     );
   }
 
-  function getState() {
-    if (typeof window.latest !== 'undefined' && window.latest) return Promise.resolve(window.latest);
-    return fetch('/api/state', { cache: 'no-store' }).then((r) => {
+  async function getState() {
+    try {
+      const r = await fetch(`/api/state?_=${Date.now()}`, {
+        cache: 'no-store',
+        headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' }
+      });
       if (!r.ok) throw new Error(`state ${r.status}`);
-      return r.json();
-    });
+      const fresh = await r.json();
+      window.latest = fresh;
+      return fresh;
+    } catch (err) {
+      if (typeof window.latest !== 'undefined' && window.latest) return window.latest;
+      throw err;
+    }
   }
 
   function renderSources(s) {
@@ -75,8 +83,15 @@
       ['سکه امامی', num(s?.coins?.emami), money(s?.coins?.emami)]
     ];
 
-    box.innerHTML = rows.map(([name, raw, value]) =>
-      `<div><span>${name}</span><b>${value}</b><small>${raw ? 'LIVE' : 'بدون داده'}</small></div>`
+    const sources = [
+      s?.iran?.source,
+      s?.dollar?.source,
+      s?.global?.source,
+      s?.bitcoin?.source,
+      s?.coins?.source
+    ];
+    box.innerHTML = rows.map(([name, raw, value], i) =>
+      `<div><span>${name}</span><b>${value}</b><small>${raw ? `LIVE • ${sources[i] || 'منبع آنلاین'}` : 'بدون داده'}</small></div>`
     ).join('');
   }
 
@@ -136,10 +151,13 @@
     set('v72Dollar', dollar ? money(dollar) : '—');
     set('v72Xau', xau ? '$' + xau.toLocaleString('en-US', { maximumFractionDigits: 2 }) : '—');
     set('v72Btc', btc ? '$' + btc.toLocaleString('en-US', { maximumFractionDigits: 2 }) : '—');
-    set('v72UpdateTime', s.updatedAt ? new Date(s.updatedAt).toLocaleTimeString('fa-IR') : '—');
+    const marketTimes = [s?.iran?.fetchedAt||s?.iran?.at,s?.dollar?.fetchedAt||s?.dollar?.at,s?.global?.at,s?.bitcoin?.fetchedAt||s?.bitcoin?.at].filter(Boolean).map(x=>new Date(x).getTime()).filter(Number.isFinite);
+    const newestMarketAt = marketTimes.length ? new Date(Math.max(...marketTimes)) : (s.updatedAt ? new Date(s.updatedAt) : null);
+    set('v72UpdateTime', newestMarketAt ? newestMarketAt.toLocaleTimeString('fa-IR') : '—');
 
     const status = s?.engineStatus?.status || 'OFFLINE';
-    set('v72LiveText', status === 'LIVE' ? 'LIVE • زنده' : status === 'STALE' ? 'تاخیر داده' : 'آفلاین');
+    const liveCount = [gold, dollar, xau, btc].filter((x) => x > 0).length;
+    set('v72LiveText', liveCount >= 3 ? `LIVE • ${liveCount} بازار آنلاین` : liveCount ? `اتصال محدود • ${liveCount} بازار` : (status === 'STALE' ? 'آخرین داده معتبر' : 'آفلاین'));
 
     const prices = Array.isArray(s?.prices)
       ? s.prices.map(Number).filter(Number.isFinite)
@@ -200,7 +218,7 @@
     });
 
     refresh();
-    window.setInterval(refresh, 5000);
+    window.setInterval(refresh, 2500);
   }
 
   document.addEventListener('DOMContentLoaded', init, { once: true });

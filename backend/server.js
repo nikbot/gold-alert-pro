@@ -22,7 +22,7 @@ const LOGIN_MAX_ATTEMPTS = 12;
 const loginAttempts = new Map();
 const app = express();
 const port = Number.isFinite(Number(process.env.PORT)) ? Number(process.env.PORT) : 3000;
-const pollMs = Math.max(5000, Number(process.env.POLL_MS || 8000));
+const pollMs = Math.max(2500, Math.min(5000, Number(process.env.POLL_MS || 4000)));
 const staleThresholdMs = Math.max(15000, Number(process.env.STALE_THRESHOLD_MS || 60000));
 const minScore = Math.min(100, Math.max(0, Number(process.env.MIN_SIGNAL_SCORE || 65)));
 const target1 = Math.max(0.1, Number(process.env.TARGET_1_PCT || 1.5));
@@ -561,22 +561,35 @@ async function tick() {
     const coins = results[3].status === "fulfilled" ? results[3].value : null;
     const bitcoin = results[4].status === "fulfilled" ? results[4].value : null;
     const forgodCurrencies = results[5].status === "fulfilled" ? results[5].value : null;
+    // Update every market independently. A temporary Iran-gold failure must not hide
+    // valid XAU/USD, USD/IRR, coin or BTC quotes.
+    if (global && Number.isFinite(Number(global.xauUsd))) state.global = global;
+    if (dollar && Number.isFinite(Number(dollar.priceIRR))) state.dollar = dollar;
+    if (coins && Object.values(coins).some(v => Number.isFinite(Number(v)))) state.coins = coins;
+    if (bitcoin && Number.isFinite(Number(bitcoin.usd))) state.bitcoin = bitcoin;
+    if (forgodCurrencies) state.forgodCurrencies = forgodCurrencies;
+
     if (!iran) {
-      console.warn("Iran18 unavailable, keeping previous state");
-      state.engineStatus = { status: "OFFLINE", label: "منبع قیمت در دسترس نیست", source: null, sourceAgeMs: null, reason: results[0].reason?.message || "Iran gold provider unavailable" };
-      if (state.iran) { state.error = results[0].reason?.message || "Iran gold provider unavailable"; broadcastMarketState(true); return; }
-      throw new Error(results[0].reason?.message || "Iran gold price unavailable");
+      console.warn("Iran18 unavailable, keeping previous Iran-gold state while other markets continue");
+      state.engineStatus = { status: "OFFLINE", label: "طلای ۱۸ موقتاً بدون منبع", source: state.iran?.source || null, sourceAgeMs: null, reason: results[0].reason?.message || "Iran gold provider unavailable" };
+      state.error = results[0].reason?.message || "Iran gold provider unavailable";
+      state.updatedAt = new Date().toISOString();
+      if (state.iran) { broadcastMarketState(true); return; }
+      broadcastMarketState(true);
+      return;
     }
     if (iran.cached) {
-      const sourceAt = new Date(state.iran?.at || iran.at || 0).getTime();
+      state.iran = iran;
+      const sourceAt = new Date(iran.at || 0).getTime();
       const age = sourceAt ? Math.max(0, Date.now() - sourceAt) : null;
-      state.engineStatus = { status: "STALE", label: "آخرین قیمت معتبر", source: state.iran?.source || iran.source || null, sourceAgeMs: age, reason: iran.warning || "منبع قیمت فعلاً داده جدید نداده است" };
-      state.error = iran.warning || "قیمت جدید از منبع دریافت نشد";
+      state.engineStatus = { status: "STALE", label: "آخرین قیمت معتبر طلا", source: iran.source || null, sourceAgeMs: age, reason: iran.warning || "منبع طلای ۱۸ فعلاً داده جدید نداده است؛ سایر بازارها زنده‌اند" };
+      state.error = iran.warning || "قیمت جدید طلای ۱۸ از منبع دریافت نشد";
+      state.updatedAt = new Date().toISOString();
       try { state.sourceDiagnostics = await getIran18Sources(false); } catch {}
       broadcastMarketState(true);
       return;
     }
-    state.iran = iran; state.global = global; state.dollar = dollar; state.coins = coins; state.bitcoin = bitcoin; state.forgodCurrencies = forgodCurrencies;
+    state.iran = iran;
     if (!state.sourceDiagnostics || Date.now() - new Date(state.sourceDiagnostics.checkedAt || 0).getTime() > 60000) {
       try { state.sourceDiagnostics = await getIran18Sources(false); } catch (e) { state.sourceDiagnostics = { checkedAt:new Date().toISOString(), primary:iran.source || null, sources:[{name:iran.source||"active",priceIRR:iran.priceIRR,ok:true}], anomaly:false, error:e.message }; }
     }
