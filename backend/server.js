@@ -1186,16 +1186,27 @@ function ensureAdminMutationOrigin(req,res){
   const origin=String(req.headers.origin||'').trim();
   if(!origin)return true;
   try {
-    const allowed=new Set();
+    // Same-origin browser requests are safe even when the app is behind a reverse proxy.
+    if(String(req.headers['sec-fetch-site']||'').toLowerCase()==='same-origin') return true;
+    const originUrl=new URL(origin);
+    const originHost=originUrl.host.toLowerCase();
+    const hosts=new Set([
+      String(req.headers['x-forwarded-host']||'').split(',')[0].trim().toLowerCase(),
+      String(req.get('host')||'').trim().toLowerCase()
+    ].filter(Boolean));
     const publicBase=String(process.env.PUBLIC_BASE_URL||'').trim().replace(/\/$/,'');
-    if(publicBase) allowed.add(publicBase);
-    const forwardedProto=String(req.headers['x-forwarded-proto']||'').split(',')[0].trim() || req.protocol;
-    const forwardedHost=String(req.headers['x-forwarded-host']||'').split(',')[0].trim() || req.get('host');
-    if(forwardedHost) allowed.add(`${forwardedProto}://${forwardedHost}`);
-    allowed.add(`${req.protocol}://${req.get('host')}`);
-    if(!allowed.has(origin)){res.status(403).json({error:'origin نامعتبر'});return false;}
-  } catch {}
-  return true;
+    if(publicBase){
+      try { if(new URL(publicBase).host.toLowerCase()===originHost) return true; } catch {}
+    }
+    // Proxy deployments can legitimately terminate TLS before reaching Node,
+    // so validate the browser Origin by host rather than internal protocol.
+    if(hosts.has(originHost)) return true;
+    res.status(403).json({error:'origin نامعتبر'});
+    return false;
+  } catch {
+    res.status(403).json({error:'origin نامعتبر'});
+    return false;
+  }
 }
 
 app.get("/api/theme", async (req,res)=>{res.json(await getTheme());});

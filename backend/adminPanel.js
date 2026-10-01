@@ -300,6 +300,7 @@ export async function updateManagedUser(identifier, input = {}) {
   if (!a) throw new Error('کاربر پیدا نشد.');
   const p = a.id;
   if (input.name !== undefined) a.name = String(input.name || '').slice(0, 80);
+  if (input.phone !== undefined) { const phone = normalizePhone(input.phone); if (phone && !/^09\\d{9}$/.test(phone)) throw new Error('شماره موبایل معتبر نیست.'); if (phone && Object.values(store).some(x => x.id !== a.id && normalizePhone(x.phone) === phone)) throw new Error('این شماره موبایل قبلاً ثبت شده است.'); a.phone = phone; }
   if (input.role !== undefined) a.role = ['user', 'pro', 'premium', 'admin'].includes(String(input.role)) ? String(input.role) : 'user';
   if (input.accessRole !== undefined) a.accessRole = normalizeAdminRole(input.accessRole);
   if (input.permissions !== undefined) a.permissions = cleanPermissions(input.permissions);
