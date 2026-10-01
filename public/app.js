@@ -802,7 +802,7 @@ window.forgotPasswordPrompt = forgotPasswordPrompt;
 window.adminLogin = adminLogin;
 
 /* =========================================================
-   Gold2 Pro V62 Market Terminal
+   Gold2 Pro V65 Market Terminal
    ========================================================= */
 (function initV62Terminal(){
   const $=id=>document.getElementById(id);
@@ -855,6 +855,14 @@ window.adminLogin = adminLogin;
     set('v62PulseGold',safeMoney(price));set('v62PulseDollar',safeMoney(dollar));set('v62PulseXau',xau?'$'+Number(xau).toLocaleString('en-US',{maximumFractionDigits:2}):'—');set('v62PulseGram',safeMoney(gram));
     set('v62PulseGoldCh',fmtPct(goldD));set('v62PulseDollarCh',fmtPct(dollarD));set('v62PulseXauCh',fmtPct(xauD));set('v62PulseGramCh',fmtPct(gramD));
     const es=s?.engineStatus||{};set('v62MarketState',es.status==='LIVE'?'LIVE':es.status==='STALE'?'STALE':'OFFLINE');
+    const v65State=es.status==='LIVE'?'بازار زنده':es.status==='STALE'?'داده با تأخیر':'منبع داده قطع';
+    set('v65StateBadge',v65State);set('v65Quality',s?.dataReady?'مناسب':(es.status==='LIVE'?'قابل استفاده':'ناقص'));set('v65QualityMeta',es.reason||'منبع فعال');
+    const trend=$('ccTrend')?.textContent||$('quickTrend')?.textContent||'در حال بررسی';
+    const pressure=$('quickPressure')?.textContent||'—';
+    const rsi=Number(String($('quickRsi')?.textContent||'').replace(/[^0-9.\-]/g,''));
+    set('v65Trend',trend);set('v65TrendMeta',rsi?('RSI '+rsi):'تحلیل تکنیکال');set('v65Momentum',pressure);
+    const raw=(s?.prices||[]).map(Number).filter(Number.isFinite).slice(-60);const avg=raw.length?(raw.reduce((a,b)=>a+b,0)/raw.length):0;const vol=avg&&raw.length?((Math.max(...raw)-Math.min(...raw))/avg*100):0;set('v65Volatility',vol?vol.toFixed(2)+'٪':'—');
+    const an=$('v65StateBadge');if(an)an.style.color=es.status==='LIVE'?'#5ee7a0':es.status==='STALE'?'#f5c451':'#ef7373';
     const q=$('v62DataQuality');if(q)q.textContent=s?.dataReady?'آماده تحلیل':(es.status==='LIVE'?'داده زنده':'داده ناقص');
     const age=$('v62UpdateAge');if(age)age.textContent=s?.updatedAt?'آخرین بروزرسانی '+new Date(s.updatedAt).toLocaleTimeString('fa-IR'):'آخرین بروزرسانی —';
     const live=$('v62MarketState');if(live)live.style.color=es.status==='LIVE'?'#22c55e':es.status==='STALE'?'#f5c451':'#ef4444';
@@ -862,6 +870,7 @@ window.adminLogin = adminLogin;
     syncChart();
   }
   function renderCopilotFromDom(){
+    try{const u=localStorage.getItem('gold-alert-pro-account-user')||localStorage.getItem('gold-alert-pro-account');const name=u&&u.includes('@')?u.split('@')[0]:u;if(name&&$('v62AccountName'))$('v62AccountName').textContent=name;}catch{}
     const trend=$('ccTrend')?.textContent||$('quickTrend')?.textContent||'در حال بررسی';
     const risk=$('ccRisk')?.textContent||'—';
     const summary=$('aiCopilotSummary')?.textContent||'در حال تحلیل داده‌های بازار...';

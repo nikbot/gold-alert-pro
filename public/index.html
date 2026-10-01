@@ -77,7 +77,7 @@ body{background:radial-gradient(900px 420px at 85% -10%,#30220e55,transparent 65
 @media(max-width:760px){.adminShell{flex-direction:column}.adminSidebar{width:100%;position:static}}
 
 /* =========================================================
-   Gold2 Pro V62 Market Terminal
+   Gold2 Pro V65 Market Terminal
    ========================================================= */
 :root{--v62-bg:#080b12;--v62-panel:#101522;--v62-panel2:#0c111b;--v62-line:#202a3b;--v62-text:#f5f7fa;--v62-muted:#8e9aae;--v62-live:#22c55e;--v62-red:#ef4444;--v62-gold:#d9ad55;--v62-blue:#6aa8ff;}
 body.v62Terminal{background:radial-gradient(circle at 70% -20%,#182033 0,#080b12 42%,#05070c 100%);}
@@ -236,19 +236,39 @@ body.authLocked .floatingMenuBtn,body.authLocked .menuBackdrop,body.authLocked .
 </div>
 <div id="authGate" class="authGate hidden" aria-hidden="true">
   <div class="authBox">
-    <div style="display:flex;justify-content:flex-end"><button type="button" class="secondary smallBtn" onclick="closeAuthGate()" aria-label="بستن">✕ بستن</button></div>
-    <div class="authBrand"><div class="authLogo">🥇</div><div class="small" style="text-align:center;margin-bottom:8px">دسترسی به امکانات حرفه‌ای</div><h1>Gold Alert Pro</h1><p>پیشخوان و قیمت زنده بدون ورود در دسترس است. برای استفاده از امکانات حرفه‌ای، کافی است وارد حساب شوید.</p></div>
-    <div class="authTabs"><button id="authLoginTab" class="active" type="button" onclick="showAuthMode('login')">ورود</button><button id="authRegisterTab" type="button" onclick="showAuthMode('register')">ثبت‌نام</button></div>
-    <div id="authLoginForm" class="authForm"><input id="authMobile" inputmode="tel" autocomplete="username" maxlength="11" placeholder="شماره موبایل، مثال 0912..." type="tel"><input id="authPass" autocomplete="current-password" type="password" placeholder="رمز عبور"><button type="button" class="secondary" onclick="forgotPasswordPrompt()">📧 بازیابی رمز عبور</button><button type="button" onclick="gateLogin()">🔐 ورود به حساب</button><button type="button" class="secondary" onclick="showAdminLoginGate()">🔑 ورود مدیریت</button></div>
-    <div id="authRegisterForm" class="authForm authRegisterOnly"><input id="regMobile" inputmode="tel" autocomplete="username" maxlength="11" placeholder="شماره موبایل، مثال 0912..." type="tel"><input id="regPass" autocomplete="new-password" type="password" minlength="6" placeholder="رمز عبور حداقل ۶ کاراکتر"><input id="regPass2" autocomplete="new-password" type="password" minlength="6" placeholder="تکرار رمز عبور"><input id="regNationalId" inputmode="numeric" placeholder="کد ملی"><input id="regRecoveryQuestion" placeholder="سؤال بازیابی رمز"><input id="regRecoveryAnswer" placeholder="پاسخ بازیابی"><button type="button" onclick="gateRegister()">📝 ساخت حساب</button></div>
-    <div id="authError" class="authError"></div><div id="adminLoginModal" style="display:none;margin-top:12px;padding:14px;border:1px solid #57451f;border-radius:18px;background:#0b1019">
-<div style="font-weight:bold;margin-bottom:10px">🔐 ورود مدیریت</div>
-<input id="adminUsernameInput" autocomplete="username" placeholder="نام کاربری مدیر" style="margin:6px 0;width:100%">
-<input id="adminPasswordInput" autocomplete="current-password" type="password" placeholder="رمز مدیر" style="margin:6px 0;width:100%">
-<button type="button" onclick="adminLogin()">ورود به پنل مدیریت</button>
-<button type="button" class="secondary" onclick="closeAdminLoginGate()">بازگشت</button>
-</div><div style="margin-top:10px"><button type="button" class="secondary" onclick="showAdminLoginGate()">🔐 ورود مدیریت</button></div>
-    <div class="authHint">حساب هر کاربر با شماره موبایل شناخته می‌شود. اطلاعات شخصی و رمز عبور برای امنیت حساب، به‌صورت امن روی سرور نگهداری می‌شوند.</div>
+    <div><button type="button" class="secondary smallBtn" onclick="closeAuthGate()" aria-label="بستن">✕ بستن</button></div>
+    <div class="authBrand">
+      <div class="authLogo">Au</div>
+      <div class="small">ورود امن به فضای حرفه‌ای بازار</div>
+      <h1>Gold2 Pro</h1>
+      <p>پیشخوان عمومی و قیمت‌های بازار بدون ورود قابل مشاهده است. با ورود به حساب، امکانات حرفه‌ای مثل AI Copilot، هشدارهای هوشمند، پرتفوی و ابزارهای تحلیلی فعال می‌شوند.</p>
+    </div>
+    <div class="authTabs"><button id="authLoginTab" class="active" type="button" onclick="showAuthMode('login')">ورود به حساب</button><button id="authRegisterTab" type="button" onclick="showAuthMode('register')">ساخت حساب</button></div>
+    <div id="authLoginForm" class="authForm">
+      <input id="authMobile" inputmode="tel" autocomplete="username" maxlength="11" placeholder="شماره موبایل، مثال 0912..." type="tel">
+      <input id="authPass" autocomplete="current-password" type="password" placeholder="رمز عبور">
+      <button type="button" onclick="gateLogin()">ورود به Gold2 Pro</button>
+      <button type="button" class="secondary" onclick="forgotPasswordPrompt()">بازیابی رمز عبور</button>
+      <button type="button" class="secondary" onclick="showAdminLoginGate()">ورود مدیریت</button>
+    </div>
+    <div id="authRegisterForm" class="authForm authRegisterOnly">
+      <input id="regMobile" inputmode="tel" autocomplete="username" maxlength="11" placeholder="شماره موبایل، مثال 0912..." type="tel">
+      <input id="regPass" autocomplete="new-password" type="password" minlength="6" placeholder="رمز عبور حداقل ۶ کاراکتر">
+      <input id="regPass2" autocomplete="new-password" type="password" minlength="6" placeholder="تکرار رمز عبور">
+      <input id="regNationalId" inputmode="numeric" placeholder="کد ملی">
+      <input id="regRecoveryQuestion" placeholder="سؤال بازیابی رمز">
+      <input id="regRecoveryAnswer" placeholder="پاسخ بازیابی">
+      <button type="button" onclick="gateRegister()">ساخت حساب حرفه‌ای</button>
+    </div>
+    <div id="authError" class="authError"></div>
+    <div id="adminLoginModal" style="display:none">
+      <div style="font-weight:bold;margin-bottom:10px">🔐 ورود مدیریت</div>
+      <input id="adminUsernameInput" autocomplete="username" placeholder="نام کاربری مدیر" style="margin:6px 0;width:100%">
+      <input id="adminPasswordInput" autocomplete="current-password" type="password" placeholder="رمز مدیر" style="margin:6px 0;width:100%">
+      <button type="button" onclick="adminLogin()">ورود به پنل مدیریت</button>
+      <button type="button" class="secondary" onclick="closeAdminLoginGate()">بازگشت</button>
+    </div>
+    <div class="authHint">رمز عبور در مرورگر نمایش داده نمی‌شود و احراز هویت توسط سرور انجام می‌شود.</div>
   </div>
 </div>
 <div class="wrap">
@@ -300,7 +320,7 @@ body.authLocked .floatingMenuBtn,body.authLocked .menuBackdrop,body.authLocked .
 <div class="livePanel menuSection" id="livePricePanel"><div class="livePriceRow"><div><div class="label">⚡ قیمت زنده • هر گرم طلای ۱۸ عیار</div><div id="livePriceBig" class="livePriceBig">—</div><div class="liveUnit">ریال</div></div><div style="text-align:left"><div id="liveChange" class="change">—</div><div id="liveStatus" class="small" style="margin-top:7px">در حال اتصال...</div></div></div><div class="liveMeta"><div class="liveMetaBox"><span>اونس جهانی</span><b id="liveXau">—</b></div><div class="liveMetaBox"><span>دلار</span><b id="liveDollar">—</b></div><div class="liveMetaBox"><span>به‌روزرسانی</span><b id="liveAge">—</b></div></div><div class="phoneCta"><div style="flex:1">📲 با نصب روی گوشی، همین صفحه را مثل یک اپلیکیشن باز کن. برای اعلان قیمت و هشدارها هم Push را فعال کن.</div><button class="secondary" onclick="enablePush()">🔔 فعال‌سازی اعلان</button></div><div class="installHero"><button id="installBtnHero" class="blue" style="display:none" onclick="installApp()">📲 نصب روی صفحه گوشی</button><button class="secondary" onclick="manualRefresh()">↻ دریافت قیمت جدید</button></div><div class="mobileHint">نمایش قیمت داخل برنامه هر ۱۰ ثانیه تازه می‌شود؛ اعلان گوشی برای جلوگیری از مزاحمت، فقط برای هشدارهای مهم و به‌روزرسانی‌های انتخاب‌شده ارسال می‌شود.</div></div>
 <div class="v62TerminalShell" id="v62TerminalShell">
   <aside class="v62Sidebar" id="v62Sidebar">
-    <div class="v62Brand"><div class="v62BrandMark">Au</div><div class="v62BrandText"><b>Gold2 Pro</b><small>V62 Market Terminal</small></div></div>
+    <div class="v62Brand"><div class="v62BrandMark">Au</div><div class="v62BrandText"><b>Gold2 Pro</b><small>V65 Market Terminal</small></div></div>
     <nav class="v62Nav" id="v62Nav">
       <button class="active" data-v62cat="dashboard" type="button"><span class="v62Icon">⌂</span><span><b>پیشخوان</b><small>نمای اصلی بازار</small></span></button>
       <button data-v62cat="market" type="button"><span class="v62Icon">↗</span><span><b>بازار</b><small>نمودار و قیمت</small></span></button>
@@ -317,7 +337,7 @@ body.authLocked .floatingMenuBtn,body.authLocked .menuBackdrop,body.authLocked .
   </aside>
   <main class="v62Main">
     <header class="v62Header">
-      <div class="v62HeaderBrand"><div class="v62BrandMark" style="width:34px;height:34px;border-radius:10px;font-size:16px">Au</div><div><b>Gold2 Pro</b><span>Market Terminal • V62</span></div></div>
+      <div class="v62HeaderBrand"><div class="v62BrandMark" style="width:34px;height:34px;border-radius:10px;font-size:16px">Au</div><div><b>Gold2 Pro</b><span>Market Terminal • V65</span></div></div>
       <div class="v62MarketStatus"><span class="v62LiveDot"></span><b id="v62MarketState">LIVE</b><span id="v62UpdateAge">آخرین بروزرسانی —</span></div>
       <div class="v62HeaderActions"><button class="v62Notif" type="button" onclick="applyCategory('alerts')">🔔<i id="v62NotifCount">0</i></button><button type="button" onclick="applyCategory('account')">👤 <span id="v62AccountName">حساب کاربری</span></button><button class="v62CopilotBtn" type="button" onclick="document.getElementById('v62CopilotQuestion')?.focus();document.getElementById('v62Copilot')?.scrollIntoView({behavior:'smooth',block:'center'})">AI Copilot</button></div>
     </header>
@@ -340,7 +360,16 @@ body.authLocked .floatingMenuBtn,body.authLocked .menuBackdrop,body.authLocked .
           <div class="v62Stat"><span>حرکت بازه انتخابی</span><b id="v62GoldMove">—</b><small>نسبت اولین نقطه به آخرین نقطه</small></div>
           <div class="v62Stat"><span>منبع قیمت</span><b id="v62Source">—</b><small id="v62EngineReason">—</small></div>
         </section>
-        <section class="v62ChartPanel">
+        <section class="v65MarketState">
+  <div class="v65StateHead"><div><span>MARKET STATE</span><b>وضعیت لحظه‌ای بازار</b></div><em id="v65StateBadge">در حال بررسی</em></div>
+  <div class="v65StateGrid">
+    <div><span>روند</span><b id="v65Trend">—</b><small id="v65TrendMeta">—</small></div>
+    <div><span>مومنتوم</span><b id="v65Momentum">—</b><small>بر پایه حرکت قیمت</small></div>
+    <div><span>نوسان</span><b id="v65Volatility">—</b><small>بر پایه دامنه اخیر</small></div>
+    <div><span>کیفیت داده</span><b id="v65Quality">—</b><small id="v65QualityMeta">—</small></div>
+  </div>
+</section>
+<section class="v62ChartPanel">
           <div class="v62PanelHead"><div><h3>LIVE GOLD CHART</h3><small>نمودار زنده • حمایت • مقاومت • سیگنال</small></div><div class="v62ChartTools"><button class="active" type="button" onclick="v62ChartRange(this,60)">1H</button><button type="button" onclick="v62ChartRange(this,120)">4H</button><button type="button" onclick="v62ChartRange(this,240)">1D</button><button type="button" onclick="v62ChartRange(this,480)">1W</button><button type="button" data-v62-mode="area" class="active" onclick="v62ChartMode('area')">AREA</button><button type="button" data-v62-mode="line" onclick="v62ChartMode('line')">LINE</button><button type="button" class="active" onclick="v62ToggleLevels(this)">سطوح</button></div></div>
           <div class="v62ChartViewport"><div class="goldChart" id="v62GoldChart"><div class="chartWrap"><div class="chartEmpty">در حال دریافت نمودار...</div></div></div></div>
         </section>
@@ -364,6 +393,7 @@ body.authLocked .floatingMenuBtn,body.authLocked .menuBackdrop,body.authLocked .
     </section>
   </main>
 </div>
+<div class="v65QuickActions"><button type="button" onclick="applyCategory('market')"><span>📈</span><b>تحلیل بازار</b><small>نمودار و اندیکاتورها</small></button><button type="button" onclick="applyCategory('ai')"><span>🧠</span><b>AI Copilot</b><small>تحلیل ساده و سریع</small></button><button type="button" onclick="applyCategory('alerts')"><span>🔔</span><b>هشدارها</b><small>رویدادهای مهم</small></button><button type="button" onclick="applyCategory('tools')"><span>🧮</span><b>ماشین‌حساب</b><small>ارزش روز طلا</small></button></div>
 <div class="sectionIntro" id="categoryIntro"><b id="categoryTitle">پیشخوان</b><span id="categoryDesc">قیمت زنده، وضعیت امروز و سیگنال کلی بازار</span></div><div class="accountQuick"><div><span class="small">وضعیت حساب</span><b id="quickAccountStatus">در حال بررسی...</b></div><div class="quickActions"><button class="secondary smallBtn" onclick="openAccountQuickMenu()">👤 حساب من</button><button class="secondary smallBtn" onclick="logoutAndRelogin()">🚪 خروج و ورود مجدد</button></div></div>
 
 <section class="card commandCenter categorySection category-dashboard"><div class="sectionTitle"><div><h3>✨ مرکز کنترل سرمایه</h3><span>نمای سریع بازار، دارایی و هشدارها</span></div><div class="liveBadge">LIVE</div></div><div class="commandGrid"><div class="commandBox"><span>ارزش سبد</span><b id="ccPortfolioValue">—</b><small id="ccPortfolioPnl">—</small></div><div class="commandBox"><span>روند بازار</span><b id="ccTrend">—</b><small id="ccTrendMeta">—</small></div><div class="commandBox"><span>ریسک</span><b id="ccRisk">—</b><small>بر پایه داده‌های موجود</small></div><div class="commandBox"><span>هشدارهای فعال</span><b id="ccAlerts">—</b><small>هدف قیمت و بازار</small></div></div><div class="quickFeatureGrid"><button class="featureTile" onclick="applyCategory('market')">📊<b>بازار</b><small>نمودار و تکنیکال</small></button><button class="featureTile" onclick="applyCategory('ai')">🤖<b>AI</b><small>تحلیل و دستیار</small></button><button class="featureTile" onclick="applyCategory('alerts')">🔔<b>هشدار</b><small>قیمت و Push</small></button><button class="featureTile" onclick="applyCategory('tools')">💼<b>دارایی</b><small>سبد و سناریو</small></button><button class="featureTile" onclick="applyCategory('decision')">🧠<b>اتاق تصمیم</b><small>سناریو و کنترل</small></button><button class="featureTile" onclick="applyCategory('account')">👤<b>حساب</b><small>پشتیبانی و بکاپ</small></button></div></section>

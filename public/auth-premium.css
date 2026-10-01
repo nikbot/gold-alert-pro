@@ -2,3 +2,48 @@
 #authLoginBox,#authRegisterBox,#adminLoginBox{border-radius:28px!important;background:linear-gradient(145deg,rgba(20,28,44,.95),rgba(8,13,23,.95))!important;backdrop-filter:blur(18px);box-shadow:0 30px 90px #000a!important;border:1px solid #3a4862!important}
 .authForm input{height:48px;transition:.25s}.authForm input:focus{transform:translateY(-1px);border-color:#e7bd62!important;box-shadow:0 0 0 3px #e7bd6225}
 .authForm button{min-height:46px;transition:.2s}.authForm button:hover{transform:translateY(-2px)}
+
+
+/* =========================================================
+   Gold2 Pro V65 Premium Auth Experience
+   ========================================================= */
+#authGate.authOpen{background:
+ radial-gradient(circle at 15% 15%,rgba(217,173,85,.14),transparent 30%),
+ radial-gradient(circle at 85% 80%,rgba(74,126,255,.12),transparent 32%),
+ linear-gradient(135deg,#05070c 0%,#080d16 48%,#0b111d 100%);}
+#authGate .authBox{width:min(980px,calc(100vw - 28px));max-height:min(720px,calc(100dvh - 28px));padding:0;overflow:hidden;border:1px solid #26344a!important;border-radius:30px!important;background:#0a1019!important;display:grid;grid-template-columns:1.05fr .95fr;direction:ltr;box-shadow:0 40px 120px #000b!important}
+#authGate .authBox>*{direction:rtl}
+#authGate .authBox>div:first-child{position:absolute;right:22px;top:18px;z-index:5}
+#authGate .authBox>div:first-child button{background:#0c131e!important;border-color:#2a384d!important;border-radius:12px!important;color:#aeb9c8!important}
+#authGate .authBrand{grid-column:2;grid-row:1;padding:54px 44px 28px;text-align:right;background:linear-gradient(180deg,#101826,#0b111b);border-right:1px solid #1e2a3b;display:flex;flex-direction:column;justify-content:center}
+#authGate .authLogo{width:62px;height:62px;margin:0 0 16px;border-radius:19px;background:linear-gradient(145deg,#f4d98f,#a87825);box-shadow:0 18px 40px #d9ad5528;font-size:29px}
+#authGate .authBrand .small{display:inline-flex;align-self:flex-start;margin:0 0 10px!important;padding:6px 10px;border:1px solid #493b20;border-radius:999px;background:#17150f;color:#dfc777!important;font-size:9px!important}
+#authGate .authBrand h1{font-size:31px;letter-spacing:-.8px;margin:0;color:#f7f9fc}
+#authGate .authBrand p{font-size:11px;line-height:2.2;color:#8491a4;max-width:420px;margin:10px 0 20px}
+#authGate .authBrand:after{content:'● داده زنده   •   AI Copilot   •   هشدار هوشمند   •   مدیریت دارایی';font-size:9px;color:#718097;line-height:2;padding:11px 13px;border:1px solid #202d40;background:#0a1018;border-radius:13px}
+#authGate .authTabs{grid-column:1;grid-row:1;margin:0;padding:48px 42px 0;align-self:start;display:flex;gap:5px;background:#090f17}
+#authGate .authTabs button{flex:0 0 50%;min-height:43px;border-radius:12px!important;background:#101925!important;border-color:#253247!important;color:#8f9bae!important}
+#authGate .authTabs button.active{background:linear-gradient(135deg,#e6c774,#b8842d)!important;border-color:transparent!important;color:#17120a!important;box-shadow:0 10px 24px #d9ad5525}
+#authGate .authForm{grid-column:1;grid-row:1;align-self:end;padding:20px 42px 42px;gap:10px;background:#090f17}
+#authGate .authForm input{height:50px;border-radius:13px!important;background:#0d1520!important;border:1px solid #243247!important;color:#fff!important;padding:0 13px}
+#authGate .authForm input::placeholder{color:#657287}
+#authGate .authForm button{border-radius:13px!important}
+#authGate #authLoginForm{padding-top:78px}
+#authGate .authHint{grid-column:1;grid-row:1;align-self:end;margin:0 42px 12px;padding:8px 11px;background:transparent;border:0;color:#59677b;font-size:8px;line-height:1.8;text-align:center}
+#authGate .authError{grid-column:1;grid-row:1;align-self:end;margin:0 42px 88px;position:relative;z-index:2}
+#authGate #adminLoginModal{position:absolute!important;left:42px;bottom:18px;width:calc(50% - 84px);z-index:6;margin:0!important;background:#0a1019!important;border-color:#33445d!important}
+@media(max-width:760px){
+ #authGate .authBox{display:block;width:min(520px,calc(100vw - 20px));max-height:calc(100dvh - 20px);overflow:auto;border-radius:24px!important}
+ #authGate .authBrand{padding:48px 24px 20px;border-right:0;border-bottom:1px solid #1e2a3b;text-align:center}
+ #authGate .authLogo{margin:0 auto 12px}.authBrand .small{align-self:center!important}.authBrand h1{font-size:25px}.authBrand p{margin-left:auto;margin-right:auto}
+ #authGate .authTabs{padding:18px 20px 0}.authForm,#authGate #authLoginForm{padding:14px 20px 24px}.authForm{grid-column:auto;grid-row:auto}.authHint{margin:0 20px 18px!important}.authError{margin:0 20px 8px!important}.authTabs{grid-column:auto;grid-row:auto}
+ #authGate #adminLoginModal{position:relative!important;left:auto;bottom:auto;width:auto;margin:10px 20px!important}
+}
+
+/* V65 dashboard polish */
+.v65MarketState{margin-top:12px;background:linear-gradient(145deg,#0e1622,#0a1018);border:1px solid #202d40;border-radius:20px;padding:13px 14px}
+.v65StateHead{display:flex;justify-content:space-between;align-items:center;gap:10px}.v65StateHead span{display:block;color:#718096;font-size:8px;letter-spacing:.7px}.v65StateHead b{display:block;font-size:12px;margin-top:3px}.v65StateHead em{font-style:normal;font-size:8px;padding:6px 9px;border-radius:999px;background:#101a27;color:#91a0b4;border:1px solid #26354a}
+.v65StateGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-top:10px}.v65StateGrid>div{padding:9px 10px;border-radius:12px;background:#0a1018;border:1px solid #1a2738}.v65StateGrid span,.v65StateGrid small{display:block;color:#718096;font-size:7px}.v65StateGrid b{display:block;font-size:11px;margin:4px 0}.v65StateGrid small{font-size:7px;color:#58677c}
+.v65QuickActions{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin:12px 0}.v65QuickActions button{display:grid;grid-template-columns:auto 1fr;column-gap:8px;text-align:right;align-items:center;padding:11px 12px;background:#0d141f;border:1px solid #202c3e;border-radius:15px;color:#d9e0ea;cursor:pointer;transition:.2s}.v65QuickActions button:hover{transform:translateY(-2px);border-color:#765e2d;background:#111a27}.v65QuickActions span{grid-row:span 2;font-size:19px}.v65QuickActions b{font-size:9px}.v65QuickActions small{font-size:7px;color:#68778b;margin-top:2px}
+@media(max-width:900px){.v65StateGrid{grid-template-columns:repeat(2,1fr)}.v65QuickActions{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:480px){.v65QuickActions{grid-template-columns:1fr 1fr}.v65QuickActions button{padding:9px}.v65StateGrid{gap:5px}}
