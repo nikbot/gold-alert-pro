@@ -1,0 +1,4 @@
+/* Gold Alert Pro Premium Auth Layer */
+#authLoginBox,#authRegisterBox,#adminLoginBox{border-radius:28px!important;background:linear-gradient(145deg,rgba(20,28,44,.95),rgba(8,13,23,.95))!important;backdrop-filter:blur(18px);box-shadow:0 30px 90px #000a!important;border:1px solid #3a4862!important}
+.authForm input{height:48px;transition:.25s}.authForm input:focus{transform:translateY(-1px);border-color:#e7bd62!important;box-shadow:0 0 0 3px #e7bd6225}
+.authForm button{min-height:46px;transition:.2s}.authForm button:hover{transform:translateY(-2px)}
