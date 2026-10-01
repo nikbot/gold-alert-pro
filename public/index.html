@@ -329,11 +329,11 @@ body.authLocked .floatingMenuBtn,body.authLocked .menuBackdrop,body.authLocked .
       <button data-v62cat="market" type="button"><span class="v62Icon">↗</span><span><b>بازار</b><small>نمودار و قیمت</small></span></button>
       <button data-v62cat="ai" type="button"><span class="v62Icon">✦</span><span><b>AI Decision Room</b><small>تحلیل هوشمند</small></span></button>
       <button data-v62cat="alerts" type="button"><span class="v62Icon">◉</span><span><b>هشدارها</b><small>Timeline و Push</small></span></button>
-      <button data-v62cat="tools" type="button"><span class="v62Icon">▣</span><span><b>پرتفوی</b><small>دارایی و ابزار</small></span></button>
+      <button data-v62cat="portfolio" type="button"><span class="v62Icon">▣</span><span><b>پرتفوی</b><small>دارایی و عملکرد</small></span></button>
       <button data-v62cat="news" type="button"><span class="v62Icon">≡</span><span><b>اخبار</b><small>اخبار بازار</small></span></button>
       <button data-v62cat="account" type="button"><span class="v62Icon">●</span><span><b>حساب</b><small>تنظیمات</small></span></button>
-          <button data-v62cat="tools" type="button"><span class="v62Icon">🧮</span><span><b>ماشین‌حساب</b><small>محاسبه ارزش طلا</small></span></button>
-      <button data-v62cat="account" type="button"><span class="v62Icon">⚙</span><span><b>تنظیمات</b><small>حساب و تنظیمات</small></span></button>
+          <button data-v62cat="calculator" type="button"><span class="v62Icon">🧮</span><span><b>ماشین‌حساب</b><small>محاسبه ارزش طلا</small></span></button>
+      <button data-v62cat="settings" type="button"><span class="v62Icon">⚙</span><span><b>تنظیمات</b><small>حساب و تنظیمات</small></span></button>
 </nav>
     <button class="v62Collapse" id="v62Collapse" type="button">◀ جمع‌کردن منو</button>
     <div class="v62SideFoot">داده‌های بازار لحظه‌ای هستند. تحلیل‌ها سناریویی‌اند و تضمین نتیجه آینده نیستند.</div>
@@ -473,7 +473,7 @@ body.authLocked .floatingMenuBtn,body.authLocked .menuBackdrop,body.authLocked .
 </section>
 
 <section class="card categorySection category-ai"><div class="sectionTitle"><h3>📊 نظر ساده برای دارنده طلای فیزیکی</h3><span>بر پایه داده‌های فعلی</span></div><div id="holderView" class="note" style="margin-top:10px">در حال تحلیل...</div></section>
-<section class="card portfolioCard menuSection categorySection category-tools" id="portfolio">
+<section class="card portfolioCard menuSection categorySection category-tools category-portfolio" id="portfolio">
 <div class="sectionTitle"><h3>💼 مدیریت دارایی طلا</h3><span class="smartBadge">● محاسبه روی همین دستگاه</span></div>
 <div class="portfolioHero" style="margin-top:10px">
   <div><div class="label">ارزش تقریبی دارایی شما</div><div id="portfolioValue" class="portfolioValue">۰ ریال</div><div id="portfolioSummary" class="portfolioSub">هنوز دارایی ثبت نشده است.</div></div>
@@ -574,7 +574,7 @@ body.authLocked .floatingMenuBtn,body.authLocked .menuBackdrop,body.authLocked .
   <div id="newsAiResult" class="aiResult"></div>
 </section>
 
-<section class="card categorySection category-account" id="account">
+<section class="card categorySection category-account category-settings" id="account">
   <div class="sectionTitle"><h3>👤 حساب کاربری</h3><span>ورود با موبایل</span></div>
   <div class="small" style="margin-top:6px">نام کاربری شما همان شماره موبایل ثبت‌شده است.</div>
   <div class="accountGrid"><input id="accountUsername" inputmode="tel" maxlength="11" placeholder="شماره موبایل"><input id="accountPassword" autocomplete="current-password" type="password" minlength="6" placeholder="رمز عبور حداقل ۶ کاراکتر"></div>
@@ -650,7 +650,7 @@ body.authLocked .floatingMenuBtn,body.authLocked .menuBackdrop,body.authLocked .
 </main></div>
 </section>
 
-<section class="card categorySection category-tools" id="proToolsPanel"><div class="sectionTitle"><h3>🧰 مرکز ابزارهای حرفه‌ای سرمایه</h3><span>اطلاعات واقعی و ذخیره‌شده برای حساب شما</span></div><div class="professionalToolGrid"><div class="toolPanel"><h4>🎯 پروفایل سرمایه‌گذاری</h4><div class="accountGrid"><select id="investorRisk"><option value="low">ریسک کم</option><option value="medium" selected>ریسک متوسط</option><option value="high">ریسک بالا</option></select><select id="investorHorizon"><option value="short">کوتاه‌مدت</option><option value="medium" selected>میان‌مدت</option><option value="long">بلندمدت</option></select><input id="investorGoal" placeholder="هدف، مثلاً حفظ ارزش پول"><textarea id="investorNotes" placeholder="توضیحات شخصی" style="min-height:65px;grid-column:1/-1"></textarea></div><button class="secondary" onclick="saveInvestorSettings()">💾 ذخیره پروفایل</button></div><div class="toolPanel"><h4>🏦 محل نگهداری</h4><div class="accountGrid"><input id="storageName" placeholder="مثلاً صندوق امانات"><input id="storageNote" placeholder="یادداشت"></div><button class="secondary" onclick="addStorageLocation()">+ افزودن محل</button><div id="storageList" class="small"></div></div><div class="toolPanel"><h4>👨‍👩‍👧 سبد خانوادگی</h4><div class="accountGrid"><input id="householdName" placeholder="نام سبد"><input id="householdOwner" placeholder="مالک"></div><button class="secondary" onclick="addHouseholdPortfolio()">+ افزودن سبد</button><div id="householdList" class="small"></div></div><div class="toolPanel"><h4>🧮 شبیه‌ساز خرید پله‌ای</h4><div class="accountGrid"><input id="ladderCapital" type="number" placeholder="سرمایه ریال"><input id="ladderSteps" type="number" value="3" min="2" max="10" placeholder="تعداد پله"><input id="ladderStepPct" type="number" value="2" step="0.1" placeholder="فاصله هر پله ٪"></div><button class="secondary" onclick="runLadderSimulation()">محاسبه</button><div id="ladderResult" class="result"></div></div><div class="toolPanel"><h4>🧾 ثبت اطلاعات فاکتور</h4><input id="invoiceFile" type="file" accept="image/*,.pdf"><div class="small">فایل برای استخراج خودکار به سرویس OCR خارجی ارسال نمی‌شود. فعلاً اطلاعات فاکتور را دستی وارد کنید تا عدد ساختگی ایجاد نشود.</div><div class="accountGrid"><input id="invoiceWeight" type="number" step="0.001" placeholder="وزن گرم"><input id="invoicePurity" type="number" value="750" placeholder="عیار"><input id="invoiceAmount" type="number" placeholder="مبلغ ریال"><input id="invoiceDate" type="date"></div><button class="secondary" onclick="saveInvoiceRecord()">💾 ثبت فاکتور</button><div id="invoiceStatus" class="small"></div></div><div class="toolPanel"><h4>🛡️ امنیت حساب</h4><button class="secondary" onclick="logoutAndRelogin()">🚪 خروج از حساب</button><button class="secondary" onclick="changePasswordPrompt()">🔑 تغییر رمز</button><div class="small">برای امنیت، رمز ذخیره‌شده هرگز در پنل نمایش داده نمی‌شود.</div></div></div></section>
+<section class="card categorySection category-tools category-settings" id="proToolsPanel"><div class="sectionTitle"><h3>🧰 مرکز ابزارهای حرفه‌ای سرمایه</h3><span>اطلاعات واقعی و ذخیره‌شده برای حساب شما</span></div><div class="professionalToolGrid"><div class="toolPanel"><h4>🎯 پروفایل سرمایه‌گذاری</h4><div class="accountGrid"><select id="investorRisk"><option value="low">ریسک کم</option><option value="medium" selected>ریسک متوسط</option><option value="high">ریسک بالا</option></select><select id="investorHorizon"><option value="short">کوتاه‌مدت</option><option value="medium" selected>میان‌مدت</option><option value="long">بلندمدت</option></select><input id="investorGoal" placeholder="هدف، مثلاً حفظ ارزش پول"><textarea id="investorNotes" placeholder="توضیحات شخصی" style="min-height:65px;grid-column:1/-1"></textarea></div><button class="secondary" onclick="saveInvestorSettings()">💾 ذخیره پروفایل</button></div><div class="toolPanel"><h4>🏦 محل نگهداری</h4><div class="accountGrid"><input id="storageName" placeholder="مثلاً صندوق امانات"><input id="storageNote" placeholder="یادداشت"></div><button class="secondary" onclick="addStorageLocation()">+ افزودن محل</button><div id="storageList" class="small"></div></div><div class="toolPanel"><h4>👨‍👩‍👧 سبد خانوادگی</h4><div class="accountGrid"><input id="householdName" placeholder="نام سبد"><input id="householdOwner" placeholder="مالک"></div><button class="secondary" onclick="addHouseholdPortfolio()">+ افزودن سبد</button><div id="householdList" class="small"></div></div><div class="toolPanel"><h4>🧮 شبیه‌ساز خرید پله‌ای</h4><div class="accountGrid"><input id="ladderCapital" type="number" placeholder="سرمایه ریال"><input id="ladderSteps" type="number" value="3" min="2" max="10" placeholder="تعداد پله"><input id="ladderStepPct" type="number" value="2" step="0.1" placeholder="فاصله هر پله ٪"></div><button class="secondary" onclick="runLadderSimulation()">محاسبه</button><div id="ladderResult" class="result"></div></div><div class="toolPanel"><h4>🧾 ثبت اطلاعات فاکتور</h4><input id="invoiceFile" type="file" accept="image/*,.pdf"><div class="small">فایل برای استخراج خودکار به سرویس OCR خارجی ارسال نمی‌شود. فعلاً اطلاعات فاکتور را دستی وارد کنید تا عدد ساختگی ایجاد نشود.</div><div class="accountGrid"><input id="invoiceWeight" type="number" step="0.001" placeholder="وزن گرم"><input id="invoicePurity" type="number" value="750" placeholder="عیار"><input id="invoiceAmount" type="number" placeholder="مبلغ ریال"><input id="invoiceDate" type="date"></div><button class="secondary" onclick="saveInvoiceRecord()">💾 ثبت فاکتور</button><div id="invoiceStatus" class="small"></div></div><div class="toolPanel"><h4>🛡️ امنیت حساب</h4><button class="secondary" onclick="logoutAndRelogin()">🚪 خروج از حساب</button><button class="secondary" onclick="changePasswordPrompt()">🔑 تغییر رمز</button><div class="small">برای امنیت، رمز ذخیره‌شده هرگز در پنل نمایش داده نمی‌شود.</div></div></div></section>
 
 
 <section class="card categorySection category-market g59ProPanel" id="proLiveTerminal">
@@ -663,7 +663,7 @@ body.authLocked .floatingMenuBtn,body.authLocked .menuBackdrop,body.authLocked .
 <div id="g59Candles" class="g59Candles"><div class="chartEmpty">در حال جمع‌آوری تیک...</div></div>
 </section>
 
-<section class="card categorySection category-tools g59ProPanel" id="goldCalculator">
+<section class="card categorySection category-tools category-calculator g59ProPanel" id="goldCalculator">
 <div class="sectionTitle"><div><h3>🧮 محاسبه‌گر حرفه‌ای طلا</h3><span>خرید، فروش، اجرت و عیار</span></div></div>
 <div class="g59CalcGrid">
  <input id="g59Weight" type="number" step="0.001" placeholder="وزن (گرم)">
@@ -763,4 +763,5 @@ if('serviceWorker' in navigator){
 <script src="v67.js"></script>
 <script src="v68.js"></script>
 <script src="v69.js"></script>
+<script src="v71.js"></script>
 </body></html>

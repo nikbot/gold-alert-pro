@@ -230,7 +230,7 @@ document.addEventListener('DOMContentLoaded',()=>{loadTheme(); updateCommandCent
 
 // v22: clean professional side menu. The dashboard is the only category shown at first load.
 const categoryLabels={
- dashboard:'پیشخوان', market:'بازار و نمودار', ai:'هوش و تحلیل', alerts:'هشدارها', tools:'دارایی و ابزار', news:'اخبار بازار', sms:'سرویس SMS', account:'حساب و پشتیبان', decision:'اتاق تصمیم', calendar:'تقویم اقتصادی', admin:'پنل مدیریت'
+ dashboard:'پیشخوان', market:'بازار و نمودار', ai:'هوش و تحلیل', alerts:'هشدارها', tools:'دارایی و ابزار', portfolio:'پرتفوی', calculator:'ماشین‌حساب', settings:'تنظیمات', news:'اخبار بازار', sms:'سرویس SMS', account:'حساب و پشتیبان', decision:'اتاق تصمیم', intelligence:'مرکز هوش طلا', calendar:'تقویم اقتصادی', admin:'پنل مدیریت'
 };
 const PUBLIC_CATEGORIES=new Set(['dashboard','account']);
 let pendingProtectedCategory='';

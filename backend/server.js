@@ -4,7 +4,7 @@ import path from "node:path";
 import crypto from "node:crypto";
 import { spawn } from "node:child_process";
 import express from "express";
-import { getIran18, getIran18Sources, getGlobalGold, getCoins, getDollar, getNews, getHistory } from "./provider.js";
+import { getIran18, getIran18Sources, getGlobalGold, getCoins, getDollar, getNews, getHistory, getBitcoin, getForgodCurrencies } from "./provider.js";
 import { runBacktest } from "./backtest.js";
 import { analyze } from "./indicators.js";
 import { initAlerts, sendTelegram, sendWebPush, sendWebPushToDevice, addSubscription, removeSubscription, removeDeviceSubscriptions, getPublicVapidKey, subscriptionCount } from "./alerts.js";
@@ -15,7 +15,7 @@ import { adminLogin, requireAdminToken, requireAdminSession, adminLogout, listUs
 import { analyzeGold } from "./ai/manager.js";
 import { getTheme, setTheme } from "./theme.js";
 
-const APP_VERSION = "64.0.0"
+const APP_VERSION = "70.0.0"
 const USER_SESSION_HOURS = Math.max(1, Number(process.env.USER_SESSION_HOURS || 72));
 const LOGIN_WINDOW_MS = 10 * 60_000;
 const LOGIN_MAX_ATTEMPTS = 12;
@@ -113,7 +113,7 @@ app.use(express.json({ limit: "64kb" }));
 app.use(express.static("public", { maxAge: "1h", setHeaders: (res, filePath) => { if (/\/(app|admin|sw)\.js$/.test(filePath) || /\/(index|admin)\.html$/.test(filePath) || /\/admin\.css$/.test(filePath)) res.setHeader("Cache-Control", "no-store"); } }));
 
 const state = {
-  iran: null, global: null, dollar: null, coins: null, marketPressure: null, analysis: null, prices: [], ticks: [], events: [], news: [], lastSignal: "WAIT", lastPressureAlert: "NEUTRAL",
+  iran: null, global: null, dollar: null, coins: null, bitcoin: null, forgodCurrencies: null, marketPressure: null, analysis: null, prices: [], ticks: [], events: [], news: [], lastSignal: "WAIT", lastPressureAlert: "NEUTRAL",
   updatedAt: null, error: null, startedAt: new Date().toISOString(), dataReady: false,
   livePush: { lastAt: 0, lastPrice: 0 },
   engineStatus: { status: "STARTING", label: "در حال راه‌اندازی", source: null, sourceAgeMs: null, reason: null },
@@ -132,7 +132,9 @@ function publicStatePayload(){
     sourceDiagnostics: state.sourceDiagnostics,
     anomaly: state.anomaly || null,
     engineStatus: state.engineStatus,
-    units: { gold18: "IRR_PER_GRAM", dollar: "IRR_PER_USD", coins: "IRR" }
+    units: { gold18: "IRR_PER_GRAM", dollar: "IRR_PER_USD", coins: "IRR", bitcoin: "USD" },
+    bitcoin: state.bitcoin,
+    forgod: { enabled: Boolean(process.env.FORGOD_API_KEY), provider: "Forgod", priority: "first", fallback: "existing-providers" }
   };
 }
 function broadcastMarketState(force = false){
@@ -548,8 +550,8 @@ async function tick() {
   if (state.busy) return;
   state.busy = true;
   try {
-    const providerNames = ["Iran18", "GlobalGold", "Dollar", "Coins"];
-    const results = await Promise.allSettled([getIran18(), getGlobalGold(), getDollar(), getCoins()]);
+    const providerNames = ["Iran18", "GlobalGold", "Dollar", "Coins", "Bitcoin", "ForgodAll"];
+    const results = await Promise.allSettled([getIran18(), getGlobalGold(), getDollar(), getCoins(), getBitcoin(), getForgodCurrencies()]);
     for (let i = 0; i < results.length; i++) {
       if (results[i].status === "rejected") console.warn(`Provider ${providerNames[i]} failed:`, results[i].reason?.message || "unknown error");
     }
@@ -557,6 +559,8 @@ async function tick() {
     const global = results[1].status === "fulfilled" ? results[1].value : null;
     const dollar = results[2].status === "fulfilled" ? results[2].value : null;
     const coins = results[3].status === "fulfilled" ? results[3].value : null;
+    const bitcoin = results[4].status === "fulfilled" ? results[4].value : null;
+    const forgodCurrencies = results[5].status === "fulfilled" ? results[5].value : null;
     if (!iran) {
       console.warn("Iran18 unavailable, keeping previous state");
       state.engineStatus = { status: "OFFLINE", label: "منبع قیمت در دسترس نیست", source: null, sourceAgeMs: null, reason: results[0].reason?.message || "Iran gold provider unavailable" };
@@ -572,7 +576,7 @@ async function tick() {
       broadcastMarketState(true);
       return;
     }
-    state.iran = iran; state.global = global; state.dollar = dollar; state.coins = coins;
+    state.iran = iran; state.global = global; state.dollar = dollar; state.coins = coins; state.bitcoin = bitcoin; state.forgodCurrencies = forgodCurrencies;
     if (!state.sourceDiagnostics || Date.now() - new Date(state.sourceDiagnostics.checkedAt || 0).getTime() > 60000) {
       try { state.sourceDiagnostics = await getIran18Sources(false); } catch (e) { state.sourceDiagnostics = { checkedAt:new Date().toISOString(), primary:iran.source || null, sources:[{name:iran.source||"active",priceIRR:iran.priceIRR,ok:true}], anomaly:false, error:e.message }; }
     }
@@ -585,7 +589,7 @@ async function tick() {
     const sourceStale = sourceAge > staleThresholdMs || transportAge > staleThresholdMs;
     state.anomaly = { detected: jumpPct > 5 || Boolean(state.sourceDiagnostics?.anomaly), jumpPct, thresholdPct:5, sourceSpreadPct:state.sourceDiagnostics?.spreadPct ?? null, checkedAt:new Date().toISOString() };
     state.engineStatus = { status: sourceStale ? "STALE" : "LIVE", label: sourceStale ? "قیمت منبع قدیمی است" : "LIVE • قیمت جدید", source: iran.source || null, sourceAgeMs: sourceAge, transportAgeMs: transportAge, reason: sourceStale ? `آخرین داده بیش از ${Math.round(staleThresholdMs/1000)} ثانیه قبل است` : null };
-    pushPrice(iran.priceIRR); pushTick({iran,global,dollar,coins});
+    pushPrice(iran.priceIRR); pushTick({iran,global,dollar,coins,bitcoin});
     state.marketPressure = calcMarketPressure();
     await emitPressureAlert(state.marketPressure, iran.priceIRR);
     state.analysis = analyze(state.prices); state.dataReady = state.prices.length >= 30;
@@ -595,7 +599,7 @@ async function tick() {
     await safeAlert(() => checkTargets(iran.priceIRR));
     await safeAlert(() => checkPersonalPriceAlerts(iran.priceIRR));
     await safeAlert(() => checkSmartAlerts());
-    await safeAlert(() => sendPremiumPriceSMS({ iran, global, dollar, coins, analysis: state.analysis }));
+    await safeAlert(() => sendPremiumPriceSMS({ iran, global, dollar, coins, bitcoin, analysis: state.analysis }));
     const a = state.analysis;
     if (a && ["BUY", "SELL"].includes(a.signal) && a.score >= minScore && a.signal !== state.lastSignal) await emitSignal(a);
     else if (!a || !["BUY", "SELL"].includes(a.signal)) { if (state.lastSignal !== "WAIT") { state.lastSignal = "WAIT"; scheduleSave(); } }
