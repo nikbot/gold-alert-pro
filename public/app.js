@@ -52,7 +52,7 @@ async function forgotPasswordPrompt(){
  }catch(e){alert('خطا در ارتباط با سرور');}
 }
 
-function logoutAndRelogin(){ logoutAccount(); setTimeout(()=>showAuthMode('login'),120); }
+function logoutAndRelogin(){ logoutAccount(); setTimeout(()=>{showAuthGate(true);showAuthMode('login');},120); }
 function updateCommandCenter(){
  const set=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v};
  const p=window.__lastPortfolioSnapshot||null, a=latest?.analysis||{}, r=latest?.portfolioRisk||null;
@@ -232,7 +232,14 @@ document.addEventListener('DOMContentLoaded',()=>{loadTheme(); updateCommandCent
 const categoryLabels={
  dashboard:'پیشخوان', market:'بازار و نمودار', ai:'هوش و تحلیل', alerts:'هشدارها', tools:'دارایی و ابزار', news:'اخبار بازار', sms:'سرویس SMS', account:'حساب و پشتیبان', decision:'اتاق تصمیم', calendar:'تقویم اقتصادی', admin:'پنل مدیریت'
 };
+const PUBLIC_CATEGORIES=new Set(['dashboard','account']);
+let pendingProtectedCategory='';
 function applyCategory(category,scroll=true){
+ if(category!=='dashboard' && category!=='admin' && !PUBLIC_CATEGORIES.has(category) && !accountToken){
+   pendingProtectedCategory=category;
+   showAuthGate(true,'برای استفاده از این بخش ابتدا وارد حساب شوید.');
+   return false;
+ }
  document.querySelectorAll('.categorySection').forEach(el=>{el.classList.remove('categoryVisible');el.style.display='none';});
  document.body.classList.toggle('categoryView',category!=='dashboard');
  document.querySelectorAll('.menuItem').forEach(b=>b.classList.toggle('active',b.dataset.category===category));
@@ -240,14 +247,16 @@ function applyCategory(category,scroll=true){
  const title=document.getElementById('categoryTitle');
  const desc=document.getElementById('categoryDesc');
  if(title) title.textContent=categoryLabels[category]||'بخش';
- if(desc) desc.textContent=category==='dashboard'?'قیمت زنده، وضعیت امروز و سیگنال کلی بازار': 'فقط ابزارهای مرتبط با '+(categoryLabels[category]||'این بخش')+' نمایش داده می‌شوند.';
+ if(desc) desc.textContent=category==='dashboard'?'قیمت زنده، وضعیت امروز و سیگنال کلی بازار':'فقط ابزارهای مرتبط با '+(categoryLabels[category]||'این بخش')+' نمایش داده می‌شوند.';
  if(scroll){
    const first=document.querySelector('.category-'+category);
    if(first) setTimeout(()=>first.scrollIntoView({behavior:'smooth',block:'start'}),40);
    else window.scrollTo({top:0,behavior:'smooth'});
  }
+ aiCopilotPage=category;
+ if(typeof refreshAICopilot==='function') refreshAICopilot(false,category);
+ return true;
 }
- aiCopilotPage=category; if(typeof refreshAICopilot==='function') refreshAICopilot(false,category);
 function closeSideMenu(){
  const menu=document.getElementById('sideMenu'),back=document.getElementById('menuBackdrop'),btn=document.getElementById('floatingMenuBtn');
  if(menu)menu.classList.remove('open'); if(back)back.classList.remove('open');
@@ -398,8 +407,93 @@ async function loadPortfolioReport(){
 }
 function downloadBackup(){window.location.href='/api/export?deviceId='+encodeURIComponent(deviceId);}
 async function runNewsAI(){const box=document.getElementById('newsAiResult');if(!box)return;box.style.display='block';box.textContent='⏳ در حال خلاصه‌سازی اخبار...';try{const r=await fetch('/api/news-ai',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({deviceId,accountToken})});const d=await r.json();if(!r.ok)throw new Error(d.error||'خطا');box.textContent=d.text||'پاسخی دریافت نشد.';}catch(e){box.textContent='⚠️ '+e.message;}}
-function showAuthMode(mode){const login=mode==='login';document.getElementById('authLoginForm').style.display=login?'grid':'none';document.getElementById('authRegisterForm').style.display=login?'none':'grid';document.getElementById('authLoginTab').classList.toggle('active',login);document.getElementById('authRegisterTab').classList.toggle('active',!login);document.getElementById('authError').textContent='';}
-function showAuthGate(show=true){const g=document.getElementById('authGate');if(g)g.classList.toggle('hidden',!show);document.body.classList.toggle('authLocked',show);if(show)showAuthMode('login');}
+function showAuthMode(mode){
+ const login=mode==='login';
+ const lf=document.getElementById('authLoginForm'),rf=document.getElementById('authRegisterForm');
+ if(lf)lf.style.display=login?'grid':'none';
+ if(rf)rf.style.display=login?'none':'grid';
+ document.getElementById('authLoginTab')?.classList.toggle('active',login);
+ document.getElementById('authRegisterTab')?.classList.toggle('active',!login);
+ const e=document.getElementById('authError');if(e)e.textContent='';
+}
+function setAuthError(message=''){const e=document.getElementById('authError');if(e)e.textContent=message||'';}
+function showAuthGate(show=true,message=''){
+ const g=document.getElementById('authGate');
+ if(!g)return;
+ g.classList.toggle('hidden',!show);g.classList.toggle('authOpen',!!show);
+ g.setAttribute('aria-hidden',show?'false':'true');
+ document.body.classList.toggle('authLocked',!!show);
+ if(show){showAuthMode('login');setAuthError(message);setTimeout(()=>document.getElementById('authMobile')?.focus(),50);}
+}
+function closeAuthGate(){showAuthGate(false);pendingProtectedCategory='';}
+function accountHeaders(){return accountToken?{'x-account-token':accountToken}:{};}
+const ACCOUNT_TOKEN_KEY_V26='gold-alert-pro-account-token-v28';
+function persistAccountToken(token){accountToken=String(token||'');if(accountToken)localStorage.setItem(ACCOUNT_TOKEN_KEY_V26,accountToken);else localStorage.removeItem(ACCOUNT_TOKEN_KEY_V26);}
+function setAccountStatus(text){const e=document.getElementById('accountStatus');if(e)e.textContent='وضعیت حساب: '+text;const q=document.getElementById('quickAccountStatus');if(q)q.textContent=accountToken?'🟢 وارد شده':'🔒 نیاز به ورود';}
+async function gateLogin(){
+ const username=String(document.getElementById('authMobile')?.value||'').trim();
+ const password=String(document.getElementById('authPass')?.value||'');
+ if(!username||!password){setAuthError('شماره موبایل و رمز عبور را وارد کنید.');return;}
+ const btn=document.querySelector('#authLoginForm button[onclick="gateLogin()"]');
+ if(btn){btn.disabled=true;btn.textContent='⏳ در حال ورود...';}
+ try{
+  const r=await fetch('/api/account/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username,password,deviceId})});
+  const d=await r.json().catch(()=>({}));
+  if(!r.ok)throw new Error(d.error||'ورود ناموفق بود.');
+  persistAccountToken(d.token);
+  setAccountStatus('🟢 '+(d.username||username));
+  const au=document.getElementById('accountUsername');if(au)au.value=d.username||username;
+  const ap=document.getElementById('accountPassword');if(ap)ap.value='';
+  closeAdminLoginGate();
+  await loadTickets();
+  await loadUserSettings();
+  toast('✅ ورود با موفقیت انجام شد.');
+  const target=pendingProtectedCategory||'dashboard';pendingProtectedCategory='';showAuthGate(false);applyCategory(target,true);
+ }catch(e){setAuthError('⚠️ '+e.message);}
+ finally{if(btn){btn.disabled=false;btn.textContent='🔐 ورود به حساب';}}
+}
+async function gateRegister(){
+ const phone=String(document.getElementById('regMobile')?.value||'').trim();
+ const password=String(document.getElementById('regPass')?.value||'');
+ const password2=String(document.getElementById('regPass2')?.value||'');
+ if(!/^09\d{9}$/.test(phone)){setAuthError('شماره موبایل باید با 09 شروع شود و 11 رقم باشد.');return;}
+ if(password.length<6){setAuthError('رمز عبور حداقل ۶ کاراکتر باشد.');return;}
+ if(password!==password2){setAuthError('تکرار رمز عبور با رمز اصلی یکسان نیست.');return;}
+ try{
+  const r=await fetch('/api/account/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone,password,nationalId:document.getElementById('regNationalId')?.value||'',recoveryQuestion:document.getElementById('regRecoveryQuestion')?.value||'',recoveryAnswer:document.getElementById('regRecoveryAnswer')?.value||'',deviceId})});
+  const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||'ثبت‌نام ناموفق بود.');
+  persistAccountToken(d.token);setAccountStatus('🟢 '+(d.username||phone));toast('✅ حساب شما ساخته شد.');
+  const target=pendingProtectedCategory||'dashboard';pendingProtectedCategory='';showAuthGate(false);applyCategory(target,true);
+ }catch(e){setAuthError('⚠️ '+e.message);}
+}
+async function loginAccount(){
+ const u=String(document.getElementById('accountUsername')?.value||'').trim();
+ const p=String(document.getElementById('accountPassword')?.value||'');
+ if(!u||!p){showAuthGate(true,'شماره موبایل و رمز عبور را وارد کنید.');return;}
+ const target=pendingProtectedCategory;
+ document.getElementById('authMobile').value=u;document.getElementById('authPass').value=p;
+ if(target){} await gateLogin();
+}
+function registerAccount(){showAuthGate(true);showAuthMode('register');}
+async function syncAccount(){
+ if(!accountToken){showAuthGate(true,'برای همگام‌سازی ابتدا وارد شوید.');return;}
+ try{
+  const r=await fetch('/api/account/sync',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:accountToken,deviceId})});
+  const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||'همگام‌سازی ناموفق بود.');toast('☁️ حساب با موفقیت همگام شد.');
+ }catch(e){toast('⚠️ '+e.message,'error');}
+}
+async function logoutAccount(){
+ const token=accountToken;persistAccountToken('');
+ try{await fetch('/api/account/logout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token})});}catch{}
+ setAccountStatus('بدون ورود');
+}
+async function saveProfileV25(){
+ try{
+  const body={deviceId,name:document.getElementById('profileName')?.value||'',city:document.getElementById('profileCity')?.value||'',phone:document.getElementById('profilePhone')?.value||''};
+  const r=await fetch('/api/profile',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const d=await r.json();if(!r.ok)throw new Error(d.error||'ذخیره ناموفق');
+  alert('✅ مشخصات ذخیره شد.');
+ }catch(e){alert('⚠️ '+e.message);}
+}
 function showAdminLoginGate(){
  const m=document.getElementById('adminLoginModal');
  if(m){m.style.display='block';}
@@ -554,7 +648,13 @@ Object.assign(categoryLabels,{decision:'اتاق تصمیم',calendar:'تقوی�
 const oldApplyCategory=applyCategory;
 applyCategory=function(category,scroll=true){ oldApplyCategory(category,scroll); };
 window.askGoldAI=askGoldAI;window.runProfessionalAI=runProfessionalAI;window.loadUserSettings=loadUserSettings;window.saveInvestorSettings=saveInvestorSettings;window.addStorageLocation=addStorageLocation;window.addHouseholdPortfolio=addHouseholdPortfolio;window.runLadderSimulation=runLadderSimulation;window.saveInvoiceRecord=saveInvoiceRecord;window.changePasswordPrompt=changePasswordPrompt;window.adminLoadOverview=adminLoadOverview;window.adminLoadBusinessDashboard=adminLoadBusinessDashboard;window.adminCheckUpdate=adminCheckUpdate;window.adminLogin=adminLogin;window.adminCreateUser=adminCreateUser;window.adminLoadUsers=adminLoadUsers;window.adminSaveUser=adminSaveUser;window.adminResetPassword=adminResetPassword;window.adminDeleteUser=adminDeleteUser;window.adminLoadCalendar=adminLoadCalendar;window.adminSaveCalendar=adminSaveCalendar;window.adminLogout=adminLogout;window.forgotPasswordPrompt=forgotPasswordPrompt;window.showAuthMode=showAuthMode;window.gateLogin=gateLogin;window.gateRegister=gateRegister;window.loadTickets=loadTickets;window.createTicket=createTicket;window.replyTicket=replyTicket;window.adminLoadTickets=adminLoadTickets;window.adminReplyTicket=adminReplyTicket;window.adminSetTicketStatus=adminSetTicketStatus;window.adminBroadcast=adminBroadcast;window.adminAddPayment=adminAddPayment;window.adminLoadAudit=adminLoadAudit;window.adminDownloadBackup=adminDownloadBackup;
-async function restoreAccountSession(){if(!accountToken){showAuthGate(true);return}try{const r=await fetch('/api/account/me',{headers:accountHeaders(),cache:'no-store'});if(!r.ok)throw new Error('invalid');showAuthGate(false);setAccountStatus('🟢 وارد حساب: '+(await r.json()).user.username);await loadTickets();await loadUserSettings();}catch{accountToken='';localStorage.removeItem(ACCOUNT_TOKEN_KEY_V26);showAuthGate(true);}}
+async function restoreAccountSession(){
+ if(!accountToken){showAuthGate(false);setAccountStatus('بدون ورود');return;}
+ try{
+  const r=await fetch('/api/account/me',{headers:accountHeaders(),cache:'no-store'});if(!r.ok)throw new Error('invalid');
+  const d=await r.json();showAuthGate(false);setAccountStatus('🟢 '+(d.user?.username||'وارد شده'));await loadTickets();await loadUserSettings();
+ }catch{persistAccountToken('');setAccountStatus('بدون ورود');showAuthGate(false);}
+}
 setInterval(loadMarketStructure,10000);setInterval(loadEconomicCalendar,180000);loadMarketStructure();loadEconomicCalendar();restoreAdminSession();restoreAccountSession();if(localStorage.getItem('gold-alert-pro-admin-logged')==='1'&&adminSession){showAdminMenu(true);}
 
 // v35: real in-app notification center + unread badge
