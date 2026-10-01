@@ -227,6 +227,8 @@ body.authLocked .floatingMenuBtn,body.authLocked .menuBackdrop,body.authLocked .
 </style>
 </style>
 <link rel="stylesheet" href="/auth-premium.css">
+<link rel="stylesheet" href="v66.css">
+<link rel="stylesheet" href="v67.css">
 </head>
 <body class="v62Terminal">
 <div id="updateBanner" style="display:none;position:sticky;top:0;z-index:900;background:#17140d;border-bottom:1px solid #4a3a19;padding:10px 14px;text-align:center">
@@ -369,9 +371,25 @@ body.authLocked .floatingMenuBtn,body.authLocked .menuBackdrop,body.authLocked .
     <div><span>کیفیت داده</span><b id="v65Quality">—</b><small id="v65QualityMeta">—</small></div>
   </div>
 </section>
+<section class="v66IntelligenceGrid">
+  <article class="v66DecisionCard">
+    <div class="v66Head"><div><span>DECISION ROOM</span><h3>اتاق هوشمند بازار</h3></div><em id="v66DecisionStatus">LIVE</em></div>
+    <div class="v66DecisionMain"><div class="v66Bias" id="v66Bias">در حال تحلیل</div><p id="v66DecisionText">داده‌های زنده در حال بررسی هستند.</p></div>
+    <div class="v66ScenarioGrid">
+      <div><span>سناریوی صعودی</span><b id="v66Bullish">—</b><small>بر پایه ساختار اخیر</small></div>
+      <div><span>سناریوی نزولی</span><b id="v66Bearish">—</b><small>بر پایه کف اخیر</small></div>
+      <div><span>حمایت کلیدی</span><b id="v66Support">—</b><small>کمینه بازه</small></div>
+      <div><span>مقاومت کلیدی</span><b id="v66Resistance">—</b><small>بیشینه بازه</small></div>
+    </div>
+  </article>
+  <article class="v66HeatmapCard">
+    <div class="v66Head"><div><span>MARKET HEATMAP</span><h3>نبض بازار</h3></div><small id="v66HeatmapTime">—</small></div>
+    <div class="v66Heatmap" id="v66Heatmap"><div class="v66HeatEmpty">در حال دریافت بازار...</div></div>
+  </article>
+</section>
 <section class="v62ChartPanel">
-          <div class="v62PanelHead"><div><h3>LIVE GOLD CHART</h3><small>نمودار زنده • حمایت • مقاومت • سیگنال</small></div><div class="v62ChartTools"><button class="active" type="button" onclick="v62ChartRange(this,60)">1H</button><button type="button" onclick="v62ChartRange(this,120)">4H</button><button type="button" onclick="v62ChartRange(this,240)">1D</button><button type="button" onclick="v62ChartRange(this,480)">1W</button><button type="button" data-v62-mode="area" class="active" onclick="v62ChartMode('area')">AREA</button><button type="button" data-v62-mode="line" onclick="v62ChartMode('line')">LINE</button><button type="button" class="active" onclick="v62ToggleLevels(this)">سطوح</button></div></div>
-          <div class="v62ChartViewport"><div class="goldChart" id="v62GoldChart"><div class="chartWrap"><div class="chartEmpty">در حال دریافت نمودار...</div></div></div></div>
+          <div class="v62PanelHead"><div><h3>LIVE GOLD CHART</h3><small>نمودار زنده • حمایت • مقاومت • سیگنال</small></div><div class="v62ChartTools"><button type="button" class="v67Tf active" data-tf="1m">1m</button><button type="button" class="v67Tf" data-tf="5m">5m</button><button type="button" class="v67Tf" data-tf="15m">15m</button><button type="button" class="v67Tf" data-tf="1h">1H</button><button type="button" class="v67Tf" data-tf="4h">4H</button><button type="button" class="v67Tf" data-tf="1d">1D</button><button type="button" class="v67Tf" data-tf="7d">7D</button><span class="v67Sep"></span><button type="button" class="v67Zoom" data-zoom="60">50</button><button type="button" class="v67Zoom active" data-zoom="120">100</button><button type="button" class="v67Zoom" data-zoom="180">180</button><button type="button" class="v67Indicator active" data-ind="ema">EMA20</button><button type="button" class="v67Indicator" data-ind="sma">SMA50</button><button type="button" class="v67Indicator active" data-ind="alerts">هشدار</button></div></div>
+          <div class="v62ChartViewport v67ChartViewport"><div class="goldChart" id="v62GoldChart"><div class="chartWrap"><div class="chartEmpty">در حال دریافت نمودار...</div></div></div></div><div class="v67IndicatorBar"><div><span>RSI(14)</span><b id="v67Rsi">—</b><small id="v67RsiState">در انتظار داده</small></div><div><span>MACD</span><b id="v67Macd">—</b><small id="v67MacdState">در انتظار داده</small></div><div><span>EMA20</span><b id="v67Ema">—</b><small>میانگین نمایی</small></div><div><span>SMA50</span><b id="v67Sma">—</b><small>میانگین ساده</small></div></div>
         </section>
       </div>
       <aside class="v62Copilot" id="v62Copilot">
@@ -702,4 +720,5 @@ if('serviceWorker' in navigator){
  });
 }
 </script>
+<script src="v67.js"></script>
 </body></html>

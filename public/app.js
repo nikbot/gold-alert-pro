@@ -802,7 +802,7 @@ window.forgotPasswordPrompt = forgotPasswordPrompt;
 window.adminLogin = adminLogin;
 
 /* =========================================================
-   Gold2 Pro V65 Market Terminal
+   Gold2 Pro V66 Intelligence Terminal
    ========================================================= */
 (function initV62Terminal(){
   const $=id=>document.getElementById(id);
@@ -897,4 +897,59 @@ window.adminLogin = adminLogin;
   const oldLoad=window.load;
   // load is declared in the page scope; wrap through an interval to avoid changing the stable V61 engine.
   setInterval(()=>{try{if(typeof latest!=='undefined'&&latest){updatePulse(latest);renderCopilotFromDom();renderTimeline();}}catch{}},1500);
+})();
+
+
+/* =========================================================
+   Gold2 Pro V66 Intelligence Layer
+   Uses the existing live state only; no new API/key is introduced.
+   ========================================================= */
+(function initV66Intelligence(){
+  const $=id=>document.getElementById(id);
+  const money=v=>{try{return moneyIRR(v)}catch{return Number(v||0).toLocaleString('fa-IR')}};
+  const num=v=>Number(v||0);
+  const pct=(a,b)=>b?((a/b-1)*100):0;
+  const fmtPct=v=>(v>=0?'▲ +':'▼ ')+Math.abs(v).toFixed(2).replace('.', '٫')+'٪';
+  const set=(id,v)=>{const e=$(id);if(e)e.textContent=v??'—'};
+  function marketItems(s){
+    const gold=num(s?.iran?.priceIRR), dollar=num(s?.dollar?.priceIRR), xau=num(s?.global?.xauUsd);
+    const gram=num(s?.coins?.gram), emami=num(s?.coins?.emami);
+    const prev=window.__v66Prev||{};
+    return [
+      ['طلای ۱۸K',gold,money(gold),pct(gold,prev.gold)],
+      ['دلار آزاد',dollar,money(dollar),pct(dollar,prev.dollar)],
+      ['اونس جهانی',xau,xau?'$'+xau.toLocaleString('en-US',{maximumFractionDigits:2}):'—',pct(xau,prev.xau)],
+      ['گرمی',gram,money(gram),pct(gram,prev.gram)],
+      ['سکه امامی',emami,money(emami),pct(emami,prev.emami)]
+    ];
+  }
+  function renderHeatmap(s){
+    const box=$('v66Heatmap'); if(!box)return;
+    const rows=marketItems(s);
+    box.innerHTML=rows.map(([name,value,label,d])=>{
+      const cls=d>0.08?'up':d<-0.08?'down':'flat';
+      return `<div class="v66Heat ${cls}"><div class="v66HeatTop"><span>${esc(name)}</span><b>${esc(label)}</b></div><div class="v66HeatPct">${value?fmtPct(d):'—'}</div><small>${value?'حرکت نسبت به داده قبلی':'داده در دسترس نیست'}</small></div>`;
+    }).join('');
+    set('v66HeatmapTime',s?.updatedAt?new Date(s.updatedAt).toLocaleTimeString('fa-IR'):'—');
+    window.__v66Prev={gold:num(s?.iran?.priceIRR),dollar:num(s?.dollar?.priceIRR),xau:num(s?.global?.xauUsd),gram:num(s?.coins?.gram),emami:num(s?.coins?.emami)};
+  }
+  function renderDecision(s){
+    const raw=(s?.prices||[]).map(Number).filter(Number.isFinite).slice(-120);
+    if(raw.length<3){set('v66Bias','در حال تحلیل');set('v66DecisionText','برای تحلیل ساختار بازار، داده بیشتری لازم است.');return;}
+    const first=raw[0],last=raw.at(-1),mid=raw[Math.floor(raw.length/2)];
+    const move=pct(last,first), short=pct(last,mid), high=Math.max(...raw), low=Math.min(...raw);
+    const momentum=(short*100);
+    let bias='خنثی';
+    if(move>0.35 && short>0.12)bias='سوگیری صعودی';
+    else if(move<-0.35 && short<-0.12)bias='سوگیری نزولی';
+    const es=s?.engineStatus?.status||'';
+    set('v66Bias',bias);set('v66Support',money(low));set('v66Resistance',money(high));
+    set('v66Bullish',money(last*(1+Math.max(0.003,Math.abs(move)/100))));
+    set('v66Bearish',money(last*(1-Math.max(0.003,Math.abs(move)/100))));
+    set('v66DecisionStatus',es==='LIVE'?'LIVE':es==='STALE'?'DELAYED':'OFFLINE');
+    const direction=move>=0?'حرکت کلی بازه مثبت':'حرکت کلی بازه منفی';
+    set('v66DecisionText',`${direction} است؛ تغییر بازه ${move.toFixed(2)}٪ و حرکت کوتاه‌تر ${momentum.toFixed(2)}٪ ثبت شده. سطوح بالا و پایین صرفاً از داده اخیر استخراج شده‌اند.`);
+  }
+  function tick(){try{if(typeof latest==='undefined'||!latest)return;renderHeatmap(latest);renderDecision(latest)}catch{}}
+  setTimeout(tick,1200);setInterval(tick,2000);
 })();
