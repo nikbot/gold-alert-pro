@@ -229,6 +229,7 @@ body.authLocked .floatingMenuBtn,body.authLocked .menuBackdrop,body.authLocked .
 <link rel="stylesheet" href="/auth-premium.css">
 <link rel="stylesheet" href="v66.css">
 <link rel="stylesheet" href="v67.css">
+<link rel="stylesheet" href="v68.css">
 </head>
 <body class="v62Terminal">
 <div id="updateBanner" style="display:none;position:sticky;top:0;z-index:900;background:#17140d;border-bottom:1px solid #4a3a19;padding:10px 14px;text-align:center">
@@ -704,8 +705,47 @@ body.authLocked .floatingMenuBtn,body.authLocked .menuBackdrop,body.authLocked .
 <div class="giRoadmap"><b>ماژول‌های آماده برای توسعه بعدی:</b><span>Heatmap</span><span>Correlation Matrix</span><span>Backtest Builder</span><span>Signal Explainability</span><span>Invoice OCR</span><span>API Keys</span><span>Advanced Alerts</span><span>Gamification</span></div>
 </section>
 
+
+<section class="v69Intelligence card categorySection" id="v69Intelligence">
+  <div class="v69Header">
+    <div><div class="v69Eyebrow">AI TRADING INTELLIGENCE</div><h2>🧠 اتاق تصمیم‌گیری هوشمند V69</h2><p>تحلیل ترکیبی روند، مومنتوم، RSI، MACD، EMA و حمایت/مقاومت بر اساس داده‌های زنده سامانه.</p></div>
+    <div class="v69HeaderActions"><span id="v69Live" class="v69Live">● آماده</span><button id="v69Refresh" class="secondary">↻ تحلیل مجدد</button></div>
+  </div>
+  <div class="v69Regime" id="v69Regime">
+    <div class="v69RegimeMain"><span>وضعیت بازار</span><strong id="v69Bias">—</strong><small id="v69Reason">در انتظار داده</small></div>
+    <div class="v69Metric"><span>اعتماد تحلیلی</span><b id="v69Confidence">—</b></div>
+    <div class="v69Metric"><span>قدرت روند</span><b id="v69Strength">—</b></div>
+    <div class="v69Metric"><span>مومنتوم</span><b id="v69Momentum">—</b></div>
+    <div class="v69Metric"><span>نوسان</span><b id="v69Volatility">—</b></div>
+  </div>
+  <div class="v69Grid">
+    <div class="v69Panel v69Decision">
+      <div class="v69PanelHead"><h3>🎯 تحلیل ترکیبی</h3><span id="v69Updated">—</span></div>
+      <div id="v69Factors" class="v69Factors"></div>
+      <div class="v69Narrative" id="v69Narrative">تحلیل پس از دریافت داده نمایش داده می‌شود.</div>
+    </div>
+    <div class="v69Panel">
+      <div class="v69PanelHead"><h3>📍 سطوح کلیدی</h3><span>بازه جاری</span></div>
+      <div class="v69Levels"><div><span>قیمت فعلی</span><b id="v69Price">—</b></div><div><span>حمایت</span><b id="v69Support">—</b></div><div><span>مقاومت</span><b id="v69Resistance">—</b></div><div><span>فاصله تا مقاومت</span><b id="v69ResDist">—</b></div></div>
+      <div class="v69Scenario" id="v69Scenario">سناریو در انتظار داده است.</div>
+    </div>
+    <div class="v69Panel v69Wide">
+      <div class="v69PanelHead"><h3>🔔 هشدارهای هوشمند</h3><button id="v69AddAlert">+ ساخت هشدار</button></div>
+      <div class="v69AlertForm"><select id="v69AlertType"><option value="above">عبور قیمت به بالا</option><option value="below">عبور قیمت به پایین</option><option value="rsi">RSI از حد</option></select><input id="v69AlertValue" type="number" step="0.01" placeholder="مقدار"><button id="v69SaveAlert">ذخیره</button></div>
+      <div id="v69Alerts" class="v69AlertList"></div>
+    </div>
+    <div class="v69Panel v69Wide">
+      <div class="v69PanelHead"><h3>🧪 Strategy Lab</h3><span>شبیه‌سازی روی داده‌های موجود</span></div>
+      <div class="v69LabControls"><select id="v69Strategy"><option value="ema">تقاطع EMA20 / SMA50</option><option value="rsi">RSI برگشت از ناحیه افراطی</option><option value="combo">ترکیبی EMA + RSI</option></select><input id="v69Capital" type="number" min="100000" value="100000000" placeholder="سرمایه اولیه"><button id="v69RunLab">اجرای شبیه‌سازی</button></div>
+      <div id="v69LabResult" class="v69LabResult">برای اجرای شبیه‌سازی یک استراتژی انتخاب کنید.</div>
+    </div>
+  </div>
+  <div class="v69Footnote">V69 از APIها و داده‌های موجود Gold2 Pro استفاده می‌کند و سیگنال قطعی یا تضمین سود ارائه نمی‌دهد.</div>
+</section>
+
 <footer class="footer">Gold Alert Pro © 2026<br><strong>طراح و توسعه: عباس صدیق آرانی</strong><br>۰۹۱۳۰۱۱۵۹۲۰<br>این سامانه ابزار پایش و تحلیل است؛ سیگنال‌ها قطعی و تضمین‌کننده سود نیستند.</footer>
 </div>
+<link rel="stylesheet" href="/v69.css?v=69.0.0">
 <script src="/app.js?v=61.0.0" defer></script>
 <script src="/gold-intelligence.js?v=61.0.0" defer></script>
 
@@ -721,4 +761,6 @@ if('serviceWorker' in navigator){
 }
 </script>
 <script src="v67.js"></script>
+<script src="v68.js"></script>
+<script src="v69.js"></script>
 </body></html>
