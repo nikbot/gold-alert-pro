@@ -67,3 +67,12 @@ The admin panel includes editable card number, card holder, SMS subscription pri
 - Historical five-day outlook endpoint: `GET /api/market-outlook`. It reports historical up/down frequency and a volatility-based illustrative range; it is not a calibrated forward probability.
 - Daily AI market report button in the AI section; requires `GAPGPT_API_KEY` configured as a server secret and user AI access.
 - Existing modules already cover portions of alerts, push/SMS, portfolio, technical indicators, admin, subscriptions, news/calendar and PWA. Features requiring third-party credentials (SMS, Telegram, payment gateway, live macro/news feeds) are not active until configured.
+
+
+## Administrator Login
+
+For the packaged V60 build:
+- Username: `admin`
+- Password: `Gold@2026`
+
+These credentials are intended for the packaged/demo build. Change them before production deployment.
