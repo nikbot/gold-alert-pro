@@ -1175,9 +1175,11 @@ body.authLocked .floatingMenuBtn,body.authLocked .menuBackdrop,body.authLocked .
 const APP_BUILD_VERSION='v75.2';
 if('serviceWorker' in navigator){
  window.addEventListener('load',()=>{
-  navigator.serviceWorker.register('/sw.js?v='+APP_BUILD_VERSION);
+  navigator.serviceWorker.register('/sw.js?v='+APP_BUILD_VERSION,{updateViaCache:'none'}).catch(()=>{});
   navigator.serviceWorker.addEventListener('message',e=>{
-    if(e.data?.type==='APP_UPDATED') location.reload();
+    if(e.data?.type==='APP_UPDATED'){
+      document.documentElement.dataset.appUpdated='1';
+    }
   });
  });
 }

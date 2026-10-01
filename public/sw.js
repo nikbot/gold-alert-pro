@@ -1,4 +1,4 @@
-const CACHE_VERSION='gold-alert-pro-v75.2';
+const CACHE_VERSION='gold-alert-pro-v75.2.1';
 const STATIC_CACHE=CACHE_VERSION;
 const APP_SHELL=['/','/index.html'];
 const NO_CACHE_PREFIXES=['/api/','/login','/register','/admin'];
@@ -13,8 +13,7 @@ self.addEventListener('activate', event=>{
     const keys=await caches.keys();
     await Promise.all(keys.filter(k=>k!==STATIC_CACHE).map(k=>caches.delete(k)));
     await self.clients.claim();
-    const clientsList=await self.clients.matchAll({type:'window'});
-    clientsList.forEach(c=>c.postMessage({type:'APP_UPDATED',build:'v75.2'}));
+    // New worker takes control without forcing a page reload.
   })());
 });
 
