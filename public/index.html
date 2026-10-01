@@ -582,8 +582,8 @@ body.authLocked .floatingMenuBtn,body.authLocked .menuBackdrop,body.authLocked .
 <link rel="stylesheet" href="v66.css">
 <link rel="stylesheet" href="v67.css">
 <link rel="stylesheet" href="v68.css">
-  <link rel="stylesheet" href="/gold2-theme.css?v=75.3.3">
-  <link rel="stylesheet" href="/gold2-terminal-layout.css?v=75.3.3">
+  <link rel="stylesheet" href="/gold2-theme.css?v=75.4">
+  <link rel="stylesheet" href="/gold2-terminal-layout.css?v=75.4">
 </head>
 <body class="v62Terminal">
 <div id="updateBanner" style="display:none;position:sticky;top:0;z-index:900;background:#17140d;border-bottom:1px solid #4a3a19;padding:10px 14px;text-align:center">
@@ -1184,16 +1184,16 @@ body.authLocked .floatingMenuBtn,body.authLocked .menuBackdrop,body.authLocked .
 </nav>
 <footer class="footer">Gold Alert Pro © 2026<br><strong>طراح و توسعه: عباس صدیق آرانی</strong><br>۰۹۱۳۰۱۱۵۹۲۰<br>این سامانه ابزار پایش و تحلیل است؛ سیگنال‌ها قطعی و تضمین‌کننده سود نیستند.</footer>
 </div>
-<link rel="stylesheet" href="/v69.css?build=75.3.3">
+<link rel="stylesheet" href="/v69.css?build=75.4">
 <script>
 (function(){
-  const RELEASE='75.3.3';
+  const RELEASE='75.4';
   const KEY='g2-release-migrated';
   if(!('serviceWorker' in navigator)) return;
   window.addEventListener('load',async()=>{
     try{
       const regs=await navigator.serviceWorker.getRegistrations();
-      const stale=regs.filter(r=>!String(r.active?.scriptURL||r.installing?.scriptURL||r.waiting?.scriptURL||'').includes('v75.3.3'));
+      const stale=regs.filter(r=>!String(r.active?.scriptURL||r.installing?.scriptURL||r.waiting?.scriptURL||'').includes('v75.4'));
       if(!stale.length) return;
       await Promise.all(stale.map(r=>r.unregister()));
       if('caches' in window){
@@ -1208,16 +1208,17 @@ body.authLocked .floatingMenuBtn,body.authLocked .menuBackdrop,body.authLocked .
   });
 })();
 </script>
-<script src="/app.js?build=75.3.3" defer></script>
-<script src="/gold-intelligence.js?build=75.3.3" defer></script>
+<script src="/app.js?build=75.4" defer></script>
+<script src="/gold-intelligence.js?build=75.4" defer></script>
 
 
-<script src="/v67.js?build=75.3.3"></script>
-<script src="/v68.js?build=75.3.3"></script>
-<script src="/v69.js?build=75.3.3"></script>
-<link rel="stylesheet" href="/v72.css?build=75.3.3">
-<link rel="stylesheet" href="/v75.2-mobile.css?build=75.3.3">
-<link rel="stylesheet" href="/gold2-v7533-final.css?v=75.3.3">
-<script src="/v71.js?build=75.3.3"></script>
-<script src="/v72.js?build=75.3.3"></script>
+<script src="/v67.js?build=75.4"></script>
+<script src="/v68.js?build=75.4"></script>
+<script src="/v69.js?build=75.4"></script>
+<link rel="stylesheet" href="/v72.css?build=75.4">
+<link rel="stylesheet" href="/v75.2-mobile.css?build=75.4">
+<link rel="stylesheet" href="/gold2-v754-final.css?v=75.4">
+<link rel="stylesheet" href="/gold2-v754-market-polish.css?v=75.4">
+<script src="/v71.js?build=75.4"></script>
+<script src="/v72.js?build=75.4"></script>
 </body></html>

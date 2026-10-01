@@ -142,9 +142,9 @@
   function render(s) {
     if (!s) return;
 
-    const gold = num(s?.iran?.priceIRR);
-    const dollar = num(s?.dollar?.priceIRR);
-    const xau = num(s?.global?.xauUsd);
+    const gold = num(s?.iran?.priceIRR ?? s?.gold18?.priceIRR ?? s?.gold18IRR);
+    const dollar = num(s?.dollar?.priceIRR ?? s?.usd?.priceIRR);
+    const xau = num(s?.global?.xauUsd ?? s?.xauUsd);
     const btc = getBitcoin(s);
 
     const mobileGold = $('v75MobileGold');
@@ -177,7 +177,13 @@
 
     const status = s?.engineStatus?.status || 'OFFLINE';
     const liveCount = [gold, dollar, xau, btc].filter((x) => x > 0).length;
-    set('v72LiveText', liveCount >= 3 ? `LIVE • ${liveCount} بازار آنلاین` : liveCount ? `اتصال محدود • ${liveCount} بازار` : (status === 'STALE' ? 'آخرین داده معتبر' : 'آفلاین'));
+    const diagnostics = s?.marketDiagnostics || {};
+    const diagnosticCount = Object.values(diagnostics).filter(x => x && typeof x === 'object' && x.ok).length;
+    set('v72LiveText',
+      liveCount >= 3 ? `LIVE • ${liveCount} بازار آنلاین` :
+      diagnosticCount >= 2 ? `اتصال فعال • ${diagnosticCount} منبع` :
+      liveCount ? `اتصال محدود • ${liveCount} بازار` :
+      (status === 'STALE' ? 'آخرین داده معتبر' : 'در انتظار داده بازار'));
 
     const prices = Array.isArray(s?.prices)
       ? s.prices.map(Number).filter(Number.isFinite)

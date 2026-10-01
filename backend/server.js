@@ -15,7 +15,7 @@ import { adminLogin, requireAdminToken, requireAdminSession, adminLogout, listUs
 import { analyzeGold } from "./ai/manager.js";
 import { getTheme, setTheme } from "./theme.js";
 
-const APP_VERSION = "75.3.3"
+const APP_VERSION = "75.4.0"
 const USER_SESSION_HOURS = Math.max(1, Number(process.env.USER_SESSION_HOURS || 72));
 const LOGIN_WINDOW_MS = 10 * 60_000;
 const LOGIN_MAX_ATTEMPTS = 12;
@@ -142,6 +142,7 @@ function publicStatePayload(){
     config: { pollMs, minScore, target1, target2, stopPct, appVersion: APP_VERSION },
     marketStructure: marketStructure(state.prices),
     sourceDiagnostics: state.sourceDiagnostics,
+    marketDiagnostics: state.marketDiagnostics || null,
     anomaly: state.anomaly || null,
     engineStatus: state.engineStatus,
     units: { gold18: "IRR_PER_GRAM", dollar: "IRR_PER_USD", coins: "IRR", bitcoin: "USD" },
@@ -563,71 +564,207 @@ async function tick() {
   state.busy = true;
   try {
     const providerNames = ["Iran18", "GlobalGold", "Dollar", "Coins", "Bitcoin", "ForgodAll"];
-    const results = await Promise.allSettled([getIran18(), getGlobalGold(), getDollar(), getCoins(), getBitcoin(), getForgodCurrencies()]);
+    const results = await Promise.allSettled([
+      getIran18(),
+      getGlobalGold(),
+      getDollar(),
+      getCoins(),
+      getBitcoin(),
+      getForgodCurrencies()
+    ]);
+
     for (let i = 0; i < results.length; i++) {
-      if (results[i].status === "rejected") console.warn(`Provider ${providerNames[i]} failed:`, results[i].reason?.message || "unknown error");
+      if (results[i].status === "rejected") {
+        console.warn(`Provider ${providerNames[i]} failed:`, results[i].reason?.message || "unknown error");
+      }
     }
+
     const iran = results[0].status === "fulfilled" ? results[0].value : null;
     const global = results[1].status === "fulfilled" ? results[1].value : null;
     const dollar = results[2].status === "fulfilled" ? results[2].value : null;
     const coins = results[3].status === "fulfilled" ? results[3].value : null;
     const bitcoin = results[4].status === "fulfilled" ? results[4].value : null;
     const forgodCurrencies = results[5].status === "fulfilled" ? results[5].value : null;
-    // Update every market independently. A temporary Iran-gold failure must not hide
-    // valid XAU/USD, USD/IRR, coin or BTC quotes.
-    if (global && Number.isFinite(Number(global.xauUsd))) state.global = global;
-    if (dollar && Number.isFinite(Number(dollar.priceIRR))) state.dollar = dollar;
-    if (coins && Object.values(coins).some(v => Number.isFinite(Number(v)))) state.coins = coins;
-    if (bitcoin && Number.isFinite(Number(bitcoin.usd))) state.bitcoin = bitcoin;
+
+    // Every market is updated independently. A failed provider for one instrument
+    // must never blank or block the other instruments.
+    const validXau = Number(global?.xauUsd);
+    if (Number.isFinite(validXau) && validXau > 0) {
+      state.global = { ...global, xauUsd: validXau };
+    }
+
+    const validDollar = Number(dollar?.priceIRR);
+    if (Number.isFinite(validDollar) && validDollar > 0) {
+      state.dollar = { ...dollar, priceIRR: Math.round(validDollar) };
+    }
+
+    if (coins && Object.values(coins).some(v => Number.isFinite(Number(v)))) {
+      state.coins = coins;
+    }
+
+    const validBtc = Number(bitcoin?.usd);
+    if (Number.isFinite(validBtc) && validBtc > 0) {
+      state.bitcoin = { ...bitcoin, usd: validBtc };
+    }
+
     if (forgodCurrencies) state.forgodCurrencies = forgodCurrencies;
 
-    if (!iran) {
-      console.warn("Iran18 unavailable, keeping previous Iran-gold state while other markets continue");
-      state.engineStatus = { status: "OFFLINE", label: "طلای ۱۸ موقتاً بدون منبع", source: state.iran?.source || null, sourceAgeMs: null, reason: results[0].reason?.message || "Iran gold provider unavailable" };
-      state.error = results[0].reason?.message || "Iran gold provider unavailable";
-      state.updatedAt = new Date().toISOString();
-      if (state.iran) { broadcastMarketState(true); return; }
-      broadcastMarketState(true);
-      return;
+    // Keep explicit per-market diagnostics for the frontend.
+    state.marketDiagnostics = {
+      gold18: {
+        ok: Boolean(iran && Number.isFinite(Number(iran.priceIRR)) && Number(iran.priceIRR) > 0),
+        source: iran?.source || state.iran?.source || null,
+        cached: Boolean(iran?.cached),
+        error: results[0].status === "rejected" ? (results[0].reason?.message || "unavailable") : (iran?.warning || null)
+      },
+      xauUsd: {
+        ok: Number.isFinite(validXau) && validXau > 0,
+        source: global?.source || state.global?.source || null,
+        error: global?.error || null
+      },
+      dollar: {
+        ok: Number.isFinite(validDollar) && validDollar > 0,
+        source: dollar?.source || state.dollar?.source || null,
+        cached: Boolean(dollar?.cached),
+        error: dollar?.error || (results[2].status === "rejected" ? results[2].reason?.message || "unavailable" : null)
+      },
+      coins: {
+        ok: Boolean(coins && Object.values(coins).some(v => Number.isFinite(Number(v)))),
+        source: coins?.source || state.coins?.source || null,
+        error: coins?.error || null
+      },
+      bitcoin: {
+        ok: Number.isFinite(validBtc) && validBtc > 0,
+        source: bitcoin?.source || state.bitcoin?.source || null,
+        cached: Boolean(bitcoin?.cached),
+        error: bitcoin?.error || null
+      },
+      checkedAt: new Date().toISOString()
+    };
+
+    // Iran 18k has its own freshness state. If it fails, preserve the previous
+    // valid quote but continue processing all other markets.
+    if (iran && Number.isFinite(Number(iran.priceIRR)) && Number(iran.priceIRR) > 0) {
+      const iranPrice = Math.round(Number(iran.priceIRR));
+      state.iran = { ...iran, priceIRR: iranPrice };
+
+      const sourceTimestamp = iran.at ? new Date(iran.at).getTime() : 0;
+      const receivedTimestamp = iran.fetchedAt ? new Date(iran.fetchedAt).getTime() : Date.now();
+      const sourceAge = sourceTimestamp > 0 && Number.isFinite(sourceTimestamp)
+        ? Math.max(0, Date.now() - sourceTimestamp)
+        : 0;
+      const transportAge = Math.max(0, Date.now() - receivedTimestamp);
+      const sourceStale = Boolean(iran.cached) || sourceAge > staleThresholdMs || transportAge > staleThresholdMs;
+
+      if (!state.sourceDiagnostics || Date.now() - new Date(state.sourceDiagnostics.checkedAt || 0).getTime() > 60000) {
+        try {
+          state.sourceDiagnostics = await getIran18Sources(false);
+        } catch (e) {
+          state.sourceDiagnostics = {
+            checkedAt: new Date().toISOString(),
+            primary: iran.source || null,
+            sources: [{ name: iran.source || "active", priceIRR: iranPrice, ok: true, cached: Boolean(iran.cached) }],
+            anomaly: false,
+            error: e.message
+          };
+        }
+      }
+
+      const previousPrice = Number(state.prices.at(-1) || 0);
+      const jumpPct = previousPrice > 0 ? Math.abs((iranPrice / previousPrice - 1) * 100) : 0;
+      state.anomaly = {
+        detected: jumpPct > 5 || Boolean(state.sourceDiagnostics?.anomaly),
+        jumpPct,
+        thresholdPct: 5,
+        sourceSpreadPct: state.sourceDiagnostics?.spreadPct ?? null,
+        checkedAt: new Date().toISOString()
+      };
+
+      state.engineStatus = {
+        status: sourceStale ? "STALE" : "LIVE",
+        label: sourceStale ? "آخرین قیمت معتبر طلا" : "LIVE • قیمت جدید",
+        source: iran.source || null,
+        sourceAgeMs: sourceAge,
+        transportAgeMs: transportAge,
+        reason: sourceStale
+          ? (iran.warning || `آخرین داده بیش از ${Math.round(staleThresholdMs / 1000)} ثانیه قبل است`)
+          : null
+      };
+
+      pushPrice(iranPrice);
+      pushTick({ iran: state.iran, global: state.global, dollar: state.dollar, coins: state.coins, bitcoin: state.bitcoin });
+      state.marketPressure = calcMarketPressure();
+      await emitPressureAlert(state.marketPressure, iranPrice);
+      state.analysis = analyze(state.prices);
+      state.dataReady = state.prices.length >= 30;
+      state.error = sourceStale ? state.engineStatus.reason : null;
+      state.consecutiveErrors = 0;
+    } else {
+      // No fresh/current Iran quote: preserve a previous valid quote if available.
+      // Other instruments remain fully usable.
+      const previousIran = state.iran;
+      const previousPrice = Number(previousIran?.priceIRR || 0);
+      if (previousPrice > 0) {
+        const fetchedAt = previousIran?.fetchedAt ? new Date(previousIran.fetchedAt).getTime() : 0;
+        const age = fetchedAt > 0 ? Math.max(0, Date.now() - fetchedAt) : null;
+        state.engineStatus = {
+          status: "STALE",
+          label: "آخرین قیمت معتبر طلا",
+          source: previousIran?.source || null,
+          sourceAgeMs: age,
+          reason: results[0].status === "rejected"
+            ? (results[0].reason?.message || "منبع طلای ۱۸ موقتاً در دسترس نیست")
+            : "قیمت جدید طلای ۱۸ دریافت نشد"
+        };
+        state.error = state.engineStatus.reason;
+        state.marketPressure = state.marketPressure || calcMarketPressure();
+        state.analysis = state.analysis || analyze(state.prices);
+      } else {
+        state.engineStatus = {
+          status: "OFFLINE",
+          label: "منبع طلای ۱۸ در دسترس نیست",
+          source: null,
+          sourceAgeMs: null,
+          reason: results[0].status === "rejected"
+            ? (results[0].reason?.message || "Iran gold provider unavailable")
+            : "Iran 18k quote unavailable"
+        };
+        state.error = state.engineStatus.reason;
+      }
+      state.consecutiveErrors++;
     }
-    if (iran.cached) {
-      state.iran = iran;
-      const sourceAt = new Date(iran.at || 0).getTime();
-      const age = sourceAt ? Math.max(0, Date.now() - sourceAt) : null;
-      state.engineStatus = { status: "STALE", label: "آخرین قیمت معتبر طلا", source: iran.source || null, sourceAgeMs: age, reason: iran.warning || "منبع طلای ۱۸ فعلاً داده جدید نداده است؛ سایر بازارها زنده‌اند" };
-      state.error = iran.warning || "قیمت جدید طلای ۱۸ از منبع دریافت نشد";
-      state.updatedAt = new Date().toISOString();
-      try { state.sourceDiagnostics = await getIran18Sources(false); } catch {}
-      broadcastMarketState(true);
-      return;
+
+    state.updatedAt = new Date().toISOString();
+
+    // Broadcast even when only XAU/USD, USD/IRR, coins or BTC changed.
+    // Previously this was skipped by early returns from the Iran18 branch.
+    broadcastMarketState(true);
+
+    if (state.iran?.priceIRR) {
+      await safeAlert(() => checkPortfolioRiskAlerts());
+      await safeAlert(() => emitLivePricePush(state.iran, state.global, state.dollar));
+      await safeAlert(() => checkTargets(state.iran.priceIRR));
+      await safeAlert(() => checkPersonalPriceAlerts(state.iran.priceIRR));
+      await safeAlert(() => checkSmartAlerts());
+      await safeAlert(() => sendPremiumPriceSMS({
+        iran: state.iran,
+        global: state.global,
+        dollar: state.dollar,
+        coins: state.coins,
+        bitcoin: state.bitcoin,
+        analysis: state.analysis
+      }));
+
+      const a = state.analysis;
+      if (a && ["BUY", "SELL"].includes(a.signal) && a.score >= minScore && a.signal !== state.lastSignal) {
+        await emitSignal(a);
+      } else if (!a || !["BUY", "SELL"].includes(a.signal)) {
+        if (state.lastSignal !== "WAIT") {
+          state.lastSignal = "WAIT";
+          scheduleSave();
+        }
+      }
     }
-    state.iran = iran;
-    if (!state.sourceDiagnostics || Date.now() - new Date(state.sourceDiagnostics.checkedAt || 0).getTime() > 60000) {
-      try { state.sourceDiagnostics = await getIran18Sources(false); } catch (e) { state.sourceDiagnostics = { checkedAt:new Date().toISOString(), primary:iran.source || null, sources:[{name:iran.source||"active",priceIRR:iran.priceIRR,ok:true}], anomaly:false, error:e.message }; }
-    }
-    const previousPrice = Number(state.prices.at(-1) || 0);
-    const jumpPct = previousPrice > 0 ? Math.abs((iran.priceIRR / previousPrice - 1) * 100) : 0;
-    const sourceTimestamp = iran.at ? new Date(iran.at).getTime() : 0;
-    const receivedTimestamp = iran.fetchedAt ? new Date(iran.fetchedAt).getTime() : Date.now();
-    const sourceAge = sourceTimestamp > 0 && Number.isFinite(sourceTimestamp) ? Math.max(0, Date.now() - sourceTimestamp) : 0;
-    const transportAge = Math.max(0, Date.now() - receivedTimestamp);
-    const sourceStale = sourceAge > staleThresholdMs || transportAge > staleThresholdMs;
-    state.anomaly = { detected: jumpPct > 5 || Boolean(state.sourceDiagnostics?.anomaly), jumpPct, thresholdPct:5, sourceSpreadPct:state.sourceDiagnostics?.spreadPct ?? null, checkedAt:new Date().toISOString() };
-    state.engineStatus = { status: sourceStale ? "STALE" : "LIVE", label: sourceStale ? "قیمت منبع قدیمی است" : "LIVE • قیمت جدید", source: iran.source || null, sourceAgeMs: sourceAge, transportAgeMs: transportAge, reason: sourceStale ? `آخرین داده بیش از ${Math.round(staleThresholdMs/1000)} ثانیه قبل است` : null };
-    pushPrice(iran.priceIRR); pushTick({iran,global,dollar,coins,bitcoin});
-    state.marketPressure = calcMarketPressure();
-    await emitPressureAlert(state.marketPressure, iran.priceIRR);
-    state.analysis = analyze(state.prices); state.dataReady = state.prices.length >= 30;
-    state.updatedAt = new Date().toISOString(); state.error = sourceStale ? state.engineStatus.reason : null; state.consecutiveErrors = 0; broadcastMarketState();
-    await safeAlert(() => checkPortfolioRiskAlerts());
-    await safeAlert(() => emitLivePricePush(iran, global, dollar));
-    await safeAlert(() => checkTargets(iran.priceIRR));
-    await safeAlert(() => checkPersonalPriceAlerts(iran.priceIRR));
-    await safeAlert(() => checkSmartAlerts());
-    await safeAlert(() => sendPremiumPriceSMS({ iran, global, dollar, coins, bitcoin, analysis: state.analysis }));
-    const a = state.analysis;
-    if (a && ["BUY", "SELL"].includes(a.signal) && a.score >= minScore && a.signal !== state.lastSignal) await emitSignal(a);
-    else if (!a || !["BUY", "SELL"].includes(a.signal)) { if (state.lastSignal !== "WAIT") { state.lastSignal = "WAIT"; scheduleSave(); } }
   } catch (e) {
     state.consecutiveErrors++;
     state.error = e.message;
@@ -635,14 +772,16 @@ async function tick() {
     const age = fetchedAt && Number.isFinite(fetchedAt) ? Math.max(0, Date.now() - fetchedAt) : Infinity;
     const hasLast = Boolean(state.iran?.priceIRR);
     state.engineStatus = hasLast && age <= staleThresholdMs
-      ? { status:"STALE", label:"آخرین قیمت معتبر", source:state.iran?.source||null, sourceAgeMs:age, reason:e.message }
-      : { status:"OFFLINE", label:"منبع قیمت در دسترس نیست", source:state.iran?.source||null, sourceAgeMs:Number.isFinite(age)?age:null, reason:e.message };
+      ? { status: "STALE", label: "آخرین قیمت معتبر", source: state.iran?.source || null, sourceAgeMs: age, reason: e.message }
+      : { status: "OFFLINE", label: "منبع قیمت در دسترس نیست", source: state.iran?.source || null, sourceAgeMs: Number.isFinite(age) ? age : null, reason: e.message };
     try { state.sourceDiagnostics = await getIran18Sources(false); } catch {}
+    state.updatedAt = new Date().toISOString();
     broadcastMarketState(true);
     console.warn("Tick error:", e.message);
-  } finally { state.busy = false; }
+  } finally {
+    state.busy = false;
+  }
 }
-
 
 
 function portfolioScenario(items, pct) {
