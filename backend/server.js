@@ -763,9 +763,12 @@ async function tick() {
     }
 
     state.updatedAt = new Date().toISOString();
+<<<<<<< HEAD
     // Persist the latest valid market snapshot so a temporary provider outage or
     // process restart does not leave the dashboard with a blank price.
     if (state.iran?.priceIRR) scheduleSave();
+=======
+>>>>>>> 07d6999d04cbb1eb1d1276da050fd1848efedb65
 
     // Broadcast even when only XAU/USD, USD/IRR, coins or BTC changed.
     // Previously this was skipped by early returns from the Iran18 branch.
