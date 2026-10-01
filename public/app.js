@@ -43,7 +43,7 @@ function initChartControls(){document.querySelectorAll('[data-range]').forEach(b
 
 function openAccountQuickMenu(){ applyCategory('account'); setTimeout(()=>document.getElementById('account')?.scrollIntoView({behavior:'smooth',block:'start'}),50); }
 
-async function forgotPasswordPrompt{
+async function forgotPasswordPrompt(){
  const email=prompt('ایمیل حساب را وارد کنید:');
  if(!email)return;
  try{
