@@ -7,8 +7,8 @@ const ACCOUNTS_FILE = path.join(DATA_DIR, 'accounts.json');
 const ADMIN_SESSIONS_FILE = path.join(DATA_DIR, 'admin-sessions.json');
 const ADMIN_SESSION_HOURS = Math.max(1, Number(process.env.ADMIN_SESSION_HOURS || 12));
 // Fixed administrator credentials for the packaged/demo build. Change before production deployment.
-export const ADMIN_USERNAME = 'admin';
-export const ADMIN_PASSWORD = 'Gold@2026';
+export const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'admin';
+export const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'Gold@2026';
 const ADMIN_LOGIN_WINDOW_MS = 10 * 60_000;
 const ADMIN_LOGIN_MAX_ATTEMPTS = 10;
 const adminAttempts = new Map();
