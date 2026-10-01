@@ -235,23 +235,60 @@ const categoryLabels={
 const PUBLIC_CATEGORIES=new Set(['dashboard','account']);
 let pendingProtectedCategory='';
 function applyCategory(category,scroll=true){
+ const publicDashboard=(category==='dashboard');
  if(category!=='dashboard' && category!=='admin' && !PUBLIC_CATEGORIES.has(category) && !accountToken){
    pendingProtectedCategory=category;
    showAuthGate(true,'برای استفاده از این بخش ابتدا وارد حساب شوید.');
    return false;
  }
- document.querySelectorAll('.categorySection').forEach(el=>{el.classList.remove('categoryVisible');el.style.display='none';});
- document.body.classList.toggle('categoryView',category!=='dashboard');
+
+ // V75.3.1: one workspace at a time.
+ document.body.dataset.g2Category=category;
+ document.body.classList.toggle('g2Dashboard',publicDashboard);
+ document.body.classList.toggle('g2SectionPage',!publicDashboard);
+
+ document.querySelectorAll('.categorySection').forEach(el=>{
+   el.classList.remove('categoryVisible');
+   el.style.display='none';
+ });
+
+ // Dashboard = the curated terminal shell only.
+ if(publicDashboard){
+   const shell=document.getElementById('v62TerminalShell');
+   if(shell){shell.classList.add('categoryVisible');shell.style.display='grid';}
+ }else{
+   document.querySelectorAll('.category-'+category).forEach(el=>{
+     // The terminal shell is a dashboard container and must never leak into pages.
+     if(el.id==='v62TerminalShell') return;
+     el.classList.add('categoryVisible');
+     el.style.display='block';
+   });
+ }
+
  document.querySelectorAll('.menuItem').forEach(b=>b.classList.toggle('active',b.dataset.category===category));
- document.querySelectorAll('.category-'+category).forEach(el=>{el.classList.add('categoryVisible');el.style.display='block';});
+ document.querySelectorAll('[data-v62cat]').forEach(b=>b.classList.toggle('active',b.dataset.v62cat===category));
+
  const title=document.getElementById('categoryTitle');
  const desc=document.getElementById('categoryDesc');
- if(title) title.textContent=categoryLabels[category]||'بخش';
- if(desc) desc.textContent=category==='dashboard'?'قیمت زنده، وضعیت امروز و سیگنال کلی بازار':'فقط ابزارهای مرتبط با '+(categoryLabels[category]||'این بخش')+' نمایش داده می‌شوند.';
+ const heading=document.getElementById('g2PageHeading');
+ const subheading=document.getElementById('g2PageSubheading');
+ const labels=typeof categoryLabels==='object'&&categoryLabels?categoryLabels:{};
+ const label=labels[category]||'بخش';
+ if(title) title.textContent=publicDashboard?'پیشخوان':label;
+ if(desc) desc.textContent=publicDashboard?'قیمت زنده، وضعیت امروز و مسیرهای اصلی':'فقط ابزارهای مرتبط با '+label+' نمایش داده می‌شوند.';
+ if(heading) heading.textContent=publicDashboard?'پیشخوان بازار':label;
+ if(subheading) subheading.textContent=publicDashboard?'نمای خلاصه و زنده بازار؛ جزئیات هر بخش از منوی کناری باز می‌شود.':'این بخش فقط ابزارها و داده‌های مرتبط با '+label+' را نمایش می‌دهد.';
+ const intro=document.getElementById('categoryIntro');
+ if(intro) intro.style.display='none';
+
  if(scroll){
-   const first=document.querySelector('.category-'+category);
-   if(first) setTimeout(()=>first.scrollIntoView({behavior:'smooth',block:'start'}),40);
-   else window.scrollTo({top:0,behavior:'smooth'});
+   if(publicDashboard){
+     window.scrollTo({top:0,behavior:'smooth'});
+   }else{
+     const first=document.querySelector('.category-'+category+':not(#v62TerminalShell)');
+     if(first) setTimeout(()=>first.scrollIntoView({behavior:'smooth',block:'start'}),40);
+     else window.scrollTo({top:0,behavior:'smooth'});
+   }
  }
  aiCopilotPage=category;
  if(typeof refreshAICopilot==='function') refreshAICopilot(false,category);

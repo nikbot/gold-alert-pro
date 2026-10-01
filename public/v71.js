@@ -24,7 +24,7 @@
       if(ok===false)return;
     }
     const target=categoryTarget[cat];
-    if(target) scrollToId(target);
+    if(target && cat!=='dashboard' && typeof applyCategory!=='function') scrollToId(target);
     document.querySelectorAll('[data-v62cat]').forEach(b=>b.classList.toggle('active',b.dataset.v62cat===cat));
   }
   function init(){

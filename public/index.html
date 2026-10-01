@@ -580,6 +580,8 @@ body.authLocked .floatingMenuBtn,body.authLocked .menuBackdrop,body.authLocked .
 <link rel="stylesheet" href="v67.css">
 <link rel="stylesheet" href="v68.css">
   <link rel="stylesheet" href="/gold2-theme.css?v=75.3">
+  <link rel="stylesheet" href="/gold2-terminal-layout.css?v=75.3.1">
+  <link rel="stylesheet" href="/gold2-v7532-colors.css?v=75.3.2">
 </head>
 <body class="v62Terminal">
 <div id="updateBanner" style="display:none;position:sticky;top:0;z-index:900;background:#17140d;border-bottom:1px solid #4a3a19;padding:10px 14px;text-align:center">
@@ -671,7 +673,7 @@ body.authLocked .floatingMenuBtn,body.authLocked .menuBackdrop,body.authLocked .
 <div class="dashboardHead"><div><div class="eyebrow">مرکز فرمان بازار</div><h2>پیشخوان امروز طلا</h2></div><div class="liveBadge">● داده‌خوانی خودکار فعال</div></div>
 <div class="liveTicker" id="liveTicker"><div class="tickerMain"><span class="tickerPulse"></span><div><div class="tickerLabel">قیمت زنده طلای ۱۸ عیار</div><div id="tickerPrice" class="tickerPrice">—</div></div></div><div class="tickerSide"><div id="tickerChange" class="tickerChange">—</div><div id="tickerTime" class="tickerTime">در حال اتصال...</div></div></div>
 <div class="livePanel menuSection" id="livePricePanel"><div class="livePriceRow"><div><div class="label">⚡ قیمت زنده • هر گرم طلای ۱۸ عیار</div><div id="livePriceBig" class="livePriceBig">—</div><div class="liveUnit">ریال</div></div><div style="text-align:left"><div id="liveChange" class="change">—</div><div id="liveStatus" class="small" style="margin-top:7px">در حال اتصال...</div></div></div><div class="liveMeta"><div class="liveMetaBox"><span>اونس جهانی</span><b id="liveXau">—</b></div><div class="liveMetaBox"><span>دلار</span><b id="liveDollar">—</b></div><div class="liveMetaBox"><span>به‌روزرسانی</span><b id="liveAge">—</b></div></div><div class="phoneCta"><div style="flex:1">📲 با نصب روی گوشی، همین صفحه را مثل یک اپلیکیشن باز کن. برای اعلان قیمت و هشدارها هم Push را فعال کن.</div><button class="secondary" onclick="enablePush()">🔔 فعال‌سازی اعلان</button></div><div class="installHero"><button id="installBtnHero" class="blue" style="display:none" onclick="installApp()">📲 نصب روی صفحه گوشی</button><button class="secondary" onclick="manualRefresh()">↻ دریافت قیمت جدید</button></div><div class="mobileHint">نمایش قیمت داخل برنامه هر ۱۰ ثانیه تازه می‌شود؛ اعلان گوشی برای جلوگیری از مزاحمت، فقط برای هشدارهای مهم و به‌روزرسانی‌های انتخاب‌شده ارسال می‌شود.</div></div>
-<div class="v62TerminalShell" id="v62TerminalShell">
+<div class="v62TerminalShell categorySection category-dashboard" id="v62TerminalShell">
   <aside class="v62Sidebar" id="v62Sidebar">
     <div class="v62Brand"><div class="v62BrandMark">Au</div><div class="v62BrandText"><b>Gold2 Pro</b><small>V75 Market Terminal</small></div></div>
     <nav class="v62Nav" id="v62Nav">
@@ -707,6 +709,12 @@ body.authLocked .floatingMenuBtn,body.authLocked .menuBackdrop,body.authLocked .
           <div class="v62MarketCard"><span>اونس جهانی</span><b id="v62CardXau">—</b><em id="v62CardXauCh">—</em></div>
           <div class="v62MarketCard"><span>سکه امامی</span><b id="v62CardCoin">—</b><em>قیمت تک‌فروشی/بازار</em></div>
         </section>
+        <div class="g2DashboardQuick" aria-label="دسترسی سریع">
+          <button type="button" onclick="applyCategory('market')"><span class="g2qIcon">📊</span><span><b>بازار و نمودار</b><small>قیمت، تکنیکال و تایم‌فریم</small></span></button>
+          <button type="button" onclick="applyCategory('ai')"><span class="g2qIcon">✦</span><span><b>AI Decision Room</b><small>سناریو و تحلیل هوشمند</small></span></button>
+          <button type="button" onclick="applyCategory('alerts')"><span class="g2qIcon">🔔</span><span><b>هشدارها</b><small>هدف قیمت و رویدادها</small></span></button>
+          <button type="button" onclick="applyCategory('portfolio')"><span class="g2qIcon">▣</span><span><b>پرتفوی</b><small>دارایی و عملکرد</small></span></button>
+        </div>
         <section class="v62ExtraStats">
           <div class="v62Stat"><span>بالاترین بازه نمودار</span><b id="v62GoldHigh">—</b><small>بر اساس داده‌های دریافت‌شده</small></div>
           <div class="v62Stat"><span>پایین‌ترین بازه نمودار</span><b id="v62GoldLow">—</b><small>بر اساس داده‌های دریافت‌شده</small></div>
@@ -763,6 +771,12 @@ body.authLocked .floatingMenuBtn,body.authLocked .menuBackdrop,body.authLocked .
   </main>
 </div>
 <div class="v65QuickActions"><button type="button" onclick="applyCategory('market')"><span>📈</span><b>تحلیل بازار</b><small>نمودار و اندیکاتورها</small></button><button type="button" onclick="applyCategory('ai')"><span>🧠</span><b>AI Copilot</b><small>تحلیل ساده و سریع</small></button><button type="button" onclick="applyCategory('alerts')"><span>🔔</span><b>هشدارها</b><small>رویدادهای مهم</small></button><button type="button" onclick="applyCategory('tools')"><span>🧮</span><b>ماشین‌حساب</b><small>ارزش روز طلا</small></button></div>
+<div class="g2PageHeader" id="g2PageHeader">
+  <div><div class="eyebrow" id="g2PageEyebrow">GOLD2 PRO • MARKET TERMINAL</div>
+  <h2 id="g2PageHeading">پیشخوان بازار</h2>
+  <p id="g2PageSubheading">نمای خلاصه و زنده بازار؛ جزئیات هر بخش از منوی کناری باز می‌شود.</p></div>
+  <button class="g2Back" type="button" onclick="applyCategory('dashboard')">← بازگشت به پیشخوان</button>
+</div>
 <div class="sectionIntro" id="categoryIntro"><b id="categoryTitle">پیشخوان</b><span id="categoryDesc">قیمت زنده، وضعیت امروز و سیگنال کلی بازار</span></div><div class="accountQuick"><div><span class="small">وضعیت حساب</span><b id="quickAccountStatus">در حال بررسی...</b></div><div class="quickActions"><button class="secondary smallBtn" onclick="openAccountQuickMenu()">👤 حساب من</button><button class="secondary smallBtn" onclick="logoutAndRelogin()">🚪 خروج و ورود مجدد</button></div></div>
 
 <section class="card commandCenter categorySection category-dashboard"><div class="sectionTitle"><div><h3>✨ مرکز کنترل سرمایه</h3><span>نمای سریع بازار، دارایی و هشدارها</span></div><div class="liveBadge">LIVE</div></div><div class="commandGrid"><div class="commandBox"><span>ارزش سبد</span><b id="ccPortfolioValue">—</b><small id="ccPortfolioPnl">—</small></div><div class="commandBox"><span>روند بازار</span><b id="ccTrend">—</b><small id="ccTrendMeta">—</small></div><div class="commandBox"><span>ریسک</span><b id="ccRisk">—</b><small>بر پایه داده‌های موجود</small></div><div class="commandBox"><span>هشدارهای فعال</span><b id="ccAlerts">—</b><small>هدف قیمت و بازار</small></div></div><div class="quickFeatureGrid"><button class="featureTile" onclick="applyCategory('market')">📊<b>بازار</b><small>نمودار و تکنیکال</small></button><button class="featureTile" onclick="applyCategory('ai')">🤖<b>AI</b><small>تحلیل و دستیار</small></button><button class="featureTile" onclick="applyCategory('alerts')">🔔<b>هشدار</b><small>قیمت و Push</small></button><button class="featureTile" onclick="applyCategory('tools')">💼<b>دارایی</b><small>سبد و سناریو</small></button><button class="featureTile" onclick="applyCategory('decision')">🧠<b>اتاق تصمیم</b><small>سناریو و کنترل</small></button><button class="featureTile" onclick="applyCategory('account')">👤<b>حساب</b><small>پشتیبانی و بکاپ</small></button></div></section>

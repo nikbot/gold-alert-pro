@@ -1,0 +1,363 @@
+
+/* ============================================================
+   Gold2 Pro V75.3.2 — Visual Color Overhaul
+   Final visual layer: intentionally overrides legacy V62/V65/V66 colors.
+   No application logic or secrets are changed.
+   ============================================================ */
+
+:root{
+  --g2-ui-bg:#08111F;
+  --g2-ui-bg-2:#0A1422;
+  --g2-ui-surface:#0F1B2D;
+  --g2-ui-surface-2:#14243A;
+  --g2-ui-surface-3:#182B43;
+  --g2-ui-border:#243650;
+  --g2-ui-border-active:#45617F;
+  --g2-ui-text:#F1F5F9;
+  --g2-ui-muted:#8FA0B5;
+  --g2-ui-gold:#D6A84F;
+  --g2-ui-gold-light:#F2C866;
+  --g2-ui-green:#22C55E;
+  --g2-ui-red:#EF4444;
+  --g2-ui-blue:#38BDF8;
+  --g2-ui-purple:#A78BFA;
+}
+
+/* ---------- Global shell ---------- */
+body.v62Terminal{
+  background:
+    radial-gradient(800px 420px at 48% -220px,rgba(56,189,248,.055),transparent 72%),
+    radial-gradient(650px 400px at 100% 0,rgba(214,168,79,.035),transparent 72%),
+    #08111F !important;
+  color:var(--g2-ui-text) !important;
+}
+
+/* ---------- Sidebar ---------- */
+body.v62Terminal .v62Sidebar{
+  background:linear-gradient(180deg,#0F1B2D 0%,#0B1727 100%) !important;
+  border:1px solid #243650 !important;
+  box-shadow:0 18px 50px rgba(0,0,0,.30) !important;
+  backdrop-filter:blur(18px);
+}
+
+body.v62Terminal .v62Brand{
+  border-bottom:1px solid #243650 !important;
+}
+
+body.v62Terminal .v62BrandMark{
+  background:linear-gradient(145deg,#E5BC63,#C59638) !important;
+  color:#111827 !important;
+  box-shadow:0 8px 24px rgba(214,168,79,.14) !important;
+}
+
+body.v62Terminal .v62Brand b{
+  color:#F8FAFC !important;
+}
+
+body.v62Terminal .v62Brand small{
+  color:#8190A4 !important;
+}
+
+body.v62Terminal .v62Nav button{
+  background:transparent !important;
+  border:1px solid transparent !important;
+  color:#94A3B8 !important;
+  box-shadow:none !important;
+}
+
+body.v62Terminal .v62Nav button:hover{
+  background:#14243A !important;
+  border-color:#243650 !important;
+  color:#E2E8F0 !important;
+}
+
+body.v62Terminal .v62Nav button.active{
+  background:linear-gradient(90deg,rgba(214,168,79,.12),rgba(214,168,79,.025)) !important;
+  border-color:rgba(214,168,79,.28) !important;
+  color:#F8FAFC !important;
+  box-shadow:inset 3px 0 0 #D6A84F !important;
+}
+
+body.v62Terminal .v62Nav button.active .v62Icon{
+  background:rgba(214,168,79,.14) !important;
+  color:#F2C866 !important;
+}
+
+body.v62Terminal .v62Icon{
+  background:#14243A !important;
+  color:#94A3B8 !important;
+  border-color:#243650 !important;
+}
+
+/* ---------- Terminal main ---------- */
+body.v62Terminal .v62Main{
+  background:transparent !important;
+}
+
+body.v62Terminal .v62Header{
+  background:#0F1B2D !important;
+  border:1px solid #243650 !important;
+  box-shadow:0 12px 35px rgba(0,0,0,.18) !important;
+}
+
+body.v62Terminal .v62HeaderActions button{
+  background:#14243A !important;
+  border-color:#2A405D !important;
+  color:#CBD5E1 !important;
+}
+
+body.v62Terminal .v62HeaderActions button:hover{
+  background:#182B43 !important;
+  border-color:#45617F !important;
+}
+
+/* ---------- Dashboard hero ---------- */
+body.g2Dashboard .v62Hero{
+  background:
+    radial-gradient(500px 240px at 0% 0%,rgba(214,168,79,.075),transparent 70%),
+    linear-gradient(145deg,#0F1B2D,#0B1727) !important;
+  border:1px solid #29405D !important;
+  box-shadow:0 18px 50px rgba(0,0,0,.24) !important;
+}
+
+body.g2Dashboard .v62Kicker,
+body.g2Dashboard .v62Hero small{
+  color:#8FA0B5 !important;
+}
+
+body.g2Dashboard .v62Hero h1,
+body.g2Dashboard .v62Hero h2{
+  color:#F8FAFC !important;
+}
+
+body.g2Dashboard .v62Hero .gold,
+body.g2Dashboard .v62Hero .price-highlight{
+  color:#F2C866 !important;
+}
+
+body.g2Dashboard .v62Hero .positive,
+body.g2Dashboard .v62Hero .up{
+  color:#22C55E !important;
+}
+
+/* ---------- Market cards ---------- */
+body.g2Dashboard .v62MarketCard{
+  background:#0F1B2D !important;
+  border:1px solid #243650 !important;
+  box-shadow:none !important;
+}
+
+body.g2Dashboard .v62MarketCard:hover{
+  background:#14243A !important;
+  border-color:#45617F !important;
+}
+
+body.g2Dashboard .v62MarketCard span,
+body.g2Dashboard .v62MarketCard em{
+  color:#8FA0B5 !important;
+}
+
+body.g2Dashboard .v62MarketCard b{
+  color:#F1F5F9 !important;
+}
+
+body.g2Dashboard .v62MarketCard em.positive,
+body.g2Dashboard .v62MarketCard em.up{
+  color:#22C55E !important;
+}
+
+/* ---------- Quick launcher ---------- */
+body.g2Dashboard .g2DashboardQuick button{
+  background:#0F1B2D !important;
+  border:1px solid #243650 !important;
+  box-shadow:none !important;
+  color:#E2E8F0 !important;
+}
+
+body.g2Dashboard .g2DashboardQuick button:hover{
+  background:#14243A !important;
+  border-color:rgba(214,168,79,.45) !important;
+  box-shadow:0 8px 25px rgba(0,0,0,.18) !important;
+}
+
+body.g2Dashboard .g2DashboardQuick .g2qIcon{
+  background:#182B43 !important;
+  color:#CBD5E1 !important;
+}
+
+body.g2Dashboard .g2DashboardQuick button:nth-child(1) .g2qIcon{
+  color:#38BDF8 !important;
+}
+body.g2Dashboard .g2DashboardQuick button:nth-child(2) .g2qIcon{
+  color:#A78BFA !important;
+}
+body.g2Dashboard .g2DashboardQuick button:nth-child(3) .g2qIcon{
+  color:#F2C866 !important;
+}
+body.g2Dashboard .g2DashboardQuick button:nth-child(4) .g2qIcon{
+  color:#22C55E !important;
+}
+
+body.g2Dashboard .g2DashboardQuick b{
+  color:#F1F5F9 !important;
+}
+body.g2Dashboard .g2DashboardQuick small{
+  color:#8190A4 !important;
+}
+
+/* ---------- Status / utility blocks ---------- */
+body.g2Dashboard .v65MarketState,
+body.g2Dashboard .v66DecisionCard,
+body.g2Dashboard .v66HeatmapCard{
+  background:#0F1B2D !important;
+  border-color:#243650 !important;
+}
+
+body.g2Dashboard .v65MarketState{
+  color:#CBD5E1 !important;
+}
+
+/* ---------- Buttons ---------- */
+body.v62Terminal button.primary,
+body.v62Terminal .primary{
+  background:linear-gradient(135deg,#D6A84F,#B88931) !important;
+  border-color:#D6A84F !important;
+  color:#111827 !important;
+}
+
+body.v62Terminal button.primary:hover,
+body.v62Terminal .primary:hover{
+  background:linear-gradient(135deg,#F2C866,#D6A84F) !important;
+}
+
+body.v62Terminal button.secondary,
+body.v62Terminal .secondary{
+  background:#14243A !important;
+  border-color:#2A405D !important;
+  color:#DCE5EF !important;
+}
+
+/* ---------- Dedicated section pages ---------- */
+body.g2SectionPage{
+  background:
+    radial-gradient(700px 350px at 50% -150px,rgba(56,189,248,.045),transparent 70%),
+    #08111F !important;
+}
+
+body.g2SectionPage .g2PageHeader{
+  border-bottom:1px solid #243650;
+  padding-bottom:12px;
+}
+
+body.g2SectionPage .g2PageHeader .eyebrow{
+  color:#64748B !important;
+}
+
+body.g2SectionPage .g2PageHeader h2{
+  color:#F8FAFC !important;
+}
+
+body.g2SectionPage .g2PageHeader p{
+  color:#8FA0B5 !important;
+}
+
+body.g2SectionPage .g2Back{
+  background:#0F1B2D !important;
+  border-color:#243650 !important;
+  color:#CBD5E1 !important;
+}
+
+body.g2SectionPage .g2Back:hover{
+  background:#14243A !important;
+  border-color:#45617F !important;
+}
+
+/* ---------- Semantic colors ---------- */
+body.v62Terminal .positive,
+body.v62Terminal .up,
+body.v62Terminal .profit,
+body.v62Terminal [data-side="buy"]{
+  color:#22C55E !important;
+}
+
+body.v62Terminal .negative,
+body.v62Terminal .down,
+body.v62Terminal .loss,
+body.v62Terminal [data-side="sell"]{
+  color:#EF4444 !important;
+}
+
+body.v62Terminal .ai,
+body.v62Terminal .copilot,
+body.v62Terminal .ai-accent{
+  color:#A78BFA !important;
+}
+
+body.v62Terminal .live,
+body.v62Terminal .online,
+body.v62Terminal .info{
+  color:#38BDF8 !important;
+}
+
+/* ---------- Mobile bottom navigation ---------- */
+@media(max-width:760px){
+  body.v62Terminal .v62Sidebar{
+    background:rgba(15,27,45,.97) !important;
+    border:1px solid #243650 !important;
+  }
+
+  body.v62Terminal .v62Nav button.active{
+    background:#14243A !important;
+    border-color:rgba(214,168,79,.24) !important;
+    box-shadow:inset 0 -2px 0 #D6A84F !important;
+  }
+
+  body.v62Terminal .v62Nav button:hover{
+    background:#14243A !important;
+  }
+
+  body.g2Dashboard .v62Hero{
+    box-shadow:0 14px 38px rgba(0,0,0,.22) !important;
+  }
+}
+
+/* ---------- Remove legacy heavy visual treatments inside terminal ---------- */
+body.v62Terminal .v62Sidebar,
+body.v62Terminal .v62Header,
+body.g2Dashboard .v62Hero,
+body.g2Dashboard .v62MarketCard,
+body.g2Dashboard .g2DashboardQuick button{
+  text-shadow:none !important;
+}
+
+/* ---------- Light mode compatibility ---------- */
+html[data-theme="light"] body.v62Terminal,
+html[data-theme="light"] body.g2SectionPage{
+  background:#F4F7FA !important;
+  color:#172033 !important;
+}
+html[data-theme="light"] body.v62Terminal .v62Sidebar{
+  background:#FFFFFF !important;
+  border-color:#D4DEE9 !important;
+  box-shadow:0 12px 35px rgba(15,23,42,.08) !important;
+}
+html[data-theme="light"] body.v62Terminal .v62Nav button{
+  color:#64748B !important;
+}
+html[data-theme="light"] body.v62Terminal .v62Nav button:hover{
+  background:#F1F5F9 !important;
+}
+html[data-theme="light"] body.v62Terminal .v62Nav button.active{
+  background:rgba(184,135,24,.08) !important;
+  border-color:rgba(184,135,24,.25) !important;
+  color:#172033 !important;
+  box-shadow:inset 3px 0 0 #B88718 !important;
+}
+html[data-theme="light"] body.v62Terminal .v62Header,
+html[data-theme="light"] body.g2Dashboard .v62Hero,
+html[data-theme="light"] body.g2Dashboard .v62MarketCard,
+html[data-theme="light"] body.g2Dashboard .g2DashboardQuick button{
+  background:#FFFFFF !important;
+  border-color:#D4DEE9 !important;
+  color:#172033 !important;
+}
