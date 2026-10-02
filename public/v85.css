@@ -75,7 +75,35 @@ body.v62Terminal button{background:#17232b;color:#dce7eb;border-color:#30434d}
 body.v62Terminal button.secondary,body.v62Terminal .v62CopilotLink{background:#17232b!important;color:#c9d6db!important;border-color:#334852!important}
 body.v62Terminal button:focus-visible,body.v62Terminal input:focus-visible,body.v62Terminal select:focus-visible{outline-color:#49bca4!important}
 body.v62Terminal input,body.v62Terminal select,body.v62Terminal textarea{background:#0c151c!important;color:#e6eef1!important;border-color:#30434d!important}
-body.v62Terminal *{color:var(--v85-text)!important}
+body.v62Terminal.g2SectionPage{color:var(--v85-text)!important}
+body.v62Terminal.g2SectionPage .categorySection:not(#v62TerminalShell){color:var(--v85-text)!important}
+body.v62Terminal .card,
+body.v62Terminal.g2SectionPage .categorySection.card{
+  color:var(--v85-text)!important;
+  background:linear-gradient(145deg,var(--v85-panel),#0e171f)!important;
+  border-color:var(--v85-line)!important;
+  box-shadow:var(--v85-shadow)!important;
+}
+body.v62Terminal.g2SectionPage .categorySection.card :is(h1,h2,h3,h4,b,strong){color:var(--v85-text)!important}
+body.v62Terminal.g2SectionPage .categorySection.card :is(p,.small,.muted,.label,small,.eyebrow){color:var(--v85-muted)!important}
+body.v62Terminal.g2SectionPage :is(.metric,.asset,.target,.toolPanel,.decisionBox,.portfolioMetric,.insight,.scenarioResult,.accountStatus,.reportBox,.alertBox,.quick,.adminStat,.adminOverviewGrid .ov,.bizCard,.bizPanel,.giPanel,.giPulse>div,.v61Metric,.v61Scenario,.v61Levels>div,.v61GuardGrid>div){
+  color:var(--v85-text)!important;background:var(--v85-panel-raised)!important;border-color:var(--v85-line)!important;
+}
+body.v62Terminal.g2SectionPage :is(input,select,textarea){background:var(--v85-panel-soft)!important;color:var(--v85-text)!important;border-color:var(--v85-line)!important}
+body.v62Terminal.g2SectionPage .categorySection.card :is(.upTxt,.v62Up,.accountLogged){color:var(--v85-green)!important}
+body.v62Terminal.g2SectionPage .categorySection.card :is(.downTxt,.v62Down){color:var(--v85-red)!important}
+body.v62Terminal button:not(.aiBtn):not(.primary):not(.blue):not(.v62CopilotBtn):not(#v82PriceRefresh):not(.danger):not(.dangerBtn){background:#17232b!important;color:#dce7eb!important;border-color:#30434d!important}
+body.v62Terminal button.aiBtn,body.v62Terminal button.primary,body.v62Terminal button.blue{background:linear-gradient(135deg,#d5ad61,#ad8035)!important;border-color:#d5ad61!important;color:#17130c!important}
+body.v62Terminal button.danger,body.v62Terminal button.dangerBtn{background:#2b171b!important;border-color:#693640!important;color:#ff9aa5!important}
+@media(hover:hover){body.v62Terminal button:hover:not(:disabled):not(.aiBtn):not(.primary):not(.blue):not(.v62CopilotBtn){background:#21323a!important;border-color:#44645f!important}}
+body.v62Terminal .sideMenu{background:linear-gradient(180deg,#121c25,#0f171f)!important;border-color:#293944!important}
+body.v62Terminal .menuSectionLabel{padding:9px 5px 2px;color:#7fa398!important;font-size:9px;font-weight:850;letter-spacing:.08em}
+body.v62Terminal .menuItem{background:#111b23!important;border-color:#293944!important;color:var(--v85-text)!important}
+body.v62Terminal .menuItem:hover,body.v62Terminal .menuItem.active{background:#18312f!important;border-color:#315c53!important;box-shadow:inset -3px 0 var(--v85-green)!important}
+body.v62Terminal .menuItem small{color:var(--v85-muted)!important}
+body.v62Terminal .menuIcon{background:#1a2831!important;color:#a9c1ca!important}
+body.v62Terminal .floatingMenuBtn{border-color:#315c53!important;background:linear-gradient(145deg,#36c98f,#14745e)!important;color:#061b15!important;box-shadow:0 12px 35px #000b,0 0 0 4px #36c98f20!important}
+body.v62Terminal .aiStatus,body.v62Terminal .aiResult,body.v62Terminal .chatResult{color:var(--v85-text)!important;background:#0e171f!important;border-color:var(--v85-line)!important}
 body.v62Terminal .v62Sidebar .v62BrandText small,body.v62Terminal .v62HeaderBrand span,body.v62Terminal .v62SideFoot,body.v62Terminal .v62MarketCard span,body.v62Terminal .v62Stat span,body.v62Terminal .v65StateGrid>div>span{color:var(--v85-muted)!important}
 body.v62Terminal .v62Nav button.active,body.v62Terminal #v82PriceRefresh,body.v62Terminal .g2DashboardQuick button,body.v62Terminal .v62CopilotLink{color:#e7edf2!important}
 

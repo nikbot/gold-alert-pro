@@ -17,7 +17,7 @@ import { getTheme, setTheme } from "./theme.js";
 import { V78_PLANS, getSubscriptionFor, setSubscription, getWatchlist, addWatchSymbol, removeWatchSymbol, saveWatchlist, createApiKey, listApiKeys, revokeApiKey, authenticateApiKey, apiUsage, securityEvent, securityEvents, subscriptionOverview, platformOverview } from "./proPlatform.js";
 import { getTradingSignals, getGoldSignalCandles, getPaperQuote, normalizeTimeframe, paperPnl, isStrongTradingSignal } from "./tradingSignals.js";
 
-const APP_VERSION = "84.0.0"
+const APP_VERSION = "85.0.1"
 const USER_SESSION_HOURS = Math.max(1, Number(process.env.USER_SESSION_HOURS || 72));
 const LOGIN_WINDOW_MS = 10 * 60_000;
 const LOGIN_MAX_ATTEMPTS = 12;
@@ -991,41 +991,42 @@ app.post("/api/ai-diagnostic", async (req,res)=>{
   const key=process.env.GAPGPT_API_KEY;
   if(!key) return res.status(503).json({ok:false,configured:false,error:"کلید GapGPT در Environment Variables سرور تنظیم نشده است."});
   try{
-    const out=await callGapGPT([{role:"system",content:"تو تست اتصال Gold Alert Pro هستی."},{role:"user",content:"فقط بنویس: اتصال AI برقرار است."}],{temperature:0,max_tokens:60,timeoutMs:20000});
+    const out=await callGapGPT([{role:"system",content:"تو تست اتصال Gold Alert Pro هستی."},{role:"user",content:"فقط بنویس: اتصال AI برقرار است."}],{temperature:0,max_tokens:60,timeoutMs:10000});
     res.json({ok:true,configured:true,provider:"GapGPT",model:out.model,text:out.text,baseUrl:AI_BASE_URL});
   }catch(e){res.status(502).json({ok:false,configured:true,provider:"GapGPT",baseUrl:AI_BASE_URL,modelsTried:AI_FALLBACK_MODELS,error:e.message});}
 });
 
 app.post("/api/ai-professional", async (req,res)=>{
-  if(!(await requireFeature(req,'ai',req.body?.deviceId))) return res.status(403).json({error:"دسترسی تحلیل حرفه‌ای AI برای این حساب فعال نیست."});
-  const ip=req.headers["x-forwarded-for"]?.split(",")[0]?.trim() || req.socket.remoteAddress || "unknown";
-  if(!aiAllowed(ip)) return res.status(429).json({error:"تعداد درخواست‌های AI زیاد است. کمی بعد دوباره امتحان کن."});
-  const key=process.env.GAPGPT_API_KEY;
-  if(!key) return res.status(503).json({error:"کلید GapGPT روی سرور تنظیم نشده است."});
-  const context=buildAIContext();
-  let account=null;
-  try{account=await accountFromReq(req);}catch{}
-  const deviceId=cleanDeviceId(req.body?.deviceId);
-  const portfolio=await getDevicePortfolio(deviceId).catch(()=>[]);
-  const profile=await profileFor(deviceId).catch(()=>({}));
-  const settings=await readJsonFile(USER_SETTINGS_FILE,{});
-  const personal=settings?.[account?.id||deviceId]||{};
-  const userQuestion=String(req.body?.question||'').slice(0,1200);
-  const payload={market:context,portfolio:portfolio.slice(0,100),profile,investorProfile:personal.investorProfile||{},question:userQuestion};
-  const prompt=`تو موتور تحلیل حرفه‌ای Gold Alert Pro هستی. فقط از داده‌های ارائه‌شده استفاده کن و اگر داده ناقص است صریح بگو. تحلیل را به فارسی، دقیق و قابل فهم ارائه بده. هیچ تضمین سود، پیش‌بینی قطعی یا دستور قطعی خرید/فروش نده. تفاوت «داده»، «محاسبه» و «سناریو» را روشن نگه دار.\n\nداده کاربر و بازار:\n${JSON.stringify(payload,null,2)}\n\nخروجی را با این تیترها بده:\n1) خلاصه مدیریتی\n2) وضعیت بازار و تکنیکال\n3) تحلیل سبد شخصی\n4) سه سناریو: صعودی، پایه، نزولی؛ برای هرکدام محرک‌ها و ریسک‌ها\n5) سطوح و اعداد قابل مشاهده (فقط اگر از داده قابل استخراج است)\n6) نکات مدیریت ریسک\n7) کیفیت داده و مواردی که باید تأیید شوند\nاگر سؤال کاربر وجود دارد، در پایان مستقیم به آن پاسخ بده.`;
   try{
-    const r=await fetchWithTimeout(`${AI_BASE_URL}/chat/completions`,{method:"POST",headers:{"Authorization":`Bearer ${key}`,"Content-Type":"application/json"},body:JSON.stringify({model:AI_MODEL,messages:[{role:"system",content:"تو تحلیلگر حرفه‌ای فارسی‌زبان طلا هستی. محتاط، داده‌محور و شفاف باش. تصمیم را به کاربر تحمیل نکن."},{role:"user",content:prompt}],temperature:0.15,max_tokens:1400})});
+    if(!(await requireFeature(req,'ai',req.body?.deviceId))) return res.status(403).json({error:"دسترسی تحلیل حرفه‌ای AI برای این حساب فعال نیست."});
+    const ip=req.headers["x-forwarded-for"]?.split(",")[0]?.trim() || req.socket.remoteAddress || "unknown";
+    if(!aiAllowed(ip)) return res.status(429).json({error:"تعداد درخواست‌های AI زیاد است. کمی بعد دوباره امتحان کن."});
+    const key=process.env.GAPGPT_API_KEY;
+    if(!key) return res.status(503).json({error:"کلید GapGPT روی سرور تنظیم نشده است."});
+    const context=buildAIContext();
+    const account=await accountFromReq(req).catch(()=>null);
+    const deviceId=cleanDeviceId(req.body?.deviceId);
+    const portfolio=await getDevicePortfolio(deviceId).catch(()=>[]);
+    const profile=await profileFor(deviceId).catch(()=>({}));
+    const settings=await readJsonFile(USER_SETTINGS_FILE,{});
+    const personal=settings?.[account?.id||deviceId]||{};
+    const userQuestion=String(req.body?.question||'').slice(0,1200);
+    const payload={market:context,portfolio:portfolio.slice(0,100),profile,investorProfile:personal.investorProfile||{},question:userQuestion};
+    const prompt=`تو موتور تحلیل حرفه‌ای Gold Alert Pro هستی. فقط از داده‌های ارائه‌شده استفاده کن و اگر داده ناقص است صریح بگو. تحلیل را به فارسی، دقیق و قابل فهم ارائه بده. هیچ تضمین سود، پیش‌بینی قطعی یا دستور قطعی خرید/فروش نده. تفاوت «داده»، «محاسبه» و «سناریو» را روشن نگه دار.\n\nداده کاربر و بازار:\n${JSON.stringify(payload,null,2)}\n\nخروجی را با این تیترها بده:\n1) خلاصه مدیریتی\n2) وضعیت بازار و تکنیکال\n3) تحلیل سبد شخصی\n4) سه سناریو: صعودی، پایه، نزولی؛ برای هرکدام محرک‌ها و ریسک‌ها\n5) سطوح و اعداد قابل مشاهده (فقط اگر از داده قابل استخراج است)\n6) نکات مدیریت ریسک\n7) کیفیت داده و مواردی که باید تأیید شوند\nاگر سؤال کاربر وجود دارد، در پایان مستقیم به آن پاسخ بده.`;
+    const r=await fetchWithTimeout(`${AI_BASE_URL}/chat/completions`,{method:"POST",headers:{"Authorization":`Bearer ${key}`,"Content-Type":"application/json"},body:JSON.stringify({model:AI_MODEL,messages:[{role:"system",content:"تو تحلیلگر حرفه‌ای فارسی‌زبان طلا هستی. محتاط، داده‌محور و شفاف باش. تصمیم را به کاربر تحمیل نکن."},{role:"user",content:prompt}],temperature:0.15,max_tokens:1400})},12000);
     const data=await r.json().catch(()=>({}));
     if(!r.ok) throw new Error(data?.error?.message||data?.message||`GapGPT HTTP ${r.status}`);
     const text=data?.choices?.[0]?.message?.content||data?.choices?.[0]?.text||data?.output_text||data?.message?.content;
     if(!text) throw new Error("پاسخ معتبری دریافت نشد.");
     res.json({ok:true,provider:"GapGPT",model:data?.model||AI_MODEL,text,at:new Date().toISOString(),dataAt:state.updatedAt,portfolioItems:portfolio.length});
-  }catch(e){console.warn("Professional AI error:",e.message);res.status(502).json({error:"تحلیل حرفه‌ای AI فعلاً در دسترس نیست: "+e.message});}
+  }catch(e){console.warn("Professional AI error:",e.message);res.status(502).json({ok:false,error:"تحلیل حرفه‌ای AI فعلاً در دسترس نیست: "+e.message});}
 });
 
 app.post("/api/ai-analysis", async (req,res)=>{
   res.set("Cache-Control","no-store");
   try {
+    const ip=req.headers["x-forwarded-for"]?.split(",")[0]?.trim() || req.socket.remoteAddress || "unknown";
+    if(!aiAllowed(ip)) return res.status(429).json({ok:false,error:"تعداد درخواست‌های AI زیاد است. کمی بعد دوباره امتحان کن."});
     const context = buildAIContext();
     const result = await analyzeGold({
       ...context,
@@ -1034,6 +1035,7 @@ app.post("/api/ai-analysis", async (req,res)=>{
     return res.json({
       ok:true,
       provider: result.provider,
+      model: result.provider === "GapGPT" ? AI_MODEL : null,
       text: typeof result.analysis === "string" ? result.analysis : JSON.stringify(result.analysis),
       at:new Date().toISOString(),
       dataAt:state.updatedAt || null
@@ -1553,7 +1555,7 @@ app.post("/api/ai-test", async(req,res)=>{
  try{
    const { analyzeGold } = await import("./ai/manager.js");
    const started=Date.now();
-   const result=await analyzeGold({price:15000000,usd:0,xau:0,change:0});
+    const result=await analyzeGold({price:Number(state.iran?.priceIRR||0),usd:Number(state.dollar?.priceIRR||0),xau:Number(state.global?.xauUsd||0),change:Number(state.iran?.changePct||0)});
    res.json({ok:true,latency:Date.now()-started,...result});
  }catch(e){
    res.status(500).json({ok:false,error:e.message});

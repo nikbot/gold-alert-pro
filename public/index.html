@@ -593,7 +593,7 @@ body.authLocked .floatingMenuBtn,body.authLocked .menuBackdrop,body.authLocked .
 <link rel="stylesheet" href="/v79-polish.css?v=79.0.0">
 <link rel="stylesheet" href="/v80.css?v=80.0.0">
 <link rel="stylesheet" href="/v84.css?v=84.0.0">
-<link rel="stylesheet" href="/v85.css?v=85.0.0">
+<link rel="stylesheet" href="/v85.css?v=85.0.1">
 </head>
 <body class="v62Terminal">
 <div id="updateBanner" style="display:none;position:sticky;top:0;z-index:900;background:#17140d;border-bottom:1px solid #4a3a19;padding:10px 14px;text-align:center">
@@ -667,18 +667,22 @@ body.authLocked .floatingMenuBtn,body.authLocked .menuBackdrop,body.authLocked .
   <div class="sideMenuHead"><div><div class="eyebrow">Gold Alert Pro</div><h3>منوی حرفه‌ای</h3></div><button class="menuClose" id="menuClose" type="button" aria-label="بستن منو">×</button></div>
   <div class="sideMenuHint">فقط بخش موردنیاز را باز کن؛ پیشخوان و قیمت زنده همیشه در دسترس هستند.</div>
   <div class="menuGroups">
+    <div class="menuSectionLabel">نمای کلی</div>
     <button class="menuItem active" data-category="dashboard" type="button"><span class="menuIcon">🏠</span><span><b>پیشخوان</b><small>قیمت زنده و وضعیت امروز</small></span></button>
+    <div class="menuSectionLabel">بازار و تحلیل</div>
     <button class="menuItem" data-category="intelligence" type="button"><span class="menuIcon">🧠</span><span><b>مرکز هوش طلا</b><small>اسکنر، سناریو، واچ‌لیست و ژورنال</small></span></button>
     <button class="menuItem" data-category="market" type="button"><span class="menuIcon">📊</span><span><b>بازار و نمودار</b><small>نمودار، سکه‌ها و تحلیل تکنیکال</small></span></button>
+    <button class="menuItem" data-category="signals" type="button"><span class="menuIcon">🎯</span><span><b>سیگنال آزمایشی</b><small>تمرین و ارزیابی بدون معامله واقعی</small></span></button>
     <button class="menuItem" data-category="ai" type="button"><span class="menuIcon">🤖</span><span><b>هوش و تحلیل</b><small>تحلیل هوشمند و راهنمای ساده</small></span></button>
+    <button class="menuItem" data-category="decision" type="button"><span class="menuIcon">🧭</span><span><b>اتاق تصمیم</b><small>روند، سناریو و مدیریت ریسک</small></span></button>
+    <button class="menuItem" data-category="news" type="button"><span class="menuIcon">📰</span><span><b>اخبار بازار</b><small>خبرهای اثرگذار و منابع عمومی</small></span></button>
+    <button class="menuItem" data-category="calendar" type="button"><span class="menuIcon">📅</span><span><b>تقویم اقتصادی</b><small>رویدادهای مهم و زمان انتشار</small></span></button>
+    <div class="menuSectionLabel">ابزارها و حساب</div>
     <button class="menuItem" data-category="alerts" type="button"><span class="menuIcon">🔔</span><span><b>هشدارها</b><small>Push، هدف قیمت و پایش خودکار</small></span></button>
     <button class="menuItem" data-category="tools" type="button"><span class="menuIcon">💼</span><span><b>دارایی و ابزار</b><small>دارایی، محاسبات و بک‌تست</small></span></button>
-    <button class="menuItem" data-category="news" type="button"><span class="menuIcon">📰</span><span><b>اخبار بازار</b><small>اخبار اثرگذار و منابع عمومی</small></span></button>
-    <button class="menuItem" data-category="decision" type="button"><span class="menuIcon">🧠</span><span><b>اتاق تصمیم</b><small>روند، سطوح مهم و دستیار AI</small></span></button>
-    <button class="menuItem" data-category="calendar" type="button"><span class="menuIcon">📅</span><span><b>تقویم اقتصادی</b><small>رویدادهای مهم و هشدارها</small></span></button>
-    <button class="menuItem adminOnly" id="adminMenuItem" data-category="admin" type="button"><span class="menuIcon">🛡️</span><span><b>پنل مدیریت</b><small>کاربران، دسترسی و اشتراک</small></span></button>
     <button class="menuItem" data-category="sms" type="button"><span class="menuIcon">📱</span><span><b>سرویس SMS</b><small>فعال‌سازی و وضعیت سرویس پیامکی</small></span></button>
     <button class="menuItem" data-category="account" type="button"><span class="menuIcon">👤</span><span><b>حساب و پشتیبان</b><small>ورود، همگام‌سازی و نسخه پشتیبان</small></span></button>
+    <button class="menuItem adminOnly" id="adminMenuItem" data-category="admin" type="button"><span class="menuIcon">🛡️</span><span><b>پنل مدیریت</b><small>کاربران، دسترسی و اشتراک</small></span></button>
   </div>
   <div class="menuFooter">با انتخاب هر دسته، سایر بخش‌ها موقتاً پنهان می‌شوند تا صفحه خلوت و سریع بماند.</div>
 </aside>
@@ -1223,13 +1227,13 @@ body.authLocked .floatingMenuBtn,body.authLocked .menuBackdrop,body.authLocked .
 </div>
 <script>
 (function(){
-  const RELEASE='85.0.0';
-  const KEY='g2-release-migrated-v85';
+  const RELEASE='85.0.1';
+  const KEY='g2-release-migrated-v85.0.1';
   if(!('serviceWorker' in navigator)) return;
   window.addEventListener('load',async()=>{
     try{
       const regs=await navigator.serviceWorker.getRegistrations();
-      const stale=regs.filter(r=>!String(r.active?.scriptURL||r.installing?.scriptURL||r.waiting?.scriptURL||'').includes('v85.0.0'));
+      const stale=regs.filter(r=>!String(r.active?.scriptURL||r.installing?.scriptURL||r.waiting?.scriptURL||'').includes('v85.0.1'));
       if(!stale.length) return;
       await Promise.all(stale.map(r=>r.unregister()));
       if('caches' in window){
@@ -1244,8 +1248,8 @@ body.authLocked .floatingMenuBtn,body.authLocked .menuBackdrop,body.authLocked .
   });
 })();
 </script>
-<script src="/app.js?build=85.0.0" defer></script>
-<script src="/gold-intelligence.js?build=85.0.0" defer></script>
+<script src="/app.js?build=85.0.1" defer></script>
+<script src="/gold-intelligence.js?build=85.0.1" defer></script>
 
 
 <script src="/v67.js?build=75.4"></script>
@@ -1256,5 +1260,5 @@ body.authLocked .floatingMenuBtn,body.authLocked .menuBackdrop,body.authLocked .
 <script src="/v78.js?v=78.0.0" defer></script>
 <script src="/v79.js?v=79.0.0" defer></script>
 <script src="/v80.js?v=80.0.0" defer></script>
-<script src="/v85.js?v=85.0.0" defer></script>
+<script src="/v85.js?v=85.0.1" defer></script>
 </body></html>

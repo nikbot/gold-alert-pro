@@ -161,7 +161,7 @@ async function enablePush(silent=false){
 function urlBase64ToUint8Array(s){const padding='='.repeat((4-s.length%4)%4),base64=(s+padding).replace(/-/g,'+').replace(/_/g,'/'),raw=atob(base64),out=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++)out[i]=raw.charCodeAt(i);return out}
 async function runBacktest(){const el=document.getElementById('bt');el.textContent='در حال اجرای بک‌تست...';try{const x=await fetch('/api/backtest?deviceId='+encodeURIComponent(deviceId)+'&accountToken='+encodeURIComponent(accountToken)).then(r=>r.json());if(x.error)throw new Error(x.error);el.innerHTML=`دوره ${x.from} تا ${x.to}<br>معاملات: <b>${fa(x.trades)}</b> • موفقیت: <b>${f2(x.winRate)}٪</b><br>سود خالص تاریخی: <b>${f2(x.netReturn)}٪</b> • افت سرمایه: ${f2(x.maxDrawdown)}٪`}catch(e){el.textContent='خطا: '+e.message}}
 async function installApp(){if(deferredPrompt){deferredPrompt.prompt();await deferredPrompt.userChoice;deferredPrompt=null;document.getElementById('installBtn').style.display='none';const h=document.getElementById('installBtnHero');if(h)h.style.display='none'}else alert('در Chrome اندروید: منوی ⋮ → افزودن به صفحه اصلی / Install app')}
-const SW_BUILD_URL='/sw.js?v84.0.0';
+const SW_BUILD_URL='/sw.js?v85.0.1';
 let swRegistrationPromise=null;
 function registerSW(){
   if(!('serviceWorker' in navigator)) return Promise.resolve(null);
@@ -181,14 +181,23 @@ function connectLiveStream(){
 function ensureMarketRefresh(){if(document.hidden||refreshInFlight||Date.now()-lastMarketEventAt<12000)return;refreshInFlight=true;load().finally(()=>{refreshInFlight=false})}
 registerSW();load();connectLiveStream();loadPortfolio();loadUserSettings();news();initChartControls();setInterval(ensureMarketRefresh,12000);setInterval(()=>{if(!document.hidden)loadPortfolio()},30000);setInterval(()=>{if(!document.hidden)news()},180000);
 
+async function readAIResponse(response){
+ const raw=await response.text();
+ try{return JSON.parse(raw||'{}');}catch{
+  if(response.status===503&&/App unavailable/i.test(raw))throw new Error('میزبان فعلاً برنامه را در دسترس قرار نمی‌دهد (خطای 503). تنظیم کلید به‌تنهایی کافی نیست؛ سرویس باید در پنل میزبانی دوباره مستقر یا راه‌اندازی شود.');
+  const detail=raw.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi,' ').replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi,' ').replace(/<[^>]+>/g,' ').replace(/&nbsp;|&#160;/gi,' ').replace(/&amp;/gi,'&').replace(/\s+/g,' ').trim().slice(0,180);
+  throw new Error(`پاسخ سرور JSON نبود${response.status?` (${response.status})`:''}${detail?`: ${detail}`:''}`);
+ }
+}
+
 async function loadAIHealth(){
  const status=document.getElementById('aiStatus');
  if(!status)return;
  try{
    const r=await fetch('/api/ai-health?v=10.1.0',{cache:'no-store'});
-   const d=await r.json().catch(()=>({}));
-   if(!r.ok) throw new Error(d.error||'خطای اتصال');
-   status.textContent=d.configured ? `🟢 اتصال هوش مصنوعی آماده است • ${d.provider||'GapGPT'} • ${d.model||''}` : '🟠 کلید GapGPT روی سرور تنظیم نشده است';
+    const d=await readAIResponse(r);
+    if(!r.ok) throw new Error(d.error||'خطای اتصال');
+    status.textContent=d.configured ? `🟠 کلید ${d.provider||'GapGPT'} تنظیم شده است؛ برای آزمون واقعی از دکمهٔ تست اتصال استفاده کن.` : '🔴 کلید GapGPT روی سرور تنظیم نشده است';
  }catch(e){ status.textContent='🔴 وضعیت هوش مصنوعی قابل دریافت نیست'; }
 }
 
@@ -196,19 +205,19 @@ async function runAIAnalysis(){
  const btn=document.getElementById('aiBtn'), box=document.getElementById('aiResult'), meta=document.getElementById('aiMeta');
  if(!btn||!box)return;
  btn.disabled=true; btn.textContent='⏳ در حال تحلیل داده‌های لحظه‌ای...'; box.style.display='block'; box.textContent='در حال دریافت تحلیل از GapGPT...'; if(meta) meta.textContent='';
- const controller=new AbortController();
- const timer=setTimeout(()=>controller.abort(),35000);
- try{
-   const r=await fetch('/api/ai-analysis',{method:'POST',headers:{'Content-Type':'application/json','Cache-Control':'no-cache'},cache:'no-store',signal:controller.signal,body:JSON.stringify({deviceId,accountToken})});
-   const raw=await r.text();
-   let d={}; try{ d=JSON.parse(raw); }catch{ d={error:raw||'پاسخ نامعتبر از سرور'}; }
-   if(!r.ok) throw new Error(d.error||`خطای سرور (${r.status})`);
-   box.textContent=d.text||'پاسخی دریافت نشد.';
-   if(meta) meta.textContent='GapGPT • مدل: '+(d.model||'نامشخص')+' • داده بازار: '+new Date(d.dataAt||Date.now()).toLocaleTimeString('fa-IR');
+  const controller=new AbortController();
+  const timer=setTimeout(()=>controller.abort(),20000);
+  try{
+    const question='تحلیل لحظه‌ای بازار طلا را بر پایه داده‌های موجود ارائه کن؛ وضعیت قیمت و زمان داده، شاخص‌های تکنیکال، دلار و اونس، سناریوهای ممکن و ریسک‌ها را بگو. داده مفقود را مشخص کن و دستور قطعی خرید یا فروش نده.';
+    const r=await fetch('/api/ai-professional',{method:'POST',headers:{'Content-Type':'application/json',...accountHeaders()},cache:'no-store',signal:controller.signal,body:JSON.stringify({deviceId,accountToken,question})});
+    const d=await readAIResponse(r);
+    if(!r.ok) throw new Error(d.error||`خطای سرور (${r.status})`);
+    box.textContent=d.text||'پاسخی دریافت نشد.';
+    if(meta) meta.textContent=(d.provider||'GapGPT')+' • مدل: '+(d.model||'نامشخص')+' • داده بازار: '+new Date(d.dataAt||Date.now()).toLocaleTimeString('fa-IR');
  }catch(e){
    const msg=e.name==='AbortError' ? 'زمان پاسخ‌گویی تمام شد؛ اتصال GapGPT یا تنظیمات سرور را بررسی کن.' : (e.message||'خطای ناشناخته');
    box.textContent='⚠️ '+msg;
-   if(meta) meta.textContent='برای بررسی، بخش Logs را ببین.';
+    if(meta) meta.textContent='وضعیت کلید با موفقیت آزمون و دسترس‌پذیری سرور یکی نیست.';
  }finally{
    clearTimeout(timer);
    btn.disabled=false; btn.textContent='🤖 تحلیل لحظه‌ای بازار + نمودار';
@@ -588,7 +597,7 @@ async function refreshAICopilot(force=false,page=aiCopilotPage,question=''){
  const summary=document.getElementById('aiCopilotSummary'); if(summary)summary.textContent='دارم قیمت، نمودار و روند را ساده بررسی می‌کنم...';
  try{
   const r=await fetch('/api/ai-assistant',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({deviceId,accountToken,page,question})});
-  const d=await r.json(); if(!r.ok)throw new Error(d.error||'دستیار در دسترس نیست');
+   const d=await readAIResponse(r); if(!r.ok)throw new Error(d.error||'دستیار در دسترس نیست');
   const data=d.assistant||{}; aiCopilotCache[key]={at:Date.now(),data,meta:d}; aiCopilotLastCall=Date.now(); renderAICopilot(data,d);
  }catch(e){renderAICopilot({greeting:'سلام 👋',summary:'فعلاً نتوانستم تحلیل تازه بگیرم.',action:'صبر کن و وضعیت Live بودن قیمت را چک کن.',why:'خطای ارتباط با دستیار.',watch:'نمودار و زمان آخرین دریافت را بررسی کن.',alert:e.message,tone:'neutral',confidence:30},{provider:'rule-engine'});}
 }
@@ -606,7 +615,7 @@ document.addEventListener('DOMContentLoaded',initAICopilot);
 
 async function testAIConnection(){
  const box=document.getElementById('aiStatus'); if(box)box.textContent='⏳ در حال تست واقعی اتصال به GapGPT...';
- try{const r=await fetch('/api/ai-diagnostic',{method:'POST',headers:{'Content-Type':'application/json'}});const d=await r.json();if(!r.ok)throw new Error(d.error||'اتصال ناموفق');if(box)box.textContent='🟢 AI متصل است • مدل: '+(d.model||'auto');return true;}catch(e){if(box)box.textContent='🔴 AI متصل نیست: '+e.message;return false;}
+  try{const r=await fetch('/api/ai-diagnostic',{method:'POST',headers:{'Content-Type':'application/json'}});const d=await readAIResponse(r);if(!r.ok)throw new Error(d.error||'اتصال ناموفق');if(box)box.textContent='🟢 اتصال واقعی برقرار است • مدل: '+(d.model||'auto');return true;}catch(e){if(box)box.textContent='🔴 AI متصل نیست: '+e.message;return false;}
 }
 window.testAIConnection=testAIConnection;
 
@@ -618,14 +627,14 @@ async function loadMarketOutlook(){
 }
 async function generateDailyAIReport(){
  const box=document.getElementById('dailyAIReport');if(!box)return;box.style.display='block';box.textContent='در حال تولید گزارش روزانه...';
- try{const r=await fetch('/api/ai-professional',{method:'POST',headers:{'Content-Type':'application/json',...accountHeaders()},body:JSON.stringify({deviceId,accountToken,question:'یک گزارش روزانه بازار تهیه کن: قیمت و زمان داده، روند کوتاه‌مدت، RSI/MACD/EMA در صورت موجود بودن، حمایت و مقاومت قابل استنباط، وضعیت دلار و اونس، اخبار و رویدادهای موجود، سناریوهای صعودی/پایه/نزولی و ریسک‌ها. داده مفقود را صریح مشخص کن و هیچ دستور قطعی خرید یا فروش نده.'})});const d=await r.json();if(!r.ok)throw new Error(d.error||'گزارش ناموفق');box.textContent=d.text||'گزارشی دریافت نشد.';}catch(e){box.textContent='⚠️ '+e.message;}
+  try{const r=await fetch('/api/ai-professional',{method:'POST',headers:{'Content-Type':'application/json',...accountHeaders()},body:JSON.stringify({deviceId,accountToken,question:'یک گزارش روزانه بازار تهیه کن: قیمت و زمان داده، روند کوتاه‌مدت، RSI/MACD/EMA در صورت موجود بودن، حمایت و مقاومت قابل استنباط، وضعیت دلار و اونس، اخبار و رویدادهای موجود، سناریوهای صعودی/پایه/نزولی و ریسک‌ها. داده مفقود را صریح مشخص کن و هیچ دستور قطعی خرید یا فروش نده.'})});const d=await readAIResponse(r);if(!r.ok)throw new Error(d.error||'گزارش ناموفق');box.textContent=d.text||'گزارشی دریافت نشد.';}catch(e){box.textContent='⚠️ '+e.message;}
 }
 window.loadMarketOutlook=loadMarketOutlook;window.generateDailyAIReport=generateDailyAIReport;
 
 async function runProfessionalAI(){
  const box=document.getElementById('aiProfessionalResult'),q=document.getElementById('aiProfessionalQuestion')?.value||''; if(!box)return;
  box.style.display='block';box.textContent='⏳ در حال تحلیل بازار، سبد و پروفایل شخصی...';
- try{const r=await fetch('/api/ai-professional',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({deviceId,accountToken,question:q})});const d=await r.json();if(!r.ok)throw new Error(d.error||'تحلیل ناموفق');box.textContent=d.text||'پاسخی دریافت نشد.';}catch(e){box.textContent='⚠️ '+e.message;}
+  try{const r=await fetch('/api/ai-professional',{method:'POST',headers:{'Content-Type':'application/json',...accountHeaders()},body:JSON.stringify({deviceId,accountToken,question:q})});const d=await readAIResponse(r);if(!r.ok)throw new Error(d.error||'تحلیل ناموفق');box.textContent=d.text||'پاسخی دریافت نشد.';}catch(e){box.textContent='⚠️ '+e.message;}
 }
 async function loadUserSettings(){try{const r=await fetch('/api/user-settings?accountToken='+encodeURIComponent(accountToken));const d=await r.json();if(!r.ok)throw new Error(d.error||'خطا');const s=d.settings||{};const p=s.investorProfile||{};const set=(id,v)=>{const e=document.getElementById(id);if(e)e.value=v??''};set('investorRisk',p.risk||'medium');set('investorHorizon',p.horizon||'medium');set('investorGoal',p.goal||'');set('investorNotes',p.notes||'');renderStorageList(s.storageLocations||[]);renderHouseholdList(s.householdPortfolios||[]);}catch(e){}
 }
