@@ -1,8 +1,8 @@
 
-/* Gold2 Pro V75.4 — network-only service worker.
+/* Gold2 Pro V80 — network-only service worker.
    It exists only for Web Push support and migration away from legacy caches.
    It never serves an old cached HTML/CSS/JS asset. */
-const BUILD='v75.4';
+const BUILD='v80.0.0';
 
 self.addEventListener('install',event=>{
   event.waitUntil(self.skipWaiting());

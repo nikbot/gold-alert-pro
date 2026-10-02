@@ -746,6 +746,6 @@ export async function getHistory() {
   // or a double slash when TGJU_GOLD_URL is the site root.
   try {
     const historyUrl = new URL("/profile/geram18/history", TGJU_GOLD_URL).toString();
-    return parseHistoryHtml(await fetchTextWithRetry(historyUrl));
+    return parseHistoryHtml(await fetchText(historyUrl));
   } catch { return []; }
 }

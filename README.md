@@ -91,3 +91,12 @@ These credentials are intended for the packaged/demo build. Change them before p
 
 ## v61.0.0
 AI Decision Room, Smart Alerts ترکیبی و Portfolio Guard اضافه شدند.
+
+## V78
+Professional Financial Terminal, Watchlist, Alerts, Developer API, subscriptions, market health and admin Pro Center.
+
+## V79
+Responsive sign-in and admin entry, clearer account sign-out, password visibility controls, and searchable dashboard navigation. See `V79_UI_REFRESH.md`.
+
+## V80
+Live gold/crypto signal workspace, exchange-sourced candles and crypto trade-side volume, Persian beginner explanations, and persistent paper-trade results. See `V80_SIGNAL_SIMULATOR.md`.

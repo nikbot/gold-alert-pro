@@ -1,8 +1,8 @@
 /* Gold2 Pro V67 — Professional Candlestick & Technical Layer */
 (function(){
  const $=id=>document.getElementById(id), n=v=>Number(v||0), money=v=>{try{return moneyIRR(v)}catch{return Number(v||0).toLocaleString('fa-IR')}};
- let tf='1m', zoom=120, showEma=true, showSma=false, showAlerts=true, candles=[];
- const intervals={ '1m':60,'5m':300,'15m':900,'1h':3600,'4h':3600,'1d':3600,'7d':3600 };
+  let tf='1h', zoom=120, showEma=true, showSma=false, showAlerts=true, candles=[];
+  const intervals={ '1m':60,'5m':300,'15m':900,'1h':3600,'4h':14400,'1d':86400,'7d':604800 };
  function ema(a,p){if(!a.length)return 0;const k=2/(p+1);let e=a[0];for(let i=1;i<a.length;i++)e=a[i]*k+e*(1-k);return e}
  function sma(a,p){return a.length? a.slice(-Math.min(p,a.length)).reduce((x,y)=>x+y,0)/Math.min(p,a.length):0}
  function rsi(a,p=14){if(a.length<p+1)return null;let g=0,l=0;for(let i=a.length-p;i<a.length;i++){const d=a[i]-a[i-1];if(d>0)g+=d;else l-=d}if(l===0)return 100;const rs=(g/p)/(l/p);return 100-100/(1+rs)}

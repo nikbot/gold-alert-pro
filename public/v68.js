@@ -3,8 +3,8 @@
  'use strict';
  const $=id=>document.getElementById(id), n=v=>Number(v||0);
  const money=v=>{try{return moneyIRR(v)}catch{return n(v).toLocaleString('fa-IR')}};
- let tf='1m', zoom=120, candles=[], offset=0, scale=1, cross=null, notify=false, timer=null;
- const intervals={'1m':60,'5m':300,'15m':900,'1h':3600,'4h':3600,'1d':3600,'7d':3600};
+  let tf='1h', zoom=120, candles=[], offset=0, scale=1, cross=null, notify=false, timer=null;
+  const intervals={'1m':60,'5m':300,'15m':900,'1h':3600,'4h':14400,'1d':86400,'7d':604800};
  const escText=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
  function ema(a,p){if(!a.length)return 0;const k=2/(p+1);let e=a[0];for(let i=1;i<a.length;i++)e=a[i]*k+e*(1-k);return e}
  function sma(a,p){return a.length?a.slice(-Math.min(p,a.length)).reduce((x,y)=>x+y,0)/Math.min(p,a.length):0}

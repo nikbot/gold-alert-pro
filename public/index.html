@@ -584,6 +584,7 @@ body.authLocked .floatingMenuBtn,body.authLocked .menuBackdrop,body.authLocked .
 <link rel="stylesheet" href="v68.css">
   <link rel="stylesheet" href="/gold2-theme.css?v=75.4">
   <link rel="stylesheet" href="/gold2-terminal-layout.css?v=75.4">
+<link rel="stylesheet" href="/v78.css?v=78.0.0">
 </head>
 <body class="v62Terminal">
 <div id="updateBanner" style="display:none;position:sticky;top:0;z-index:900;background:#17140d;border-bottom:1px solid #4a3a19;padding:10px 14px;text-align:center">
@@ -680,6 +681,7 @@ body.authLocked .floatingMenuBtn,body.authLocked .menuBackdrop,body.authLocked .
     <div class="v62Brand"><div class="v62BrandMark">Au</div><div class="v62BrandText"><b>Gold2 Pro</b><small>V75 Market Terminal</small></div></div>
     <nav class="v62Nav" id="v62Nav">
       <button class="active" data-v62cat="dashboard" type="button"><span class="v62Icon">⌂</span><span><b>پیشخوان</b><small>نمای اصلی بازار</small></span></button>
+      <button data-v62cat="signals" type="button"><span class="v62Icon">🎯</span><span><b>سیگنال آزمایشی</b><small>طلا و رمزارز</small></span></button>
       <button data-v62cat="market" type="button"><span class="v62Icon">↗</span><span><b>بازار</b><small>نمودار و قیمت</small></span></button>
       <button data-v62cat="ai" type="button"><span class="v62Icon">✦</span><span><b>AI Decision Room</b><small>تحلیل هوشمند</small></span></button>
       <button data-v62cat="alerts" type="button"><span class="v62Icon">◉</span><span><b>هشدارها</b><small>Timeline و Push</small></span></button>
@@ -749,7 +751,7 @@ body.authLocked .floatingMenuBtn,body.authLocked .menuBackdrop,body.authLocked .
   </article>
 </section>
 <section class="v62ChartPanel">
-          <div class="v62PanelHead"><div><h3>LIVE GOLD CHART</h3><small>نمودار زنده • حمایت • مقاومت • سیگنال</small></div><div class="v62ChartTools"><button type="button" class="v67Tf active" data-tf="1m">1m</button><button type="button" class="v67Tf" data-tf="5m">5m</button><button type="button" class="v67Tf" data-tf="15m">15m</button><button type="button" class="v67Tf" data-tf="1h">1H</button><button type="button" class="v67Tf" data-tf="4h">4H</button><button type="button" class="v67Tf" data-tf="1d">1D</button><button type="button" class="v67Tf" data-tf="7d">7D</button><span class="v67Sep"></span><button type="button" class="v67Zoom" data-zoom="60">50</button><button type="button" class="v67Zoom active" data-zoom="120">100</button><button type="button" class="v67Zoom" data-zoom="180">180</button><button type="button" class="v67Indicator active" data-ind="ema">EMA20</button><button type="button" class="v67Indicator" data-ind="sma">SMA50</button><button type="button" class="v67Indicator active" data-ind="alerts">هشدار</button></div></div>
+          <div class="v62PanelHead"><div><h3>LIVE GOLD CHART</h3><small>کندل بازار • حمایت • مقاومت • سیگنال</small></div><div class="v62ChartTools"><button type="button" class="v67Tf" data-tf="1m">1m</button><button type="button" class="v67Tf" data-tf="5m">5m</button><button type="button" class="v67Tf" data-tf="15m">15m</button><button type="button" class="v67Tf active" data-tf="1h">1H</button><button type="button" class="v67Tf" data-tf="4h">4H</button><button type="button" class="v67Tf" data-tf="1d">1D</button><button type="button" class="v67Tf" data-tf="7d">7D</button><span class="v67Sep"></span><button type="button" class="v67Zoom" data-zoom="60">50</button><button type="button" class="v67Zoom active" data-zoom="120">100</button><button type="button" class="v67Zoom" data-zoom="180">180</button><button type="button" class="v67Indicator active" data-ind="ema">EMA20</button><button type="button" class="v67Indicator" data-ind="sma">SMA50</button><button type="button" class="v67Indicator active" data-ind="alerts">هشدار</button></div></div>
           <div class="v62ChartViewport v67ChartViewport"><div class="goldChart" id="v62GoldChart"><div class="chartWrap"><div class="chartEmpty">در حال دریافت نمودار...</div></div></div></div><div class="v67IndicatorBar"><div><span>RSI(14)</span><b id="v67Rsi">—</b><small id="v67RsiState">در انتظار داده</small></div><div><span>MACD</span><b id="v67Macd">—</b><small id="v67MacdState">در انتظار داده</small></div><div><span>EMA20</span><b id="v67Ema">—</b><small>میانگین نمایی</small></div><div><span>SMA50</span><b id="v67Sma">—</b><small>میانگین ساده</small></div></div>
         </section>
       </div>
@@ -772,6 +774,17 @@ body.authLocked .floatingMenuBtn,body.authLocked .menuBackdrop,body.authLocked .
     </section>
   </main>
 </div>
+<section class="categorySection category-signals v80Page" id="v80SignalsPage">
+  <div class="v80Hero"><div><span class="v80Eyebrow">GOLD FIRST • CRYPTO NEXT</span><h2>سیگنال رو ببین، با پول فرضی امتحانش کن</h2><p>ساده و سرراست: چی بخری یا بفروشی، از چه قیمتی، کجا خارج بشی و اگر همین الان با مبلغ دلخواهت شروع می‌کردی چه نتیجه‌ای می‌گرفتی.</p></div><div class="v80Live" id="v80FeedStatus">در حال گرفتن دادهٔ بازار…</div></div>
+  <div class="v80Notice">⚠️ این بخش فقط تمرینی است؛ هیچ خریدوفروش واقعی انجام نمی‌شود. بازار ممکن است خلاف سیگنال حرکت کند. کارمزد و اختلاف قیمت هم در نتیجهٔ آزمایشی حساب نشده‌اند.</div>
+  <div class="v80Toolbar"><div><b>بازهٔ بررسی</b><small>بازهٔ کوتاه‌تر نوسان بیشتری دارد</small></div><div class="v80Timeframes"><button data-v80-tf="15m">۱۵ دقیقه</button><button class="active" data-v80-tf="1h">۱ ساعت</button><button data-v80-tf="4h">۴ ساعت</button><button data-v80-tf="1d">روزانه</button></div><button class="v80Refresh" id="v80Refresh">↻ تازه‌سازی</button></div>
+  <div class="v80Assets" id="v80Assets"><div class="v80Loading">در حال بررسی طلا و رمزارزها از روی کندل و حجم معامله…</div></div>
+  <div class="v80WorkGrid"><article class="v80ChartCard"><div class="v80CardHead"><div><small>کندل‌های واقعی منبع بازار</small><h3 id="v80ChartTitle">اول یک دارایی انتخاب کن</h3></div><span id="v80ChartSource">—</span></div><div id="v80Chart" class="v80Chart"><div class="v80Loading">نمودار بعد از دریافت داده نمایش داده می‌شود.</div></div><div class="v80ChartFoot">حجم کل بازار/قرارداد از منبع داده می‌آید. برای رمزارز، خریدوفروش از معاملات واقعی صرافی Coinbase در ۵ دقیقهٔ اخیر جدا می‌شود؛ برای طلا، تفکیک خرید/فروش تخمینی است.</div></article>
+    <article class="v80SimCard"><div class="v80CardHead"><div><small>فقط تمرین، بدون پول واقعی</small><h3>اگر با این سیگنال وارد می‌شدم…</h3></div><span id="v80SelectedName">طلای ۱۸ عیار</span></div><label class="v80AmountLabel" for="v80Amount">مبلغی که می‌خواهی فرضی امتحان کنی <span id="v80AmountUnit">تومان</span></label><div class="v80AmountRow"><input id="v80Amount" type="number" inputmode="decimal" min="1" value="10000000"><button id="v80StartPaper">شروع تمرین</button></div><div id="v80SelectedSignal" class="v80SelectedSignal">اول یک دارایی با سیگنال روشن انتخاب کن.</div><div class="v80SimHint">حواست باشه: «خرید» یعنی فرض می‌کنیم قیمت بالا بره؛ «فروش» یعنی تمرینِ سود گرفتن از پایین‌آمدن قیمت. دومی فقط شبیه‌سازی است.</div></article>
+  </div>
+  <article class="v80HistoryCard"><div class="v80CardHead"><div><small>نتیجهٔ تمرین‌های خودت</small><h3>سود و ضرر تا همین لحظه</h3></div><span id="v80HistorySummary">در انتظار</span></div><div id="v80Trades"><div class="v80Loading">هنوز تمرینی شروع نکردی.</div></div></article>
+  <div class="v80Sources">دادهٔ طلا: قیمت هر گرم از منبع فعلی سامانه و کندل/حجم کل از قرارداد آتی طلای COMEX در Yahoo Finance. دادهٔ رمزارز: کندل و معاملات لحظه‌ای Coinbase. اگر منبع قطع یا داده کهنه باشد، به‌جای ساختن سیگنال «فعلاً صبر کن» نشان داده می‌شود.</div>
+</section>
 <div class="v65QuickActions"><button type="button" onclick="applyCategory('market')"><span>📈</span><b>تحلیل بازار</b><small>نمودار و اندیکاتورها</small></button><button type="button" onclick="applyCategory('ai')"><span>🧠</span><b>AI Copilot</b><small>تحلیل ساده و سریع</small></button><button type="button" onclick="applyCategory('alerts')"><span>🔔</span><b>هشدارها</b><small>رویدادهای مهم</small></button><button type="button" onclick="applyCategory('tools')"><span>🧮</span><b>ماشین‌حساب</b><small>ارزش روز طلا</small></button></div>
 <div class="g2PageHeader" id="g2PageHeader">
   <div><div class="eyebrow" id="g2PageEyebrow">GOLD2 PRO • MARKET TERMINAL</div>
@@ -1187,13 +1200,13 @@ body.authLocked .floatingMenuBtn,body.authLocked .menuBackdrop,body.authLocked .
 <link rel="stylesheet" href="/v69.css?build=75.4">
 <script>
 (function(){
-  const RELEASE='75.4';
+  const RELEASE='80.0.0';
   const KEY='g2-release-migrated';
   if(!('serviceWorker' in navigator)) return;
   window.addEventListener('load',async()=>{
     try{
       const regs=await navigator.serviceWorker.getRegistrations();
-      const stale=regs.filter(r=>!String(r.active?.scriptURL||r.installing?.scriptURL||r.waiting?.scriptURL||'').includes('v75.4'));
+      const stale=regs.filter(r=>!String(r.active?.scriptURL||r.installing?.scriptURL||r.waiting?.scriptURL||'').includes('v80.0.0'));
       if(!stale.length) return;
       await Promise.all(stale.map(r=>r.unregister()));
       if('caches' in window){
@@ -1219,6 +1232,11 @@ body.authLocked .floatingMenuBtn,body.authLocked .menuBackdrop,body.authLocked .
 <link rel="stylesheet" href="/v75.2-mobile.css?build=75.4">
 <link rel="stylesheet" href="/gold2-v754-final.css?v=75.4">
 <link rel="stylesheet" href="/gold2-v754-market-polish.css?v=75.4">
+<link rel="stylesheet" href="/v79-polish.css?v=79.0.0">
+<link rel="stylesheet" href="/v80.css?v=80.0.0">
 <script src="/v71.js?build=75.4"></script>
 <script src="/v72.js?build=75.4"></script>
+<script src="/v78.js?v=78.0.0" defer></script>
+<script src="/v79.js?v=79.0.0" defer></script>
+<script src="/v80.js?v=80.0.0" defer></script>
 </body></html>

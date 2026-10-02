@@ -14,8 +14,10 @@ import { getCommerceSettings, setCommerceSettings } from "./commerceSettings.js"
 import { adminLogin, requireAdminToken, requireAdminSession, adminLogout, listUsers, createManagedUser, updateManagedUser, deleteManagedUser, adminStats, publicAccount, userIsActive, userPermissions, getUserByUsername, validUsername, FEATURE_KEYS, PRO_PERMISSIONS, PREMIUM_PERMISSIONS, ADMIN_COOKIE_NAME, ADMIN_ROLES, ADMIN_FEATURES, adminRolePermissions, getLoginLogs, listAdminSessions, revokeAdminSession, revokeAllAdminSessions, getAdminSettings, setAdminSettings, normalizeAdminRole } from "./adminPanel.js";
 import { analyzeGold } from "./ai/manager.js";
 import { getTheme, setTheme } from "./theme.js";
+import { V78_PLANS, getSubscriptionFor, setSubscription, getWatchlist, addWatchSymbol, removeWatchSymbol, saveWatchlist, createApiKey, listApiKeys, revokeApiKey, authenticateApiKey, apiUsage, securityEvent, securityEvents, subscriptionOverview, platformOverview } from "./proPlatform.js";
+import { getTradingSignals, getGoldSignalCandles, getPaperQuote, normalizeTimeframe, paperPnl } from "./tradingSignals.js";
 
-const APP_VERSION = "75.4.0"
+const APP_VERSION = "80.0.0"
 const USER_SESSION_HOURS = Math.max(1, Number(process.env.USER_SESSION_HOURS || 72));
 const LOGIN_WINDOW_MS = 10 * 60_000;
 const LOGIN_MAX_ATTEMPTS = 12;
@@ -30,6 +32,7 @@ const target2 = Math.max(target1, Number(process.env.TARGET_2_PCT || 3));
 const stopPct = Math.max(0.1, Number(process.env.STOP_LOSS_PCT || 1));
 const DATA_DIR = process.env.DATA_DIR || "/data/gold-alert-pro";
 const STATE_FILE = path.join(DATA_DIR, "state.json");
+const PAPER_TRADES_FILE = path.join(DATA_DIR, "paper-trades.json");
 const PERSONAL_ALERTS_FILE = path.join(DATA_DIR, "personal-price-alerts.json");
 const PORTFOLIO_FILE = path.join(DATA_DIR, "portfolios.json");
 const PORTFOLIO_ALERT_DROP_PCT = Math.max(0.1, Number(process.env.PORTFOLIO_ALERT_DROP_PCT || 0.6));
@@ -44,6 +47,10 @@ const AUDIT_FILE = path.join(DATA_DIR, "audit-log.json");
 const SMART_ALERTS_FILE = path.join(DATA_DIR, "smart-alerts.json");
 const PAYMENTS_FILE = path.join(DATA_DIR, "payments.json");
 const USER_SETTINGS_FILE = path.join(DATA_DIR, "user-settings.json");
+let paperTradesByDevice = {};
+let paperSaveQueue = Promise.resolve();
+let paperTradesLoaded = false;
+let paperTradesLoadTask = null;
 const UPDATE_MANIFEST_URL = String(process.env.UPDATE_MANIFEST_URL || "").trim();
 const UPDATE_PACKAGE_URL = String(process.env.UPDATE_PACKAGE_URL || "").trim();
 const UPDATE_DIR = path.join(DATA_DIR, "updates");
@@ -224,6 +231,56 @@ async function audit(action, meta={}){ try{ const a=await readJsonFile(AUDIT_FIL
 async function addNotification(userId,title,message,type="info"){ const all=await readJsonFile(NOTIFICATIONS_FILE,[]); const item={id:crypto.randomUUID(),userId,title:String(title).slice(0,120),message:String(message).slice(0,1000),type,read:false,createdAt:new Date().toISOString()}; all.unshift(item); await writeJsonFile(NOTIFICATIONS_FILE,all.slice(0,5000)); try{ const store=await readJsonFile(ACCOUNTS_FILE,{}); const a=Object.values(store).find(x=>x?.id===userId); if(a?.deviceId) await sendWebPushToDevice(a.deviceId,{title:String(title).slice(0,120),body:String(message).slice(0,500),icon:'/icon-192.png',badge:'/icon-192.png',tag:`user-notification-${item.id}`,data:{url:'/#notificationCenter'}},`NOTIF_${item.id}`,Date.now()); }catch(e){ console.warn('User notification push failed:',e.message); } return item; }
 async function readJsonFile(file, fallback) { try { return JSON.parse(await fs.readFile(file, "utf8")); } catch { return fallback; } }
 async function writeJsonFile(file, value) { await fs.mkdir(DATA_DIR, { recursive: true }); await fs.writeFile(file, JSON.stringify(value), "utf8"); }
+async function loadPaperTrades() {
+  if(paperTradesLoaded)return;
+  if(!paperTradesLoadTask)paperTradesLoadTask=(async()=>{
+    const saved = await readJsonFile(PAPER_TRADES_FILE, {});
+    paperTradesByDevice = saved && typeof saved === "object" && !Array.isArray(saved) ? saved : {};
+    paperTradesLoaded = true;
+  })();
+  await paperTradesLoadTask;
+}
+function savePaperTrades() {
+  const snapshot = JSON.stringify(paperTradesByDevice);
+  paperSaveQueue = paperSaveQueue.then(async () => {
+    await fs.mkdir(DATA_DIR, { recursive: true });
+    await fs.writeFile(PAPER_TRADES_FILE, snapshot, "utf8");
+  }).catch(e => console.warn("Paper-trade save failed:", e.message));
+}
+let evaluatingPaperTrades = false;
+async function evaluatePaperTrades(onlyDeviceId = "") {
+  if (evaluatingPaperTrades) return;
+  evaluatingPaperTrades = true;
+  try {
+    await loadPaperTrades();
+    const ids = onlyDeviceId ? [onlyDeviceId] : Object.keys(paperTradesByDevice);
+    const active = ids.flatMap(id => (paperTradesByDevice[id] || []).filter(t => t.status === "OPEN").map(t => ({ id, trade: t })));
+    const symbols = [...new Set(active.map(x => x.trade.symbol))];
+    const marks = new Map(await Promise.all(symbols.map(async symbol => [symbol, await getPaperQuote(symbol, { ...state.iran, status: state.engineStatus?.status }).catch(() => null)])));
+    let changed = false;
+    for (const { id, trade } of active) {
+      const mark = marks.get(trade.symbol);
+      if (!mark || !Number.isFinite(mark.price)) continue;
+      trade.currentPrice = mark.price;
+      trade.updatedAt = mark.at;
+      trade.pnl = paperPnl(trade, mark.price);
+      let closeReason = "";
+      if (trade.direction === "BUY" && mark.price <= trade.stop || trade.direction === "SELL" && mark.price >= trade.stop) closeReason = "STOP";
+      else if (trade.direction === "BUY" && mark.price >= trade.target || trade.direction === "SELL" && mark.price <= trade.target) closeReason = "TARGET";
+      else if (Date.now() >= Date.parse(trade.expiresAt)) closeReason = "TIME";
+      if (closeReason) {
+        trade.status = "CLOSED";
+        trade.closedAt = mark.at;
+        trade.closeReason = closeReason;
+        trade.outcome = trade.pnl > 0 ? "PROFIT" : trade.pnl < 0 ? "LOSS" : "EVEN";
+      }
+      changed = true;
+    }
+    if (changed) savePaperTrades();
+  } finally {
+    evaluatingPaperTrades = false;
+  }
+}
 function normalizePhone(v) { return String(v || "").replace(/[۰-۹]/g, d => String("۰۱۲۳۴۵۶۷۸۹".indexOf(d))).replace(/[٠-٩]/g, d => String("٠١٢٣٤٥٦٧٨٩".indexOf(d))).replace(/[\u200c\u200f\u200e]/g, "").replace(/\s+/g, "").replace(/-/g, "").trim(); }
 function hashPassword(password, salt = crypto.randomBytes(16).toString("hex")) { const hash = crypto.scryptSync(String(password), salt, 64).toString("hex"); return { salt, hash }; }
 function verifyPassword(password, salt, expected) { try { const actual = crypto.scryptSync(String(password), salt, 64).toString("hex"); return crypto.timingSafeEqual(Buffer.from(actual, "hex"), Buffer.from(expected, "hex")); } catch { return false; } }
@@ -1186,30 +1243,26 @@ function ensureAdminMutationOrigin(req,res){
   const origin=String(req.headers.origin||'').trim();
   if(!origin)return true;
   try {
-    // Same-origin browser requests are safe even when the app is behind a reverse proxy.
-    if(String(req.headers['sec-fetch-site']||'').toLowerCase()==='same-origin') return true;
-    const originUrl=new URL(origin);
-    const originHost=originUrl.host.toLowerCase();
-    const hosts=new Set([
-      String(req.headers['x-forwarded-host']||'').split(',')[0].trim().toLowerCase(),
-      String(req.get('host')||'').trim().toLowerCase()
-    ].filter(Boolean));
+    const allowed=new Set();
     const publicBase=String(process.env.PUBLIC_BASE_URL||'').trim().replace(/\/$/,'');
-    if(publicBase){
-      try { if(new URL(publicBase).host.toLowerCase()===originHost) return true; } catch {}
-    }
-    // Proxy deployments can legitimately terminate TLS before reaching Node,
-    // so validate the browser Origin by host rather than internal protocol.
-    if(hosts.has(originHost)) return true;
-    res.status(403).json({error:'origin نامعتبر'});
-    return false;
-  } catch {
-    res.status(403).json({error:'origin نامعتبر'});
-    return false;
-  }
+    if(publicBase) allowed.add(publicBase);
+    const forwardedProto=String(req.headers['x-forwarded-proto']||'').split(',')[0].trim() || req.protocol;
+    const forwardedHost=String(req.headers['x-forwarded-host']||'').split(',')[0].trim() || req.get('host');
+    if(forwardedHost) allowed.add(`${forwardedProto}://${forwardedHost}`);
+    allowed.add(`${req.protocol}://${req.get('host')}`);
+    if(!allowed.has(origin)){res.status(403).json({error:'origin نامعتبر'});return false;}
+  } catch {}
+  return true;
 }
 
 app.get("/api/theme", async (req,res)=>{res.json(await getTheme());});
+
+app.get("/api/admin/v78/overview", async (req,res)=>{ const session=await adminAuth(req,res,['SUPER_ADMIN','ADMIN']); if(!session)return res.status(403).json({error:'admin session invalid'}); res.json({ok:true,version:APP_VERSION,platform:await platformOverview(),subscriptions:await subscriptionOverview(),security:await securityEvents(100),market:{status:state.engineStatus||null,price:Number(state.iran?.priceIRR||0),source:state.iran?.source||null,updatedAt:state.updatedAt}}); });
+app.get("/api/admin/v78/security-events", async (req,res)=>{ const session=await adminAuth(req,res,['SUPER_ADMIN','ADMIN']); if(!session)return res.status(403).json({error:'admin session invalid'}); res.json({ok:true,events:await securityEvents(Number(req.query.limit||200))}); });
+app.get("/api/admin/v78/subscriptions", async (req,res)=>{ const session=await adminAuth(req,res,['SUPER_ADMIN','ADMIN']); if(!session)return res.status(403).json({error:'admin session invalid'}); const all=await readJsonFile(path.join(DATA_DIR,'v78-subscriptions.json'),{}); res.json({ok:true,plans:V78_PLANS,subscriptions:Object.values(all)}); });
+app.put("/api/admin/v78/subscriptions/:userId", async (req,res)=>{ const session=await adminAuth(req,res,['SUPER_ADMIN']); if(!session)return res.status(403).json({error:'admin session invalid'}); if(!ensureAdminMutationOrigin(req,res))return; try{const sub=await setSubscription(req.params.userId,req.body?.plan,req.body?.days, {changedBy:session.username}); await audit('subscription_changed',{userId:req.params.userId,plan:sub.plan,days:req.body?.days,actor:session.username}); res.json({ok:true,subscription:sub});}catch(e){res.status(400).json({error:e.message});} });
+app.get("/api/admin/v78/api-keys", async (req,res)=>{ const session=await adminAuth(req,res,['SUPER_ADMIN','ADMIN']); if(!session)return res.status(403).json({error:'admin session invalid'}); const all=await readJsonFile(path.join(DATA_DIR,'v78-api-keys.json'),{}); const rows=Object.values(all).map(({hash,...x})=>x); res.json({ok:true,keys:rows}); });
+
 app.get("/api/admin/theme", async (req,res)=>{if(!(await adminAuth(req,res)))return res.status(403).json({error:"admin session invalid"});res.json(await getTheme());});
 app.put("/api/admin/theme", async (req,res)=>{if(!(await adminAuth(req,res,['SUPER_ADMIN','ADMIN'])))return;if(!ensureAdminMutationOrigin(req,res))return;try{res.json({ok:true,theme:await setTheme(req.body?.theme)});}catch(e){res.status(400).json({error:e.message});}});
 app.post("/api/admin/login", async (req,res)=>{ try{ const out=await adminLogin(req.body?.username,req.body?.password,{ip:req.ip,userAgent:req.get('user-agent')}); setAdminCookie(req,res,out.token,Math.max(60,Math.floor((new Date(out.expiresAt).getTime()-Date.now())/1000))); res.json({ok:true,username:out.username,role:out.role,permissions:out.permissions,expiresAt:out.expiresAt}); }catch(e){res.status(403).json({error:e.message});} });
@@ -1218,6 +1271,20 @@ app.post("/api/admin/logout", async (req,res)=>{ const token=adminTokenFromReq(r
 async function databaseReady(){ try { await fs.mkdir(DATA_DIR,{recursive:true}); await fs.access(DATA_DIR); return true; } catch { return false; } }
 async function adminUserCounts(){ const all=await readJsonFile(ACCOUNTS_FILE,{}); const users=Object.values(all); const now=Date.now(); return {total:users.length,active:users.filter(u=>u.active!==false&&(!u.expiresAt||Date.parse(u.expiresAt)>=now)).length,inactive:users.filter(u=>u.active===false).length,expired:users.filter(u=>u.expiresAt&&Date.parse(u.expiresAt)<now).length,onlineEstimate:users.filter(u=>u.active!==false&&u.lastSeenAt&&Date.now()-Date.parse(u.lastSeenAt)<15*60*1000).length}; }
 async function adminRevenueStats(){ const payments=await readJsonFile(PAYMENTS_FILE,[]); const valid=payments.filter(p=>Number.isFinite(Number(p.amount))&&Number(p.amount)>0); const successful=valid.filter(p=>String(p.status||'').toLowerCase()==='confirmed'); const failed=valid.filter(p=>['failed','declined','cancelled'].includes(String(p.status||'').toLowerCase())); const now=Date.now(); const monthStart=new Date(); monthStart.setDate(1);monthStart.setHours(0,0,0,0); return {total:successful.reduce((a,p)=>a+Number(p.amount),0),monthly:successful.filter(p=>Date.parse(p.at||0)>=monthStart.getTime()).reduce((a,p)=>a+Number(p.amount),0),successfulCount:successful.length,failedCount:failed.length,average:successful.length?Math.round(successful.reduce((a,p)=>a+Number(p.amount),0)/successful.length):0,last30:successful.filter(p=>Date.parse(p.at||0)>=now-30*86400000).reduce((a,p)=>a+Number(p.amount),0)}; }
+
+// V78 Pro Platform: watchlists, API keys, subscriptions, security telemetry and public developer API.
+app.get("/api/v78/platform", async (req,res)=>{ const a=await accountFromReq(req); if(!a)return res.status(401).json({error:'ابتدا وارد حساب شوید.'}); res.json({ok:true,version:APP_VERSION,subscription:await getSubscriptionFor(a.id),watchlist:await getWatchlist(a.id),apiKeys:await listApiKeys(a.id),apiUsage:await apiUsage(a.id)}); });
+app.get("/api/v78/watchlist", async (req,res)=>{ const a=await accountFromReq(req); if(!a)return res.status(401).json({error:'ابتدا وارد حساب شوید.'}); res.json({ok:true,watchlist:await getWatchlist(a.id)}); });
+app.post("/api/v78/watchlist", async (req,res)=>{ const a=await accountFromReq(req); if(!a)return res.status(401).json({error:'ابتدا وارد حساب شوید.'}); try{const watchlist=await addWatchSymbol(a.id,req.body?.symbol); await audit('watchlist_symbol_added',{userId:a.id,symbol:String(req.body?.symbol||'').slice(0,32)}); res.json({ok:true,watchlist});}catch(e){res.status(400).json({error:e.message});} });
+app.put("/api/v78/watchlist", async (req,res)=>{ const a=await accountFromReq(req); if(!a)return res.status(401).json({error:'ابتدا وارد حساب شوید.'}); try{const watchlist=await saveWatchlist(a.id,req.body?.symbols); res.json({ok:true,watchlist});}catch(e){res.status(400).json({error:e.message});} });
+app.delete("/api/v78/watchlist/:symbol", async (req,res)=>{ const a=await accountFromReq(req); if(!a)return res.status(401).json({error:'ابتدا وارد حساب شوید.'}); try{res.json({ok:true,watchlist:await removeWatchSymbol(a.id,req.params.symbol)});}catch(e){res.status(400).json({error:e.message});} });
+app.get("/api/v78/api-keys", async (req,res)=>{ const a=await accountFromReq(req); if(!a)return res.status(401).json({error:'ابتدا وارد حساب شوید.'}); res.json({ok:true,keys:await listApiKeys(a.id),usage:await apiUsage(a.id),subscription:await getSubscriptionFor(a.id)}); });
+app.post("/api/v78/api-keys", async (req,res)=>{ const a=await accountFromReq(req); if(!a)return res.status(401).json({error:'ابتدا وارد حساب شوید.'}); try{const out=await createApiKey(a.id,req.body?.label); await audit('api_key_created',{userId:a.id,keyId:out.id}); res.json({ok:true,...out});}catch(e){res.status(400).json({error:e.message});} });
+app.delete("/api/v78/api-keys/:id", async (req,res)=>{ const a=await accountFromReq(req); if(!a)return res.status(401).json({error:'ابتدا وارد حساب شوید.'}); try{await revokeApiKey(a.id,req.params.id); await audit('api_key_revoked',{userId:a.id,keyId:req.params.id}); res.json({ok:true});}catch(e){res.status(400).json({error:e.message});} });
+app.get("/api/v78/health", async (_,res)=>{ res.set('Cache-Control','no-store'); res.json({ok:true,version:APP_VERSION,market:{status:state.engineStatus?.status||'OFFLINE',priceIRR:Number(state.iran?.priceIRR||0),source:state.iran?.source||null,ageMs:state.iran?.fetchedAt?Date.now()-Date.parse(state.iran.fetchedAt):null},server:{uptime:Math.round(process.uptime()),updatedAt:state.updatedAt},platform:await platformOverview()}); });
+app.get("/api/v78/market/snapshot", async (_,res)=>{ res.set('Cache-Control','no-store'); res.json({ok:true,version:APP_VERSION,generatedAt:new Date().toISOString(),status:state.engineStatus||null,iran:state.iran||null,global:state.global||null,dollar:state.dollar||null,coins:state.coins||{},bitcoin:state.bitcoin||null,analysis:state.analysis||null,pressure:state.marketPressure||null,watchSymbols:['XAUUSD','GOLD18','USD','BTC']}); });
+app.get("/api/v1/market/gold", async (req,res)=>{ try{ const raw=String(req.headers.authorization||''); const key=raw.replace(/^Bearer\s+/i,'').trim()||String(req.headers['x-api-key']||'').trim(); if(!key)return res.status(401).json({error:'API key required'}); const auth=await authenticateApiKey(key); if(!auth)return res.status(401).json({error:'API key invalid'}); res.set('X-RateLimit-Daily',String(auth.subscription.limits.apiDaily)); res.set('X-RateLimit-Remaining',String(Math.max(0,auth.subscription.limits.apiDaily-auth.usage))); res.json({ok:true,data:{symbol:'XAUUSD',priceIRR:Number(state.iran?.priceIRR||0),xauUSD:Number(state.global?.price||state.global?.xau||0)||null,usdIRR:Number(state.dollar?.priceIRR||state.dollar?.price||0)||null,changePct:Number(state.iran?.changePct||0)||0,timestamp:state.updatedAt||new Date().toISOString(),status:state.engineStatus?.status||'OFFLINE',source:state.iran?.source||null}}); }catch(e){res.status(429).json({error:e.message});} });
+
 app.get("/api/admin/dashboard", async (req,res)=>{ const session=await adminAuth(req,res); if(!session)return res.status(403).json({error:"admin session invalid"}); try{ const users=await adminUserCounts(); const revenue=await adminRevenueStats(); const tickets=await ticketStore(); const auditLog=await readJsonFile(AUDIT_FILE,[]); const logs=await getLoginLogs(200); const successfulLogins=logs.filter(x=>x.success&&x.event!=='logout'); const recentLogins=successfulLogins.filter(x=>Date.parse(x.at||0)>=Date.now()-7*86400000); const activities=[...auditLog.map(x=>({type:'activity',at:x.at,action:x.action,meta:x.meta})),...logs.map(x=>({type:x.success?'login_success':'login_failed',at:x.at,action:x.event|| (x.success?'login':'failed'),meta:{username:x.username,ip:x.ip,role:x.role,reason:x.reason}}))].sort((a,b)=>Date.parse(b.at||0)-Date.parse(a.at||0)).slice(0,30); res.set('Cache-Control','no-store'); res.json({ok:true,version:APP_VERSION,system:{server:'ONLINE',database:await databaseReady()?'ONLINE':'OFFLINE',application:'ONLINE',uptime:Math.round(process.uptime()),startedAt:state.startedAt,dataReady:state.dataReady,error:state.error||null},users:{...users,newUsers7d:recentLogins.filter(x=>Date.parse(x.at||0)>=Date.now()-7*86400000).length},financial:revenue,support:{total:tickets.length,open:tickets.filter(t=>['open','pending'].includes(t.status)).length,answered:tickets.filter(t=>t.status==='answered').length},activity:activities,admin:{username:session.username,role:normalizeAdminRole(session.role),permissions:session.permissions},generatedAt:new Date().toISOString()}); }catch(e){res.status(500).json({error:'dashboard unavailable',detail:e.message});} });
 app.get("/api/admin/live-status", async (req,res)=>{ const session=await adminAuth(req,res,['SUPER_ADMIN','ADMIN','MODERATOR']); if(!session)return res.status(403).json({error:"admin session invalid"}); const started=Date.now(); const db=await databaseReady(); let site='ONLINE'; let health={ok:false}; try{ const r=await fetch(`http://127.0.0.1:${port}/health`,{cache:'no-store',signal:AbortSignal.timeout(2500)}); health=await r.json().catch(()=>({})); site=r.ok?'ONLINE':'OFFLINE'; }catch{site='OFFLINE';} res.set('Cache-Control','no-store'); res.json({ok:true,site,server:site,application:'ONLINE',database:db?'ONLINE':'OFFLINE',responseTimeMs:Math.max(0,Date.now()-started),uptime:Math.round(process.uptime()),health,previewUrl:`${String(process.env.PUBLIC_BASE_URL||'').replace(/\/$/,'')||''}/`}); });
 app.get("/api/admin/reports", async (req,res)=>{ const session=await adminAuth(req,res,['SUPER_ADMIN','ADMIN','MODERATOR']); if(!session)return res.status(403).json({error:"admin session invalid"}); const users=(await readJsonFile(ACCOUNTS_FILE,{})); const payments=await readJsonFile(PAYMENTS_FILE,[]); const audit=await readJsonFile(AUDIT_FILE,[]); const days=Math.max(7,Math.min(90,Number(req.query.days||30))); const now=new Date(); const daily=[]; for(let i=days-1;i>=0;i--){ const d=new Date(now.getTime()-i*86400000); const key=d.toISOString().slice(0,10); daily.push({date:key,newUsers:Object.values(users).filter(u=>String(u.createdAt||'').slice(0,10)===key).length,revenue:payments.filter(p=>String(p.status||'').toLowerCase()==='confirmed'&&String(p.at||'').slice(0,10)===key).reduce((a,p)=>a+Number(p.amount||0),0),activity:audit.filter(a=>String(a.at||'').slice(0,10)===key).length}); } const monthly={}; Object.values(users).forEach(u=>{const k=String(u.createdAt||'').slice(0,7);if(k)monthly[k]=(monthly[k]||0)+1;}); const revenueByMonth={}; payments.filter(p=>String(p.status||'').toLowerCase()==='confirmed').forEach(p=>{const k=String(p.at||'').slice(0,7);if(k)revenueByMonth[k]=(revenueByMonth[k]||0)+Number(p.amount||0);}); res.set('Cache-Control','no-store'); res.json({ok:true,rangeDays:days,daily,monthlyUsers:monthly,monthlyRevenue:revenueByMonth,generatedAt:new Date().toISOString()}); });
@@ -1342,8 +1409,67 @@ app.get("/api/source-diagnostics", async (req,res)=>{
   try { const d=await getIran18Sources(true); state.sourceDiagnostics=d; res.set("Cache-Control","no-store"); res.json({ok:true,...d}); }
   catch(e){res.status(503).json({ok:false,error:e.message});}
 });
-app.get("/api/candles", (req,res)=>{
-  const seconds=Math.min(3600,Math.max(5,Number(req.query.interval||60)));
+app.get("/api/trading-signals", async (req,res)=>{
+  try {
+    const timeframe=normalizeTimeframe(req.query.timeframe);
+    const signals=await getTradingSignals(timeframe,{...state.iran,status:state.engineStatus?.status});
+    res.set("Cache-Control","no-store");
+    res.json({ok:true,timeframe,generatedAt:new Date().toISOString(),signals,disclaimer:"این‌ها پیشنهاد آموزشیِ خودکارند، نه توصیه مالی یا تضمین سود. قبل از هر تصمیم، ریسک را بسنج."});
+  } catch(e) { res.status(503).json({ok:false,error:e.message}); }
+});
+app.get("/api/paper-trades", async (req,res)=>{
+  const deviceId=cleanDeviceId(req.query.deviceId);
+  if(!deviceId)return res.status(400).json({error:"شناسه دستگاه لازم است."});
+  await loadPaperTrades();
+  await evaluatePaperTrades(deviceId);
+  res.set("Cache-Control","no-store");
+  res.json({ok:true,trades:(paperTradesByDevice[deviceId]||[]).slice().sort((a,b)=>String(b.openedAt).localeCompare(String(a.openedAt))).slice(0,100),disclaimer:"شبیه‌سازی است؛ کارمزد، اختلاف قیمت خریدوفروش و لغزش بازار در سود و زیان نیامده‌اند."});
+});
+app.post("/api/paper-trades", async (req,res)=>{
+  await loadPaperTrades();
+  const deviceId=cleanDeviceId(req.body?.deviceId);
+  const symbol=String(req.body?.symbol||"").toUpperCase();
+  const amount=Number(req.body?.amount);
+  const timeframe=normalizeTimeframe(req.body?.timeframe);
+  if(!deviceId)return res.status(400).json({error:"شناسه دستگاه لازم است."});
+  try {
+    const signals=await getTradingSignals(timeframe,{...state.iran,status:state.engineStatus?.status});
+    const market=signals.find(x=>x.symbol===symbol);
+    if(!market||!market.quoteLive||!Number.isFinite(market.price))return res.status(409).json({error:"قیمت زنده و معتبر این دارایی در دسترس نیست؛ شبیه‌سازی را فعلاً شروع نمی‌کنیم."});
+    if(!["BUY","SELL"].includes(market.signal))return res.status(409).json({error:"فعلاً نشانه‌ها هم‌جهت نیستند؛ صبر کن تا موقعیت روشن‌تری شکل بگیرد."});
+    const gold=symbol==="GOLD18",min=gold?1000:1,max=gold?1e12:1e8;
+    if(!Number.isFinite(amount)||amount<min||amount>max)return res.status(400).json({error:gold?"مبلغ آزمایشی را به تومان وارد کن (حداقل ۱٬۰۰۰ تومان).":"مبلغ آزمایشی را به دلار وارد کن (حداقل ۱ دلار)."});
+    const trades=paperTradesByDevice[deviceId]||[];
+    if(trades.filter(t=>t.status==="OPEN").length>=5)return res.status(409).json({error:"حداکثر ۵ شبیه‌سازی هم‌زمان داری؛ اول یکی را ببند."});
+    const direction=market.signal,entry=market.price;
+    const trade={id:crypto.randomUUID(),deviceId,symbol,name:market.name,direction,amount,currency:gold?"تومان":"دلار",timeframe,entry,currentPrice:entry,target:market.target,stop:market.stop,targetPct:market.targetPct,stopPct:market.stopPct,hold:market.hold,openedAt:new Date().toISOString(),expiresAt:new Date(Date.now()+market.holdMs).toISOString(),status:"OPEN",pnl:0,score:market.score,signalReasons:market.reasons.slice(0,4)};
+    trades.unshift(trade);
+    paperTradesByDevice[deviceId]=trades.slice(0,200);
+    savePaperTrades();
+    res.status(201).json({ok:true,trade,disclaimer:"این خریدوفروش واقعی نیست و هیچ سفارشی به بازار فرستاده نمی‌شود."});
+  } catch(e) { res.status(503).json({error:e.message||"سیگنال فعلاً در دسترس نیست."}); }
+});
+app.get("/api/candles", async (req,res)=>{
+  const seconds=Math.min(604800,Math.max(5,Number(req.query.interval||60)));
+  if(seconds===86400||seconds===604800){
+    try{
+      let candles=(await getHistory()).map(c=>({time:Date.parse(`${String(c.date).replaceAll('/','-')}T12:00:00Z`),open:Number(c.open),high:Number(c.high),low:Number(c.low),close:Number(c.close),volume:0})).filter(c=>Number.isFinite(c.time)&&[c.open,c.high,c.low,c.close].every(Number.isFinite));
+      if(seconds===604800){const weeks=new Map();for(const c of candles){const d=new Date(c.time),weekStart=new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate()-((d.getUTCDay()+6)%7))).getTime();let w=weeks.get(weekStart);if(!w){w={...c,time:weekStart};weeks.set(weekStart,w);}else{w.high=Math.max(w.high,c.high);w.low=Math.min(w.low,c.low);w.close=c.close;}}candles=[...weeks.values()];}
+      res.set("Cache-Control","no-store");return res.json({ok:true,intervalSeconds:seconds,source:"TGJU • تاریخچهٔ واقعی طلای ۱۸",candles:candles.slice(-180)});
+    }catch(e){res.status(503).json({ok:false,error:"تاریخچهٔ کندل طلا موقتاً در دسترس نیست."});return;}
+  }
+  if([900,3600,14400].includes(seconds)){
+    try{
+      const timeframe=seconds===900?"15m":seconds===14400?"4h":"1h";
+      const feed=await getGoldSignalCandles(timeframe),reference=feed.bars.at(-1)?.close;
+      const current=Number(state.iran?.priceIRR||0),usd=Number(state.dollar?.priceIRR||0);
+      const localCurrent=current>0?current:(reference>0&&usd>0?reference*usd/31.1034768*.75:0);
+      if(!(reference>0&&localCurrent>0))throw new Error("قیمت محلی برای تبدیل مقیاس در دسترس نیست");
+      const scale=localCurrent/reference;
+      const candles=feed.bars.map(c=>({...c,open:c.open*scale,high:c.high*scale,low:c.low*scale,close:c.close*scale}));
+      res.set("Cache-Control","no-store");return res.json({ok:true,intervalSeconds:seconds,source:"Yahoo Finance • GC=F؛ مقیاس تقریبی بر پایهٔ قیمت طلای ۱۸ زنده",candles:candles.slice(-180)});
+    }catch(e){res.status(503).json({ok:false,error:"کندل زندهٔ طلا موقتاً در دسترس نیست."});return;}
+  }
   const ticks=state.ticks.filter(x=>Number.isFinite(Number(x.price)));
   const buckets=new Map();
   for(const t of ticks){ const ts=new Date(t.at).getTime(); const key=Math.floor(ts/(seconds*1000))*seconds*1000; let c=buckets.get(key); const p=Number(t.price); if(!c)c={time:new Date(key).toISOString(),open:p,high:p,low:p,close:p,volume:0}; else {c.high=Math.max(c.high,p);c.low=Math.min(c.low,p);c.close=p;} c.volume++; buckets.set(key,c); }
@@ -1405,10 +1531,12 @@ const server = app.listen(port, "0.0.0.0", async () => {
   try { await loadState(); } catch (e) { console.warn("State load error:", e.message); }
   try { await loadPersonalAlerts(); } catch (e) { console.warn("Personal alerts load error:", e.message); }
   try { await loadSmartAlerts(); } catch (e) { console.warn("Smart alerts load error:", e.message); }
-  try { await initAlerts(); } catch (e) { console.warn("Push initialization unavailable:", e.message); }
-  try { await loadHistorySeed(); console.log(`History seed: ${state.prices.length} points`); } catch (e) { console.warn("History seed error:", e.message); }
-  try { await tick(); } catch (e) { console.warn("Initial market tick error:", e.message); }
-  setInterval(() => tick().catch(e => console.warn("Interval tick error:", e.message)), pollMs);
+   try { await initAlerts(); } catch (e) { console.warn("Push initialization unavailable:", e.message); }
+   try { await loadPaperTrades(); } catch (e) { console.warn("Paper-trade history load error:", e.message); }
+   try { await loadHistorySeed(); console.log(`History seed: ${state.prices.length} points`); } catch (e) { console.warn("History seed error:", e.message); }
+   try { await tick(); } catch (e) { console.warn("Initial market tick error:", e.message); }
+   setInterval(() => tick().catch(e => console.warn("Interval tick error:", e.message)), pollMs);
+   setInterval(() => evaluatePaperTrades().catch(e => console.warn("Paper-trade update error:", e.message)), 30000);
 });
 server.on("error", e => console.error("Server error:", e));
 process.on("unhandledRejection", e => console.error("Unhandled rejection:", e));

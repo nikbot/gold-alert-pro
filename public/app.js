@@ -161,7 +161,7 @@ async function enablePush(silent=false){
 function urlBase64ToUint8Array(s){const padding='='.repeat((4-s.length%4)%4),base64=(s+padding).replace(/-/g,'+').replace(/_/g,'/'),raw=atob(base64),out=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++)out[i]=raw.charCodeAt(i);return out}
 async function runBacktest(){const el=document.getElementById('bt');el.textContent='در حال اجرای بک‌تست...';try{const x=await fetch('/api/backtest?deviceId='+encodeURIComponent(deviceId)+'&accountToken='+encodeURIComponent(accountToken)).then(r=>r.json());if(x.error)throw new Error(x.error);el.innerHTML=`دوره ${x.from} تا ${x.to}<br>معاملات: <b>${fa(x.trades)}</b> • موفقیت: <b>${f2(x.winRate)}٪</b><br>سود خالص تاریخی: <b>${f2(x.netReturn)}٪</b> • افت سرمایه: ${f2(x.maxDrawdown)}٪`}catch(e){el.textContent='خطا: '+e.message}}
 async function installApp(){if(deferredPrompt){deferredPrompt.prompt();await deferredPrompt.userChoice;deferredPrompt=null;document.getElementById('installBtn').style.display='none';const h=document.getElementById('installBtnHero');if(h)h.style.display='none'}else alert('در Chrome اندروید: منوی ⋮ → افزودن به صفحه اصلی / Install app')}
-const SW_BUILD_URL='/sw.js?build=75.4';
+const SW_BUILD_URL='/sw.js?v80.0.0';
 let swRegistrationPromise=null;
 function registerSW(){
   if(!('serviceWorker' in navigator)) return Promise.resolve(null);
@@ -239,9 +239,9 @@ document.addEventListener('DOMContentLoaded',()=>{loadTheme(); updateCommandCent
 
 // v22: clean professional side menu. The dashboard is the only category shown at first load.
 const categoryLabels={
- dashboard:'پیشخوان', market:'بازار و نمودار', ai:'هوش و تحلیل', alerts:'هشدارها', tools:'دارایی و ابزار', portfolio:'پرتفوی', calculator:'ماشین‌حساب', settings:'تنظیمات', news:'اخبار بازار', sms:'سرویس SMS', account:'حساب و پشتیبان', decision:'اتاق تصمیم', intelligence:'مرکز هوش طلا', calendar:'تقویم اقتصادی', admin:'پنل مدیریت'
+ dashboard:'پیشخوان', market:'بازار و نمودار', signals:'سیگنال و تمرین آزمایشی', ai:'هوش و تحلیل', alerts:'هشدارها', tools:'دارایی و ابزار', portfolio:'پرتفوی', calculator:'ماشین‌حساب', settings:'تنظیمات', news:'اخبار بازار', sms:'سرویس SMS', account:'حساب و پشتیبان', decision:'اتاق تصمیم', intelligence:'مرکز هوش طلا', calendar:'تقویم اقتصادی', admin:'پنل مدیریت'
 };
-const PUBLIC_CATEGORIES=new Set(['dashboard','account']);
+const PUBLIC_CATEGORIES=new Set(['dashboard','account','signals']);
 let pendingProtectedCategory='';
 function applyCategory(category,scroll=true){
  const publicDashboard=(category==='dashboard');

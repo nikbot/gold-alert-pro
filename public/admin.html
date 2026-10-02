@@ -10,8 +10,9 @@
   <link rel="stylesheet" href="/gold2-theme.css?v=75.3">
   <link rel="stylesheet" href="/gold2-terminal-layout.css?v=75.4">
   <link rel="stylesheet" href="/gold2-v7532-colors.css?v=75.4">
+  <link rel="stylesheet" href="/v79-polish.css?v=79.0.0">
 </head>
-<body>
+<body class="admin-v79">
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
   <section id="loginView" class="admin-login-view">
@@ -23,7 +24,7 @@
       </div>
       <div class="login-copy"><h1>ورود به مرکز مدیریت</h1><p>مدیریت کاربران، پرداخت‌ها، امنیت، گزارش‌ها و وضعیت آنلاین سامانه در یکجا.</p></div>
       <form id="loginForm" class="login-form">
-        <label>نام کاربری<input id="loginUsername" autocomplete="username" value="admin" required></label>
+        <label>نام کاربری<input id="loginUsername" autocomplete="username" placeholder="نام کاربری مدیر" required></label>
         <label>رمز عبور<input id="loginPassword" autocomplete="current-password" type="password" placeholder="رمز مدیریت" required></label>
         <button class="primary wide" type="submit">ورود امن به داشبورد <span>↗</span></button>
         <div id="loginError" class="form-error" role="alert"></div>
@@ -45,6 +46,7 @@
         <button class="nav-item" data-view="security"><span>◈</span> امنیت</button>
         <button class="nav-item" data-view="preview"><span>▣</span> مشاهده سایت</button>
         <button class="nav-item" data-view="settings"><span>⚙</span> تنظیمات</button>
+        <button class="nav-item" data-view="v78"><span>⚡</span> V78 Pro Center</button>
       </nav>
       <div class="sidebar-footer"><div class="role-chip"><span class="dot live"></span><div><b id="adminRoleLabel">SUPER_ADMIN</b><small id="adminUserLabel">admin</small></div></div><button id="sidebarLogout" class="logout-btn">↪ خروج</button></div>
     </aside>
@@ -100,6 +102,15 @@
           <article class="panel preview-panel"><div class="panel-head"><div><h3>Live Preview</h3><small>نمایش نسخه فعلی سایت</small></div><button id="previewRefresh" class="ghost">↻ Refresh</button></div><iframe id="sitePreview" title="Live Site Preview" src="/"></iframe></article>
         </section>
 
+        <section id="view-v78" class="view">
+          <div class="section-hero"><div><div class="eyebrow">V78 PROFESSIONAL PLATFORM</div><h1>مرکز حرفه‌ای V78</h1><p>سلامت بازار، API، اشتراک‌ها، امنیت و زیرساخت Financial Terminal.</p></div><button id="v78AdminRefresh" class="primary">↻ بروزرسانی</button></div>
+          <div id="v78AdminMetrics" class="metric-grid compact"></div>
+          <div class="grid-2"><article class="panel"><div class="panel-head"><div><h3>Market Data Health</h3><small>وضعیت موتور قیمت و آخرین داده</small></div></div><div id="v78AdminMarket" class="health-grid"></div></article><article class="panel"><div class="panel-head"><div><h3>Subscription Distribution</h3><small>توزیع پلن‌ها</small></div></div><div id="v78AdminSubs" class="mini-stats"></div></article></div>
+          <article class="panel"><div class="panel-head"><div><h3>API Keys</h3><small>کلیدهای توسعه‌دهندگان</small></div></div><div id="v78AdminKeys" class="list"></div></article>
+          <article class="panel"><div class="panel-head"><div><h3>Security Telemetry</h3><small>رویدادهای V78</small></div></div><div id="v78AdminSecurity" class="list"></div></article>
+          <article class="panel form-panel"><div class="panel-head"><div><h3>مدیریت اشتراک کاربر</h3><small>فعال‌سازی Pro / Premium / Enterprise</small></div></div><div class="form-grid"><label>User ID<input id="v78SubUserId" placeholder="شناسه کاربر"></label><label>پلن<select id="v78SubPlan"><option>FREE</option><option>PRO</option><option>PREMIUM</option><option>ENTERPRISE</option></select></label><label>مدت (روز)<input id="v78SubDays" type="number" min="1" value="30"></label></div><div class="modal-actions"><button id="v78SubSave" class="primary">اعمال اشتراک</button></div></article>
+        </section>
+
         <section id="view-settings" class="view">
           <div class="section-hero"><div><div class="eyebrow">SETTINGS</div><h1>تنظیمات سامانه</h1><p>تنظیمات عمومی، دسترسی‌ها و امنیت نشست مدیریت.</p></div><button id="settingsSaveBtn" class="primary">ذخیره تنظیمات</button></div>
           <div class="grid-2"><article class="panel form-panel"><div class="panel-head"><div><h3>تنظیمات عمومی</h3><small>Site Settings</small></div></div><label>نام سایت<input id="settingSiteName"></label><label>آدرس لوگو<input id="settingLogoUrl"></label><label>نقش پیش‌فرض کاربران<select id="settingDefaultRole"></select></label><label class="check-row"><input id="settingMaintenance" type="checkbox"> حالت تعمیر و نگهداری</label></article><article class="panel form-panel"><div class="panel-head"><div><h3>امنیت مدیریت</h3><small>Session & Login Protection</small></div></div><label>مدت نشست مدیریت (ساعت)<input id="settingSessionHours" type="number" min="1" max="168"></label><label>بازه Rate Limit (دقیقه)<input id="settingLoginWindow" type="number" min="1" max="60"></label><label>حداکثر تلاش ورود<input id="settingMaxAttempts" type="number" min="3" max="30"></label></article></div>
@@ -112,6 +123,7 @@
   <dialog id="userDialog" class="modal-dialog"><form method="dialog" id="userForm"><div class="modal-head"><div><h3 id="userDialogTitle">کاربر جدید</h3><small>اطلاعات دسترسی و حساب</small></div><button value="cancel" class="icon-btn">×</button></div><input type="hidden" id="userEditId"><div class="form-grid"><label>نام کاربری<input id="formUsername" required></label><label>نام<input id="formName"></label><label>موبایل<input id="formPhone" inputmode="tel"></label><label>نقش<select id="formRole"></select></label><label>رمز عبور<input id="formPassword" type="password" autocomplete="new-password"></label><label>انقضا<input id="formExpiry" type="datetime-local"></label><label class="span-2">عنوان اشتراک<input id="formPlan"></label><label class="check-row span-2"><input id="formActive" type="checkbox" checked> حساب فعال باشد</label></div><div class="modal-actions"><button value="cancel" class="ghost">انصراف</button><button id="saveUserBtn" value="default" class="primary">ذخیره</button></div></form></dialog>
   <dialog id="paymentDialog" class="modal-dialog"><form method="dialog" id="paymentForm"><div class="modal-head"><div><h3>ثبت پرداخت</h3><small>دفتر تراکنش‌ها</small></div><button value="cancel" class="icon-btn">×</button></div><div class="form-grid"><label>نام کاربری<input id="paymentUser"></label><label>مبلغ (ریال)<input id="paymentAmount" type="number" min="0"></label><label>پلن<input id="paymentPlan"></label><label>شماره پیگیری<input id="paymentReference"></label><label>وضعیت<select id="paymentStatus"><option value="confirmed">تأییدشده</option><option value="pending">در انتظار</option><option value="failed">ناموفق</option><option value="cancelled">لغوشده</option></select></label></div><div class="modal-actions"><button value="cancel" class="ghost">انصراف</button><button id="savePaymentBtn" value="default" class="primary">ثبت تراکنش</button></div></form></dialog>
 
+  <script src="/v79.js?v=79.0.0" defer></script>
   <script src="/admin.js" defer></script>
 </body>
 </html>

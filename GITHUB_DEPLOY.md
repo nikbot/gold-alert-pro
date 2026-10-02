@@ -1,4 +1,4 @@
-# انتشار Gold Alert Pro v38 با GitHub و Deplexo
+# انتشار Gold2 Pro v80 با GitHub و Deplexo
 
 ## 1) ساخت Repository
 در GitHub یک Repository جدید با نامی مثل `gold-alert-pro` بسازید. برای پروژه خصوصی، Repository را Private نگه دارید.

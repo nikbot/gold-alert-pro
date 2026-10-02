@@ -1,4 +1,4 @@
-# Gold2 Pro V60 Deployment Checklist
+# Gold2 Pro V80 Deployment Checklist
 
 ## Deplexo
 - Install: `npm install --omit=dev --no-audit --no-fund`
