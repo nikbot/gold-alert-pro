@@ -1,0 +1,62 @@
+:root{
+  --v81-surface:#1a2940;
+  --v81-surface-raised:#20324c;
+  --v81-border:#3a506d;
+  --v81-muted:#b4c3d7;
+  --v81-gold:#f2cf79;
+}
+
+body.v62Terminal{
+  background:radial-gradient(900px 480px at 75% -12%,#26405f 0,transparent 62%),linear-gradient(160deg,#0e1727,#0a1120 60%,#0d1522);
+}
+body.v62Terminal .v62Header,
+body.v62Terminal .v62Sidebar,
+body.v62Terminal .v62Copilot,
+body.v62Terminal .v62Timeline,
+body.v62Terminal .v62PulsePanel{
+  background:linear-gradient(155deg,#1b2a41,#142136);
+  border-color:var(--v81-border);
+}
+body.v62Terminal .v62Header,
+body.v62Terminal .v62Sidebar{box-shadow:0 18px 46px #02081466}
+body.v62Terminal .v62Nav button{color:#d1dceb}
+body.v62Terminal .v62Nav button:hover{background:#ffffff0a;border-color:#47617f}
+body.v62Terminal .v62Nav button.active{background:linear-gradient(90deg,#e6ba5a28,#74a5df13);border-color:#b89145;color:#fff}
+body.v62Terminal .v62Nav .v62Icon{background:#273a54;border-color:#405a79}
+body.v62Terminal .v62Hero,
+body.v62Terminal .v62MarketCard,
+body.v62Terminal .v62ChartPanel,
+body.v62Terminal .v62Stat,
+body.v62Terminal .v62PulseRow,
+body.v62Terminal .v62TimelineItem{background:linear-gradient(145deg,#1a2a41,#142136);border-color:#354b67}
+body.v62Terminal .v62Hero{min-height:270px}
+body.v62Terminal .v62HeroPrice{color:#fff0be;font-variant-numeric:tabular-nums;letter-spacing:-1.6px}
+body.v62Terminal .v62Kicker,
+body.v62Terminal .v62Unit,
+body.v62Terminal .v62MarketCard span,
+body.v62Terminal .v62TimelineTime{color:var(--v81-muted)}
+body.v62Terminal .v62MarketCard b{color:#f6f8fc;font-variant-numeric:tabular-nums}
+body.v62Terminal .v62MarketStatus{background:#20324a;border-color:#3a506d;color:#e0e9f5}
+body.v62Terminal button{min-height:38px}
+body.v62Terminal button:focus-visible,
+body.v62Terminal input:focus-visible,
+body.v62Terminal textarea:focus-visible,
+body.v62Terminal select:focus-visible{outline:2px solid #f2cf79;outline-offset:2px}
+.aiCopilotCard{border-color:#526987;background:linear-gradient(155deg,#20334eF5,#132137F8)}
+.aiCopilotFab{box-shadow:0 12px 32px #02081499}
+.authGate{background:radial-gradient(ellipse at 50% 0,#38435b 0,#141a28 40%,#080d17 78%)}
+.authBox{background:linear-gradient(155deg,#1b2a40,#101a2a);border-color:#6a5832;box-shadow:0 26px 90px #000b,0 0 0 1px #ffffff08 inset}
+.authBrand p,.authHint{color:#c2ccda}
+.authTabs button:not(.active){background:#263750;border-color:#3e5573;color:#e4ebf4}
+.adminCommandBar,.adminQuickGrid button,.adminStat{background:linear-gradient(145deg,#1c2c43,#142238);border-color:#3b526f}
+
+@media(max-width:760px){
+  body.v62Terminal .wrap{padding:8px 9px 96px}
+  body.v62Terminal .v62Sidebar{bottom:max(8px,env(safe-area-inset-bottom,0px));right:8px;left:8px;background:#17263bed;border-color:#405773}
+  body.v62Terminal .v62Hero{min-height:250px}
+  body.v62Terminal .v62HeroPrice{overflow-wrap:anywhere;line-height:1.12}
+  body.v62Terminal .aiCopilotDock{left:10px;bottom:88px!important;width:min(430px,calc(100vw - 20px))}
+  body.v62Terminal .aiCopilotCollapsed{left:12px;bottom:88px!important}
+  .authBox{padding:18px}
+}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;transition-duration:.01ms!important}}

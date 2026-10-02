@@ -15,9 +15,9 @@ import { adminLogin, requireAdminToken, requireAdminSession, adminLogout, listUs
 import { analyzeGold } from "./ai/manager.js";
 import { getTheme, setTheme } from "./theme.js";
 import { V78_PLANS, getSubscriptionFor, setSubscription, getWatchlist, addWatchSymbol, removeWatchSymbol, saveWatchlist, createApiKey, listApiKeys, revokeApiKey, authenticateApiKey, apiUsage, securityEvent, securityEvents, subscriptionOverview, platformOverview } from "./proPlatform.js";
-import { getTradingSignals, getGoldSignalCandles, getPaperQuote, normalizeTimeframe, paperPnl } from "./tradingSignals.js";
+import { getTradingSignals, getGoldSignalCandles, getPaperQuote, normalizeTimeframe, paperPnl, isStrongTradingSignal } from "./tradingSignals.js";
 
-const APP_VERSION = "80.0.0"
+const APP_VERSION = "81.0.0"
 const USER_SESSION_HOURS = Math.max(1, Number(process.env.USER_SESSION_HOURS || 72));
 const LOGIN_WINDOW_MS = 10 * 60_000;
 const LOGIN_MAX_ATTEMPTS = 12;
@@ -26,7 +26,9 @@ const app = express();
 const port = Number.isFinite(Number(process.env.PORT)) ? Number(process.env.PORT) : 3000;
 const pollMs = Math.max(2500, Math.min(5000, Number(process.env.POLL_MS || 4000)));
 const staleThresholdMs = Math.max(15000, Number(process.env.STALE_THRESHOLD_MS || 60000));
-const minScore = Math.min(100, Math.max(0, Number(process.env.MIN_SIGNAL_SCORE || 65)));
+const minScore = Math.min(100, Math.max(0, Number(process.env.MIN_SIGNAL_SCORE || 75)));
+const strongSignalScore = Math.max(70, Math.min(100, Number(process.env.STRONG_SIGNAL_SCORE || 75)));
+const strongSignalPollMs = Math.max(60_000, Number(process.env.STRONG_SIGNAL_POLL_MS || 120_000));
 const target1 = Math.max(0.1, Number(process.env.TARGET_1_PCT || 1.5));
 const target2 = Math.max(target1, Number(process.env.TARGET_2_PCT || 3));
 const stopPct = Math.max(0.1, Number(process.env.STOP_LOSS_PCT || 1));
@@ -534,7 +536,7 @@ function buildTrade(a) {
     stop: a.signal === "BUY" ? p * (1 - stopPct / 100) : p * (1 + stopPct / 100),
     target1Hit: false, target2Hit: false, stopHit: false, openedAt: new Date().toISOString(), closedAt: null };
 }
-async function safeAlert(fn) { try { await fn(); } catch (e) { console.warn("Alert error:", e.message); } }
+async function safeAlert(fn) { try { return await fn(); } catch (e) { console.warn("Alert error:", e.message); return null; } }
 async function alertTarget(kind, trade, price) {
   const labels = { target1: "🎯 هدف اول", target2: "🏆 هدف دوم", stop: "🛑 حد ضرر" };
   const label = labels[kind] || kind;
@@ -628,6 +630,36 @@ async function emitSignal(a) {
   state.events = state.events.slice(0, 50);
   state.lastSignal = a.signal;
   scheduleSave();
+}
+
+const strongSignalState = new Map();
+let strongSignalSweepBusy = false;
+async function monitorStrongSignals() {
+  if (strongSignalSweepBusy || state.engineStatus?.status !== "LIVE" || !state.dataReady || state.anomaly?.detected) return;
+  strongSignalSweepBusy = true;
+  try {
+    const rows = await getTradingSignals("1h", { ...state.iran, status: state.engineStatus.status });
+    const now = Date.now();
+    const cooldownMs = Math.max(30 * 60_000, Number(process.env.STRONG_SIGNAL_COOLDOWN_MIN || 120) * 60_000);
+    for (const row of rows) {
+      const previous = strongSignalState.get(row.symbol) || { signal: "WAIT", notifiedAt: 0 };
+      const strong = isStrongTradingSignal(row, strongSignalScore);
+      if (strong && previous.signal !== row.signal && now - previous.notifiedAt >= cooldownMs) {
+        const isGold = row.kind === "gold";
+        const unitPrice = isGold ? `${Number(row.price).toLocaleString("fa-IR")} تومان/گرم` : `$${Number(row.price).toLocaleString("en-US", { maximumFractionDigits: 2 })}`;
+        const side = row.signal === "BUY" ? "خرید" : "فروش";
+        const body = `${row.name} • ${side} قوی (${Math.round(row.score)} از ۱۰۰)\nقیمت: ${unitPrice}\nهدف: ${Number(row.target).toLocaleString("fa-IR")} • حد خروج: ${Number(row.stop).toLocaleString("fa-IR")}\nبازه: ${row.timeframe} | ${row.hold}\n${isGold ? "حجم خرید/فروش تخمینی است؛ قیمت آتی طلا مبنای تحلیل است." : "جریان معاملات Coinbase بررسی شده است."} سیگنال آموزشی است، نه تضمین سود.`;
+        const result = await safeAlert(() => sendWebPush({ title: `🚨 سیگنال قوی ${side} • ${row.name}`, body, icon: "/icon-192.png", badge: "/icon-192.png", tag: `strong-${row.symbol}-${row.signal}`, renotify: true, data: { url: "/#signals" } }, `STRONG_${row.symbol}_${row.signal}`, Number(row.price)));
+        strongSignalState.set(row.symbol, result?.sent || result?.reason === "duplicate" ? { signal: row.signal, notifiedAt: now } : previous);
+      } else {
+        strongSignalState.set(row.symbol, { signal: strong ? row.signal : "WAIT", notifiedAt: previous.notifiedAt });
+      }
+    }
+  } catch (e) {
+    console.warn("Strong-signal sweep failed:", e.message);
+  } finally {
+    strongSignalSweepBusy = false;
+  }
 }
 
 async function emitPressureAlert(mp, price) {
@@ -844,7 +876,7 @@ async function tick() {
       }));
 
       const a = state.analysis;
-      if (a && ["BUY", "SELL"].includes(a.signal) && a.score >= minScore && a.signal !== state.lastSignal) {
+      if (a && ["BUY", "SELL"].includes(a.signal) && a.score >= minScore && state.engineStatus.status === "LIVE" && state.dataReady && !state.anomaly?.detected && a.signal !== state.lastSignal) {
         await emitSignal(a);
       } else if (!a || !["BUY", "SELL"].includes(a.signal)) {
         if (state.lastSignal !== "WAIT") {
@@ -1325,7 +1357,7 @@ app.post("/api/admin/users", async (req,res)=>{ const session=await adminAuth(re
 app.put("/api/admin/users/:identifier", async (req,res)=>{ const session=await adminAuth(req,res,['SUPER_ADMIN','ADMIN']); if(!session)return res.status(403).json({error:"admin session invalid"}); if(!ensureAdminMutationOrigin(req,res))return; try{res.json({ok:true,user:await updateManagedUser(req.params.identifier,req.body||{})});}catch(e){res.status(400).json({error:e.message});} });
 app.post("/api/admin/users/:identifier/password", async (req,res)=>{ const session=await adminAuth(req,res,['SUPER_ADMIN','ADMIN']); if(!session)return res.status(403).json({error:"admin session invalid"}); if(!ensureAdminMutationOrigin(req,res))return; try{ const targetId=req.params.identifier; const target=(await listUsers({page:1,limit:200})).users.find(u=>u.id===targetId||u.username===targetId||u.phone===targetId); if(!target)return res.status(404).json({error:'کاربر پیدا نشد.'}); const targetRole=String(target.accessRole||'USER').toUpperCase(); const actorRole=normalizeAdminRole(session.role); if(['SUPER_ADMIN','ADMIN','MODERATOR'].includes(targetRole) && actorRole!=='SUPER_ADMIN') return res.status(403).json({error:'تغییر رمز حساب‌های مدیریتی فقط توسط مدیر ارشد مجاز است.'}); const {resetManagedUserPassword}=await import('./adminPanel.js'); const user=await resetManagedUserPassword(targetId,req.body?.password); await audit('admin_password_reset',{targetUserId:user.id,targetUsername:user.username,actor:session.username}); res.json({ok:true,user}); }catch(e){res.status(400).json({error:e.message});} });
 app.delete("/api/admin/users/:identifier", async (req,res)=>{ const session=await adminAuth(req,res,['SUPER_ADMIN','ADMIN']); if(!session)return res.status(403).json({error:"admin session invalid"}); if(!ensureAdminMutationOrigin(req,res))return; try{ const targetId=req.params.identifier; const target=(await listUsers({page:1,limit:200})).users.find(u=>u.id===targetId||u.username===targetId||u.phone===targetId); if(!target)return res.status(404).json({error:'کاربر پیدا نشد.'}); const actorRole=normalizeAdminRole(session.role); const targetRole=String(target.accessRole||'USER').toUpperCase(); if(target.id===session.userId || target.username===session.username)return res.status(400).json({error:'نمی‌توانید حساب خودتان را حذف کنید.'}); if(['SUPER_ADMIN','ADMIN','MODERATOR'].includes(targetRole) && actorRole!=='SUPER_ADMIN')return res.status(403).json({error:'حذف حساب‌های مدیریتی فقط توسط مدیر ارشد مجاز است.'}); await deleteManagedUser(targetId); await audit('admin_user_deleted',{targetUserId:target.id,targetUsername:target.username,actor:session.username});res.json({ok:true});}catch(e){res.status(400).json({error:e.message});} });
-app.post("/api/admin/broadcast", async (req,res)=>{ if(!(await adminAuth(req,res)))return res.status(403).json({error:'admin session invalid'}); const title=String(req.body?.title||'اطلاعیه مدیریت').trim(),message=String(req.body?.message||'').trim(); if(!message)return res.status(400).json({error:'متن پیام الزامی است.'}); const users=await listUsers(); for(const u of users.filter(x=>x.active)) await addNotification(u.id,title,message,'broadcast'); await audit('broadcast',{title,count:users.filter(x=>x.active).length}); res.json({ok:true,count:users.filter(x=>x.active).length}); });
+app.post("/api/admin/broadcast", async (req,res)=>{ if(!(await adminAuth(req,res)))return res.status(403).json({error:'admin session invalid'}); if(!ensureAdminMutationOrigin(req,res))return; const title=String(req.body?.title||'اطلاعیه مدیریت').trim().slice(0,120),message=String(req.body?.message||'').trim().slice(0,1000); if(!message)return res.status(400).json({error:'متن پیام را وارد کنید.'}); const users=await listUsers(),active=users.filter(x=>x.active); for(const u of active) await addNotification(u.id,title,message,'broadcast'); await audit('broadcast',{title,count:active.length}); res.json({ok:true,count:active.length,pushSubscriptions:subscriptionCount(),channel:'اعلان داخل سامانه و Push برای دستگاه‌های ثبت‌شده'}); });
 app.get("/api/admin/audit", async (req,res)=>{ if(!(await adminAuth(req,res)))return res.status(403).json({error:'admin session invalid'}); res.json({ok:true,items:(await readJsonFile(AUDIT_FILE,[])).slice(0,200)}); });
 app.get("/api/admin/payments", async (req,res)=>{ if(!(await adminAuth(req,res)))return res.status(403).json({error:'admin session invalid'}); res.json({ok:true,payments:await readJsonFile(PAYMENTS_FILE,[])}); });
 app.post("/api/admin/payments", async (req,res)=>{ if(!(await adminAuth(req,res)))return res.status(403).json({error:'admin session invalid'}); const p={id:crypto.randomUUID(),username:String(req.body?.username||''),amount:Number(req.body?.amount||0),plan:String(req.body?.plan||''),status:String(req.body?.status||'confirmed'),reference:String(req.body?.reference||''),at:new Date().toISOString()}; const all=await readJsonFile(PAYMENTS_FILE,[]); all.unshift(p); await writeJsonFile(PAYMENTS_FILE,all.slice(0,2000)); await audit('payment_recorded',{id:p.id,username:p.username,amount:p.amount}); res.json({ok:true,payment:p}); });
@@ -1535,9 +1567,11 @@ const server = app.listen(port, "0.0.0.0", async () => {
    try { await loadPaperTrades(); } catch (e) { console.warn("Paper-trade history load error:", e.message); }
    try { await loadHistorySeed(); console.log(`History seed: ${state.prices.length} points`); } catch (e) { console.warn("History seed error:", e.message); }
    try { await tick(); } catch (e) { console.warn("Initial market tick error:", e.message); }
-   setInterval(() => tick().catch(e => console.warn("Interval tick error:", e.message)), pollMs);
-   setInterval(() => evaluatePaperTrades().catch(e => console.warn("Paper-trade update error:", e.message)), 30000);
-});
+    setInterval(() => tick().catch(e => console.warn("Interval tick error:", e.message)), pollMs);
+    setInterval(() => evaluatePaperTrades().catch(e => console.warn("Paper-trade update error:", e.message)), 30000);
+    setTimeout(() => monitorStrongSignals(), 5000);
+    setInterval(() => monitorStrongSignals(), strongSignalPollMs);
+ });
 server.on("error", e => console.error("Server error:", e));
 process.on("unhandledRejection", e => console.error("Unhandled rejection:", e));
 process.on("uncaughtException", e => console.error("Uncaught exception:", e));

@@ -9,9 +9,10 @@ const LOGIN_LOGS_FILE = path.join(DATA_DIR, 'login-logs.json');
 const ADMIN_SETTINGS_FILE = path.join(DATA_DIR, 'admin-settings.json');
 const ADMIN_SESSION_HOURS = Math.max(1, Number(process.env.ADMIN_SESSION_HOURS || 12));
 
-// Demo defaults are retained for the packaged build. Override them with Deplexo secrets for production.
-export const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'admin';
-export const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'Gold@2026';
+// Keep demo credentials local-only; production requires credentials from the host's secret store.
+const production = process.env.NODE_ENV === 'production';
+export const ADMIN_USERNAME = process.env.ADMIN_USERNAME || (production ? '' : 'admin');
+export const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || (production ? '' : 'Gold@2026');
 export const ADMIN_COOKIE_NAME = process.env.ADMIN_COOKIE_NAME || 'gold_admin_session';
 export const ADMIN_ROLES = ['SUPER_ADMIN', 'ADMIN', 'MODERATOR', 'PREMIUM_USER', 'USER'];
 export const ADMIN_FEATURES = [
@@ -150,7 +151,7 @@ export async function adminLogin(username, password, meta = {}) {
   else prev.count++;
 
   const legacyKey = String(process.env.ADMIN_KEY || '');
-  const valid = (u === ADMIN_USERNAME && p === ADMIN_PASSWORD) || (legacyKey && p === legacyKey && u === 'admin');
+  const valid = (ADMIN_USERNAME && ADMIN_PASSWORD && u === ADMIN_USERNAME && p === ADMIN_PASSWORD) || (legacyKey && p === legacyKey && u === 'admin');
   if (!valid) {
     await appendLoginLog({ username: u, success: false, ip: sanitizeIp(meta.ip), userAgent: sanitizeUserAgent(meta.userAgent), reason: 'invalid_credentials' });
     throw new Error('نام کاربری یا رمز مدیریت صحیح نیست.');

@@ -206,6 +206,9 @@ async function oneAsset(asset, tf, goldQuote) {
 }
 
 export function normalizeTimeframe(value) { return TIMEFRAMES[value] ? value : "1h"; }
+export function isStrongTradingSignal(row, threshold = 75) {
+  return Boolean(row?.quoteLive && !row?.stale && ["BUY", "SELL"].includes(row.signal) && Number(row.score) >= threshold);
+}
 export async function getGoldSignalCandles(timeframe = "1h") {
   const key = normalizeTimeframe(timeframe);
   return fetchGoldBars(TIMEFRAMES[key]);

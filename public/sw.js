@@ -1,8 +1,8 @@
 
-/* Gold2 Pro V80 — network-only service worker.
+/* Gold2 Pro V81 — network-only service worker.
    It exists only for Web Push support and migration away from legacy caches.
    It never serves an old cached HTML/CSS/JS asset. */
-const BUILD='v80.0.0';
+const BUILD='v81.0.0';
 
 self.addEventListener('install',event=>{
   event.waitUntil(self.skipWaiting());
@@ -27,11 +27,27 @@ self.addEventListener('push',event=>{
   try{data=event.data?event.data.json():{}}catch{}
   event.waitUntil(self.registration.showNotification(data.title||'Gold Alert Pro',{
     body:data.body||'سیگنال جدید طلا',
-    icon:'/icon-192.png'
+    icon:data.icon||'/icon-192.png',
+    badge:data.badge||'/icon-192.png',
+    tag:data.tag||'gold-alert',
+    renotify:Boolean(data.renotify),
+    dir:'rtl',
+    lang:'fa',
+    timestamp:Date.now(),
+    data:{url:data.data?.url||'/'}
   }));
 });
 
 self.addEventListener('notificationclick',event=>{
   event.notification.close();
-  event.waitUntil(clients.openWindow('/'));
+  const target=new URL(event.notification.data?.url||'/',self.location.origin).href;
+  event.waitUntil((async()=>{
+    const pages=await clients.matchAll({type:'window',includeUncontrolled:true});
+    for(const page of pages){
+      if(new URL(page.url).origin!==self.location.origin)continue;
+      if('navigate' in page)await page.navigate(target);
+      return page.focus();
+    }
+    return clients.openWindow(target);
+  })());
 });

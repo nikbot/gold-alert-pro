@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { analyzeCandles, normalizeTimeframe, paperPnl } from "./tradingSignals.js";
+import { analyzeCandles, isStrongTradingSignal, normalizeTimeframe, paperPnl } from "./tradingSignals.js";
 
 function trendBars(direction = 1, now = Date.now()) {
   const interval = 60 * 60_000;
@@ -47,4 +47,11 @@ test("paper returns handle long and short positions with the user's amount", () 
 
 test("unknown timeframe safely falls back to one hour", () => {
   assert.equal(normalizeTimeframe("garbage"), "1h");
+});
+
+test("push alerts require a strong direction and fresh quote", () => {
+  assert.equal(isStrongTradingSignal({ signal: "BUY", score: 75, quoteLive: true }), true);
+  assert.equal(isStrongTradingSignal({ signal: "SELL", score: 74, quoteLive: true }), false);
+  assert.equal(isStrongTradingSignal({ signal: "BUY", score: 90, quoteLive: false }), false);
+  assert.equal(isStrongTradingSignal({ signal: "WAIT", score: 95, quoteLive: true }), false);
 });
