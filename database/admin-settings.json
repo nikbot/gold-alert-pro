@@ -1,9 +1,0 @@
-{
-  "siteName": "Gold Alert Pro",
-  "logoUrl": "/icon-192.png",
-  "sessionTimeoutHours": 12,
-  "loginProtection": {"windowMinutes": 10,"maxAttempts": 10},
-  "maintenanceMode": false,
-  "defaultRole": "USER",
-  "updatedAt": null
-}

@@ -1,2 +1,0 @@
-import {GoogleGenerativeAI} from '@google/generative-ai';
-export default async d=>{if(!process.env.GEMINI_API_KEY)throw Error('missing');const m=new GoogleGenerativeAI(process.env.GEMINI_API_KEY).getGenerativeModel({model:'gemini-2.5-flash'});return (await m.generateContent(`تحلیل طلا ${JSON.stringify(d)}`)).response.text()}

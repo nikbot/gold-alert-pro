@@ -1,2 +1,0 @@
-import Groq from 'groq-sdk';
-export default async d=>{if(!process.env.GROQ_API_KEY)throw Error('missing');const c=new Groq({apiKey:process.env.GROQ_API_KEY});return (await c.chat.completions.create({model:'llama-3.1-70b-versatile',messages:[{role:'user',content:JSON.stringify(d)}]})).choices[0].message.content}

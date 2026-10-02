@@ -1,6 +1,0 @@
-framework: node
-dockerfile: Dockerfile
-install: npm install --omit=dev --no-audit --no-fund
-build: npm run check
-start: node backend/server.js
-port: 3000

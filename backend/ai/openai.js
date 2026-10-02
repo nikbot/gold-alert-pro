@@ -1,2 +1,0 @@
-import OpenAI from 'openai';
-export default async d=>{if(!process.env.OPENAI_API_KEY)throw Error('missing');const c=new OpenAI({apiKey:process.env.OPENAI_API_KEY});return (await c.chat.completions.create({model:'gpt-4.1-mini',messages:[{role:'user',content:JSON.stringify(d)}]})).choices[0].message.content}
