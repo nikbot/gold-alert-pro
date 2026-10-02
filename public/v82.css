@@ -1,0 +1,210 @@
+:root{
+  --v82-bg:#0a1014;
+  --v82-panel:#111a20;
+  --v82-panel2:#162129;
+  --v82-panel3:#1b2a32;
+  --v82-line:#2b3c43;
+  --v82-text:#edf5f3;
+  --v82-muted:#9cafad;
+  --v82-teal:#49d5bd;
+  --v82-gold:#e8c778;
+  --v82-up:#44d49b;
+  --v82-down:#fa7181;
+  --v82-blue:#75baf7;
+}
+
+html{background:var(--v82-bg);scrollbar-color:#35504e var(--v82-bg)}
+body.v62Terminal{
+  color:var(--v82-text);
+  background:radial-gradient(ellipse at 76% -8%,#16483f3b,transparent 35%),linear-gradient(145deg,#0b1115,#0a1014 56%,#101b1d);
+  font-variant-numeric:tabular-nums;
+}
+body.v62Terminal .wrap{max-width:1540px;padding:16px 22px 84px}
+body.v62Terminal .v62TerminalShell{grid-template-columns:248px minmax(0,1fr);gap:18px}
+body.v62Terminal .v62Sidebar{background:linear-gradient(180deg,#142127,#10191e)!important;border:1px solid #2c4145!important;border-radius:20px!important;box-shadow:0 22px 52px #0005!important}
+body.v62Terminal .v62Brand{border-color:#2b3e42}
+body.v62Terminal .v62BrandMark{background:linear-gradient(145deg,#65dfc7,#228c7d)!important;color:#061411!important;box-shadow:0 8px 24px #39d1b522!important}
+body.v62Terminal .v62Nav button{color:#adc0bf;border-radius:12px}
+body.v62Terminal .v62Nav button:hover{background:#49d5bd0c;border-color:#35514f}
+body.v62Terminal .v62Nav button.active{background:linear-gradient(100deg,#1d74662c,#19312f)!important;border-color:#39887a!important;color:#edfffc!important;box-shadow:inset -3px 0 var(--v82-teal)!important}
+body.v62Terminal .v62Nav .v62Icon{background:#1a2b30!important;border:1px solid #304a4d!important;color:#80ddcc!important}
+body.v62Terminal .v62Main{min-width:0}
+body.v62Terminal .v62Header{padding:10px 14px;border-radius:17px;background:#131f24ef!important;border:1px solid #304348!important;box-shadow:0 12px 32px #0004!important;backdrop-filter:blur(16px)}
+body.v62Terminal .v62HeaderBrand b{letter-spacing:.2px}
+body.v62Terminal .v62HeaderBrand span{color:#91aaa8}
+body.v62Terminal .v62MarketStatus{background:#132d2a;border-color:#296358;color:#a5ddd3}
+body.v62Terminal .v62LiveDot{background:var(--v82-up);box-shadow:0 0 12px #44d49b88}
+body.v62Terminal .v62HeaderActions button{background:#1a2a30;border-color:#354b50;color:#d9e7e5}
+body.v62Terminal .v62HeaderActions .v62CopilotBtn{background:linear-gradient(130deg,#62dfc8,#32a993);color:#061612;font-weight:850}
+body.v62Terminal .v82MenuBtn{background:transparent!important;border-color:#405a59!important;color:#b9d2cd!important}
+body.v62Terminal .v62MainGrid{grid-template-columns:minmax(0,1.7fr) minmax(290px,.76fr);gap:14px}
+body.v62Terminal .v62Hero{min-height:0!important;padding:23px 25px;border-radius:20px!important;border:1px solid #32655f!important;background:radial-gradient(ellipse at 5% 100%,#2b8d7430,transparent 43%),linear-gradient(135deg,#182a2c,#142126 56%,#192a2a)!important;box-shadow:0 22px 50px #0004!important}
+body.v62Terminal .v62HeroTitle{font-size:17px;color:#c1d1ce}
+body.v62Terminal .v62HeroPrice{font-size:clamp(42px,5vw,66px);letter-spacing:-1.7px;line-height:1.15;color:#f0fbf6;font-feature-settings:"tnum";text-shadow:0 0 32px #49d5bd1c}
+body.v62Terminal .v62HeroLive{background:#12382f;border-color:#307c63;color:#88edc2}
+body.v62Terminal .v62Kicker,body.v62Terminal .v62Unit{color:#a4bbb7}
+body.v62Terminal .v62HeroMeta{gap:8px}
+body.v62Terminal .v62Pill{padding:8px 11px;background:#101c20;border-color:#2e4849;color:#a3b9b6}
+body.v62Terminal .v62Pill b{color:#edf5f3}
+.v82PriceControl{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:17px;padding-top:13px;border-top:1px solid #ffffff12}
+.v82PricePulse{color:#96bab3;font-size:10px}.v82PricePulse i{display:inline-block;width:7px;height:7px;margin-left:6px;border-radius:50%;background:var(--v82-up);box-shadow:0 0 10px #44d49b88}
+#v82PriceRefresh{min-height:37px;padding:7px 12px;border:1px solid #418f80;border-radius:10px;background:#1c5148;color:#dffff7;font-size:10px;font-weight:800;cursor:pointer}
+#v82PriceRefresh:hover{background:#24675b}#v82PriceRefresh:disabled{opacity:.65;cursor:wait}
+body.v62Terminal .v62HeroBottom{margin-top:12px}
+body.v62Terminal .v62MarketCards{gap:9px}
+body.v62Terminal .v62MarketCard,body.v62Terminal .v62Stat,body.v62Terminal .v62ChartPanel,body.v62Terminal .v62Timeline,body.v62Terminal .v62PulsePanel{
+  border-color:var(--v82-line)!important;border-radius:15px!important;background:linear-gradient(150deg,#172329,#131d22)!important;box-shadow:0 10px 28px #0002!important
+}
+body.v62Terminal .v62MarketCard{min-height:92px;padding:14px}
+body.g2Dashboard .v62Header,body.g2Dashboard .v62Sidebar{background:linear-gradient(155deg,#172527,#121d21)!important;border-color:#2e4b48!important}
+body.g2Dashboard .g2DashboardQuick button{background:linear-gradient(145deg,#172729,#132124)!important;border:1px solid #31504c!important;color:#eaf5f1!important;box-shadow:none!important}
+body.g2Dashboard .g2DashboardQuick button:hover{background:#1b3332!important;border-color:#4c8b7d!important}
+body.g2Dashboard .g2DashboardQuick .g2qIcon{background:#1b3532!important;border-color:#365954!important;color:#78dbc8!important}
+body.g2Dashboard .v62MarketCard{background:linear-gradient(150deg,#172329,#131d22)!important;border-color:var(--v82-line)!important;box-shadow:0 10px 28px #0002!important}
+body.g2Dashboard .v62Timeline,body.g2Dashboard .v62PulsePanel,body.g2Dashboard .v62ChartPanel{background:linear-gradient(150deg,#172729,#131f23)!important;border-color:#2d4848!important}
+body.g2Dashboard .v62Pill{background:#101c20!important;border-color:#2e4849!important;color:#a3b9b6!important}
+body.g2Dashboard .v62ExtraStats{display:grid!important}
+body.g2Dashboard .v66IntelligenceGrid{display:grid!important}
+body.g2Dashboard .v62ChartPanel{display:block!important}
+body.g2Dashboard .v62BottomGrid{display:grid!important}
+body.g2Dashboard .v62Copilot{display:block!important}
+body.g2Dashboard #aiCopilotCollapsed{display:none!important}
+body.v62Terminal .v62MarketCard span,body.v62Terminal .v62Stat span{color:#a8bcba}
+body.v62Terminal .v62MarketCard b{font-size:16px;color:#f1f6f4}
+body.v62Terminal .v62MarketCard em{color:#8aa19f}
+body.v62Terminal .v62MarketCard em.v62Up,body.v62Terminal .v62PulseRow .v62Up{color:var(--v82-up)!important}
+body.v62Terminal .v62MarketCard em.v62Down,body.v62Terminal .v62PulseRow .v62Down{color:var(--v82-down)!important}
+body.v62Terminal .v62ExtraStats{gap:9px}
+body.v62Terminal .v62Stat b{color:#edf5f3}
+body.v62Terminal .v65MarketState,body.v62Terminal .v66DecisionCard,body.v62Terminal .v66HeatmapCard{border:1px solid #2d4848!important;border-radius:18px;background:linear-gradient(145deg,#172628,#131e22)!important;box-shadow:0 14px 34px #0003}
+body.v62Terminal .v65StateGrid>div,body.v62Terminal .v66ScenarioGrid>div{background:#102020!important;border-color:#2b4544!important}
+body.v62Terminal .v61DecisionRoom,body.v62Terminal .v61SmartAlerts{background:linear-gradient(145deg,#182728,#121d20)!important;border-color:#35514e!important}
+body.v62Terminal .v61Metric,body.v62Terminal .v61Levels>div,body.v62Terminal .v61GuardGrid>div{background:#111e21;border-color:#304544}
+body.v62Terminal .v61Metric b,body.v62Terminal .v61Levels b,body.v62Terminal .v61GuardGrid b{color:var(--v82-teal)}
+body.v62Terminal .v62ChartViewport{border-color:#2b4144;background:#0e171b}
+body.v62Terminal .v62Copilot{border-color:#35504d;border-radius:18px;background:linear-gradient(155deg,#1a2a2b,#141f23);box-shadow:0 14px 34px #0003}
+body.v62Terminal .v62CopilotState,body.v62Terminal .v62StateGrid div{background:#122022;border-color:#2d4444}
+body.v62Terminal .v62TimelineItem{border-color:#27383a}
+body.v62Terminal .v62PulseRow{background:#142125;border-color:#2a4142}
+body.v62Terminal .v62Range button,body.v62Terminal .v62ChartTools button,body.v62Terminal .v62ToolsRow button{background:#1b2a2e;border-color:#3b5554;color:#bed0cd}
+body.v62Terminal .v62Range button.active,body.v62Terminal .v62ChartTools button.active{background:#19483f;border-color:#48ae9d;color:#c8fff3}
+body.v62Terminal .adminCommandBar,body.v62Terminal .adminQuickGrid button,body.v62Terminal .adminStat,body.v62Terminal .adminSidebar{background:linear-gradient(145deg,#1a2a2d,#142125);border-color:#36504f}
+body.v62Terminal .adminSidebar button,body.v62Terminal .adminFilterBar input,body.v62Terminal .adminFilterBar select{background:#18282b;border-color:#395250;color:#ecf5f2}
+body.v62Terminal .v80Hero{background:linear-gradient(120deg,#193a36,#14252c);border-color:#3a7468}
+body.v62Terminal button,body.v62Terminal input,body.v62Terminal select,body.v62Terminal textarea{font-family:inherit}
+body.v62Terminal input,body.v62Terminal select,body.v62Terminal textarea{background:#101b20;border-color:#34484b;color:#eff7f4}
+body.v62Terminal button:focus-visible,body.v62Terminal input:focus-visible,body.v62Terminal select:focus-visible,body.v62Terminal textarea:focus-visible{outline:2px solid var(--v82-teal);outline-offset:2px}
+body.v62Terminal .floatingMenuBtn{top:80px;right:20px;transform:none;width:44px;height:44px;border-radius:13px;background:#1b3936;border:1px solid #3b776c;color:#baffef;box-shadow:0 10px 28px #0006}
+body.v62Terminal .floatingMenuBtn{display:none}
+body.v62Terminal .floatingMenuBtn:active{transform:scale(.96)}
+body.v62Terminal .sideMenu{z-index:100;background:linear-gradient(180deg,#152226,#10181d);border-color:#354b4d}
+body.v62Terminal .sideMenuHint{background:#152522;border-color:#34524b;color:#bdd2ca}
+body.v62Terminal .menuItem{background:#172429;border-color:#2b4144;color:#ecf5f2}
+body.v62Terminal .menuItem.active{background:#1c3a35;border-color:#419486}
+body.v62Terminal .menuItem small{color:#9ab1ad}
+
+#authGate.authOpen{background:radial-gradient(ellipse at 78% 12%,#1b756346,transparent 34%),radial-gradient(ellipse at 8% 100%,#d8b35d14,transparent 35%),#071012ed;backdrop-filter:blur(14px)}
+#authGate .authBox{position:relative;width:min(970px,calc(100vw - 36px));max-height:min(760px,calc(100dvh - 36px));padding:0;overflow:auto;display:grid;grid-template-columns:1.05fr .95fr;grid-template-rows:auto 1fr auto auto;direction:ltr;border:1px solid #365452!important;border-radius:26px!important;background:#0e181b!important;box-shadow:0 36px 110px #000c!important}
+#authGate .authBox>*{direction:rtl}
+#authGate .authBox>div:first-child{position:absolute;top:14px;left:14px;z-index:5}
+#authGate .authBrand{grid-column:2;grid-row:1/5;display:flex;flex-direction:column;justify-content:center;min-height:500px;padding:66px 42px 38px;text-align:right;background:radial-gradient(ellipse at 25% 82%,#42c1a51b,transparent 45%),linear-gradient(155deg,#19312f,#142327);border:0;border-right:1px solid #2b4543}
+#authGate .authLogo{width:58px;height:58px;margin:0 0 18px;border-radius:17px;background:linear-gradient(145deg,#67e0c6,#208c7d);color:#06201a;box-shadow:0 12px 32px #45cbb72e;font-size:26px}
+#authGate .authBrand .small{align-self:flex-start;margin:0 0 12px!important;padding:6px 10px;border:1px solid #397066;border-radius:999px;background:#153d36;color:#a9eee0!important;font-size:9px!important}
+#authGate .authBrand h1{font-size:clamp(28px,4vw,38px);letter-spacing:-.8px;color:#effbf7}
+#authGate .authBrand p{max-width:420px;margin:12px 0 20px;color:#a5bfbb;font-size:12px;line-height:2.2}
+#authGate .authBrand:after{content:'قیمت زنده  •  نمودار و سناریو  •  هشدارهای انتخابی';padding:12px 14px;border:1px solid #35504b;border-radius:12px;background:#10201f;color:#b5ccc5;font-size:10px;line-height:1.8}
+#authGate .authTabs{grid-column:1;grid-row:1;margin:0;padding:50px 38px 8px;display:flex;gap:8px;background:#0e181b}
+#authGate .authTabs button{flex:1;min-height:44px;border-radius:11px!important;background:#19272a!important;border-color:#334a4a!important;color:#aec1bc!important}
+#authGate .authTabs button.active{background:#22685b!important;border-color:#4eb6a2!important;color:#effffb!important;box-shadow:0 8px 22px #2b9c8329}
+#authGate .authForm{grid-column:1;grid-row:2;align-self:start;padding:17px 38px 12px;gap:11px;background:#0e181b}
+#authGate .authForm input,#authGate #adminLoginModal input{height:48px;border:1px solid #344b4d!important;border-radius:11px!important;background:#142125!important;color:#f0f7f4!important;padding:0 13px}
+#authGate .authForm input:focus,#authGate #adminLoginModal input:focus{border-color:#4eb6a2!important;box-shadow:0 0 0 3px #49d5bd22}
+#authGate .authForm input::placeholder,#authGate #adminLoginModal input::placeholder{color:#809994}
+#authGate .authForm button,#authGate #adminLoginModal button{min-height:43px;border-radius:11px!important}
+#authGate .authForm button:first-of-type,#authGate #adminLoginModal button:first-of-type{background:linear-gradient(110deg,#55d8bd,#258f80)!important;color:#071612!important;border:0;font-weight:900}
+#authGate .authForm button.secondary,#authGate #adminLoginModal button.secondary{background:#172528!important;border:1px solid #304648!important;color:#c4d6d1!important}
+#authGate .authError{grid-column:1;grid-row:3;margin:0 38px;min-height:20px}
+#authGate .authHint{grid-column:1;grid-row:4;margin:0 38px 20px;padding:8px 10px;border:1px solid #2a4243;background:#111e20;color:#93aaa5;text-align:center}
+#authGate #adminLoginModal{position:relative!important;grid-column:1;grid-row:2/4;align-self:start;width:auto!important;margin:18px 38px!important;padding:17px!important;border:1px solid #344b4d!important;border-radius:15px!important;background:#111e20!important}
+#authGate #adminLoginModal>div:first-child{font-size:17px!important}
+#authGate [hidden]{display:none!important}
+
+@media(max-width:1080px){
+  body.v62Terminal .v62TerminalShell{grid-template-columns:78px minmax(0,1fr)}
+  body.v62Terminal .v62Sidebar .v62BrandText,body.v62Terminal .v62Sidebar .v62Nav b,body.v62Terminal .v62Sidebar .v62Nav small,body.v62Terminal .v62SideFoot,body.v62Terminal .v62Collapse{display:none}
+  body.v62Terminal .v62Sidebar{padding:10px}
+  body.v62Terminal .v62Nav button{justify-content:center}
+  body.v62Terminal .v62MainGrid{grid-template-columns:1fr}
+  body.v62Terminal .v62Copilot{position:relative;top:auto;min-height:0}
+}
+@media(max-width:760px){
+  body.v62Terminal .wrap{padding:8px 11px calc(105px + env(safe-area-inset-bottom,0px))}
+  body.v62Terminal .v62TerminalShell{display:block!important}
+  body.v62Terminal .v62Sidebar{position:fixed!important;z-index:60!important;right:9px!important;left:9px!important;bottom:max(8px,env(safe-area-inset-bottom,0px))!important;top:auto!important;width:auto!important;height:auto!important;max-height:72px;padding:6px 7px;border-radius:17px;background:#111e22f5!important;border-color:#34524e!important;backdrop-filter:blur(18px);box-shadow:0 12px 36px #0008!important}
+  body.v62Terminal .v62Nav{display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr));gap:3px;padding:0;overflow:hidden!important}
+  body.v62Terminal .v62Nav>button{min-width:0!important;min-height:54px!important;display:flex!important;flex-direction:column;justify-content:center;gap:3px;padding:4px 2px;border-radius:11px}
+  body.v62Terminal .v62Nav>button:nth-child(2),body.v62Terminal .v62Nav>button:nth-child(7),body.v62Terminal .v62Nav>button:nth-child(8),body.v62Terminal .v62Nav>button:nth-child(9),body.v62Terminal .v62Nav>button:nth-child(10){display:none!important}
+  body.v62Terminal .v62Nav .v62Icon{width:24px;height:24px;border-radius:8px;font-size:13px}
+  body.v62Terminal .v62Sidebar .v62Nav b{display:block;font-size:8px;line-height:1.2;white-space:nowrap}
+  body.v62Terminal .v62Header{grid-template-columns:1fr auto;gap:7px;margin:0 0 10px;padding:8px 9px}
+  body.v62Terminal .v62HeaderBrand b{font-size:14px}
+  body.v62Terminal .v62HeaderBrand span{font-size:8px}
+  body.v62Terminal .v62HeaderActions{gap:4px}
+  body.v62Terminal .v62HeaderActions button{min-height:35px;padding:6px 8px;font-size:9px}
+  body.v62Terminal .v82MenuBtn{display:inline-flex!important;align-items:center;justify-content:center;min-width:34px;font-size:0}
+  body.v62Terminal .v82MenuBtn:before{content:'☰';font-size:16px}
+  body.v62Terminal .v62HeaderActions button:nth-child(2){font-size:14px}
+  body.v62Terminal .v62HeaderActions button:nth-child(3) span{display:none}
+  body.v62Terminal .v62MarketStatus{grid-column:1/-1;grid-row:2;justify-self:stretch;justify-content:center;min-height:31px;padding:5px 8px;font-size:8px}
+  body.v62Terminal .v62Hero{padding:17px 15px;border-radius:17px;min-height:0}
+  body.v62Terminal .v62HeroPrice{font-size:clamp(32px,9vw,48px);letter-spacing:-1px;overflow-wrap:anywhere}
+  body.v62Terminal .v62HeroTop{align-items:flex-start}
+  body.v62Terminal .v62HeroMeta{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));margin-top:11px}
+  body.v62Terminal .v62Pill{font-size:8px;padding:7px 8px}
+  .v82PriceControl{margin-top:12px}
+  body.v62Terminal .v62HeroBottom{display:flex;align-items:center}
+  body.v62Terminal .v62HeroChart{width:38%;min-width:90px;height:48px;margin:0}
+  body.v62Terminal .v62MarketCards{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin-top:9px}
+  body.v62Terminal .v62MarketCard{min-height:78px;padding:11px;border-radius:13px}
+  body.v62Terminal .v62MarketCard b{font-size:13px}
+  body.v62Terminal .g2DashboardQuick{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+  body.v62Terminal .g2DashboardQuick button{min-height:60px;padding:9px}
+  body.v62Terminal .v62ExtraStats{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+  body.v62Terminal .v62Stat{padding:10px}
+  body.v62Terminal .v62ChartViewport{height:270px}
+  body.v62Terminal .v62BottomGrid{grid-template-columns:1fr;margin-bottom:8px}
+  body.v62Terminal .v62Copilot{padding:13px}
+  body.v62Terminal .floatingMenuBtn{display:none!important}
+  body.v62Terminal .sideMenu{z-index:100;width:min(390px,92vw);padding-bottom:calc(20px + env(safe-area-inset-bottom,0px))}
+  body.v62Terminal .menuBackdrop{z-index:99}
+  body.v62Terminal .v75MobileNav{display:none!important}
+  body.v62Terminal .aiCopilotDock{left:10px;bottom:calc(84px + env(safe-area-inset-bottom,0px))!important;width:min(390px,calc(100vw - 20px))}
+  body.v62Terminal .aiCopilotCollapsed{left:12px;bottom:calc(86px + env(safe-area-inset-bottom,0px))!important}
+  body.v62Terminal .aiCopilotCollapsed{display:none!important}
+  #aiCopilotCollapsed{display:none!important}
+  #authGate.authOpen{padding:10px}
+  #authGate .authBox{display:flex;flex-direction:column;width:min(480px,calc(100vw - 20px));max-height:calc(100dvh - 20px);border-radius:20px!important}
+  #authGate .authBox>div:first-child{top:10px;left:10px}
+  #authGate .authBrand{order:0;display:block;min-height:0;padding:46px 20px 17px;text-align:center;border-right:0;border-bottom:1px solid #2b4543}
+  #authGate .authLogo{width:43px;height:43px;margin:0 auto 9px;border-radius:13px;font-size:20px}
+  #authGate .authBrand .small{margin:0 auto 7px!important}
+  #authGate .authBrand h1{font-size:23px}
+  #authGate .authBrand p{margin:5px auto 8px;font-size:9px;line-height:1.8}
+  #authGate .authBrand:after{display:none}
+  #authGate .authTabs{order:1;padding:11px 16px 0}
+  #authGate .authForm{order:2;padding:11px 16px;gap:8px}
+  #authGate .authForm input{height:43px}
+  #authGate .authError{order:3;margin:0 16px;min-height:15px}
+  #authGate .authHint{order:4;margin:3px 16px 13px;padding:6px 8px;font-size:8px}
+  #authGate #adminLoginModal{order:3;width:auto!important;margin:10px 16px!important;padding:12px!important}
+}
+@media(max-width:390px){
+  body.v62Terminal .wrap{padding-right:8px;padding-left:8px}
+  body.v62Terminal .v62Hero{padding:14px 12px}
+  body.v62Terminal .v62HeroTitle{font-size:14px}
+  body.v62Terminal .v62MarketCard{padding:9px}
+  body.v62Terminal .v62MarketCard b{font-size:12px}
+  body.v62Terminal .v62HeaderBrand .v62BrandMark{display:none}
+  body.v62Terminal .v62HeroLive{font-size:8px;padding:6px 7px}
+}
+@media(prefers-reduced-motion:reduce){body.v62Terminal *,body.v62Terminal *::before,body.v62Terminal *::after{scroll-behavior:auto!important;transition-duration:.01ms!important;animation-duration:.01ms!important}}

@@ -585,7 +585,6 @@ body.authLocked .floatingMenuBtn,body.authLocked .menuBackdrop,body.authLocked .
   <link rel="stylesheet" href="/gold2-theme.css?v=75.4">
   <link rel="stylesheet" href="/gold2-terminal-layout.css?v=75.4">
 <link rel="stylesheet" href="/v78.css?v=78.0.0">
-<link rel="stylesheet" href="/v81.css?v=81.0.0">
 </head>
 <body class="v62Terminal">
 <div id="updateBanner" style="display:none;position:sticky;top:0;z-index:900;background:#17140d;border-bottom:1px solid #4a3a19;padding:10px 14px;text-align:center">
@@ -676,10 +675,10 @@ body.authLocked .floatingMenuBtn,body.authLocked .menuBackdrop,body.authLocked .
 </aside>
 <div class="dashboardHead"><div><div class="eyebrow">مرکز فرمان بازار</div><h2>پیشخوان امروز طلا</h2></div><div class="liveBadge">● داده‌خوانی خودکار فعال</div></div>
 <div class="liveTicker" id="liveTicker"><div class="tickerMain"><span class="tickerPulse"></span><div><div class="tickerLabel">قیمت زنده طلای ۱۸ عیار</div><div id="tickerPrice" class="tickerPrice">—</div></div></div><div class="tickerSide"><div id="tickerChange" class="tickerChange">—</div><div id="tickerTime" class="tickerTime">در حال اتصال...</div></div></div>
-<div class="livePanel menuSection" id="livePricePanel"><div class="livePriceRow"><div><div class="label">⚡ قیمت زنده • هر گرم طلای ۱۸ عیار</div><div id="livePriceBig" class="livePriceBig">—</div><div class="liveUnit">ریال</div></div><div style="text-align:left"><div id="liveChange" class="change">—</div><div id="liveStatus" class="small" style="margin-top:7px">در حال اتصال...</div></div></div><div class="liveMeta"><div class="liveMetaBox"><span>اونس جهانی</span><b id="liveXau">—</b></div><div class="liveMetaBox"><span>دلار</span><b id="liveDollar">—</b></div><div class="liveMetaBox"><span>به‌روزرسانی</span><b id="liveAge">—</b></div></div><div class="phoneCta"><div style="flex:1">📲 با نصب روی گوشی، همین صفحه را مثل یک اپلیکیشن باز کن. برای اعلان قیمت و هشدارها هم Push را فعال کن.</div><button class="secondary" onclick="enablePush()">🔔 فعال‌سازی اعلان</button></div><div class="installHero"><button id="installBtnHero" class="blue" style="display:none" onclick="installApp()">📲 نصب روی صفحه گوشی</button><button class="secondary" onclick="manualRefresh()">↻ دریافت قیمت جدید</button></div><div class="mobileHint">نمایش قیمت داخل برنامه هر ۱۰ ثانیه تازه می‌شود؛ اعلان گوشی برای جلوگیری از مزاحمت، فقط برای هشدارهای مهم و به‌روزرسانی‌های انتخاب‌شده ارسال می‌شود.</div></div>
+<div class="livePanel menuSection" id="livePricePanel"><div class="livePriceRow"><div><div class="label">⚡ قیمت زنده • هر گرم طلای ۱۸ عیار</div><div id="livePriceBig" class="livePriceBig">—</div><div class="liveUnit">ریال</div></div><div style="text-align:left"><div id="liveChange" class="change">—</div><div id="liveStatus" class="small" style="margin-top:7px">در حال اتصال...</div></div></div><div class="liveMeta"><div class="liveMetaBox"><span>اونس جهانی</span><b id="liveXau">—</b></div><div class="liveMetaBox"><span>دلار</span><b id="liveDollar">—</b></div><div class="liveMetaBox"><span>به‌روزرسانی</span><b id="liveAge">—</b></div></div><div class="phoneCta"><div style="flex:1">📲 با نصب روی گوشی، همین صفحه را مثل یک اپلیکیشن باز کن. برای اعلان قیمت و هشدارها هم Push را فعال کن.</div><button class="secondary" onclick="enablePush()">🔔 فعال‌سازی اعلان</button></div><div class="installHero"><button id="installBtnHero" class="blue" style="display:none" onclick="installApp()">📲 نصب روی صفحه گوشی</button><button class="secondary" onclick="manualRefresh()">↻ دریافت قیمت جدید</button></div><div class="mobileHint">قیمت بازار حداکثر هر ۴ ثانیه تازه می‌شود؛ اعلان گوشی برای هشدارهای مهم نیاز به اجازه شما دارد.</div></div>
 <div class="v62TerminalShell categorySection category-dashboard" id="v62TerminalShell">
   <aside class="v62Sidebar" id="v62Sidebar">
-    <div class="v62Brand"><div class="v62BrandMark">Au</div><div class="v62BrandText"><b>Gold2 Pro</b><small>V81 Market Terminal</small></div></div>
+     <div class="v62Brand"><div class="v62BrandMark">Au</div><div class="v62BrandText"><b>Gold2 Pro</b><small>V82 Trading Terminal</small></div></div>
     <nav class="v62Nav" id="v62Nav">
       <button class="active" data-v62cat="dashboard" type="button"><span class="v62Icon">⌂</span><span><b>پیشخوان</b><small>نمای اصلی بازار</small></span></button>
       <button data-v62cat="signals" type="button"><span class="v62Icon">🎯</span><span><b>سیگنال آزمایشی</b><small>طلا و رمزارز</small></span></button>
@@ -697,15 +696,16 @@ body.authLocked .floatingMenuBtn,body.authLocked .menuBackdrop,body.authLocked .
   </aside>
   <main class="v62Main">
     <header class="v62Header">
-      <div class="v62HeaderBrand"><div class="v62BrandMark" style="width:34px;height:34px;border-radius:10px;font-size:16px">Au</div><div><b>Gold2 Pro</b><span>Market Terminal • V81</span></div></div>
+      <div class="v62HeaderBrand"><div class="v62BrandMark" style="width:34px;height:34px;border-radius:10px;font-size:16px">Au</div><div><b>Gold2 Pro</b><span>Trading Terminal • V82</span></div></div>
       <div class="v62MarketStatus"><span class="v62LiveDot"></span><b id="v62MarketState">LIVE</b><span id="v62UpdateAge">آخرین بروزرسانی —</span></div>
-      <div class="v62HeaderActions"><button class="v62Notif" type="button" onclick="applyCategory('alerts')">🔔<i id="v62NotifCount">0</i></button><button type="button" onclick="applyCategory('account')">👤 <span id="v62AccountName">حساب کاربری</span></button><button class="v62CopilotBtn" type="button" onclick="document.getElementById('v62CopilotQuestion')?.focus();document.getElementById('v62Copilot')?.scrollIntoView({behavior:'smooth',block:'center'})">AI Copilot</button></div>
+      <div class="v62HeaderActions"><button class="v82MenuBtn" type="button" onclick="openSideMenu()" aria-label="باز کردن همه بخش‌ها">☰ بخش‌ها</button><button class="v62Notif" type="button" onclick="applyCategory('alerts')">🔔<i id="v62NotifCount">0</i></button><button type="button" onclick="applyCategory('account')">👤 <span id="v62AccountName">حساب کاربری</span></button><button class="v62CopilotBtn" type="button" onclick="document.getElementById('v62CopilotQuestion')?.focus();document.getElementById('v62Copilot')?.scrollIntoView({behavior:'smooth',block:'center'})">AI Copilot</button></div>
     </header>
     <section class="v62MainGrid">
       <div>
         <section class="v62Hero">
-          <div class="v62HeroTop"><div><div class="v62Kicker">MARKET HERO • GOLD 18K / 750</div><div class="v62HeroTitle">طلای ۱۸ عیار</div><div class="v62HeroPrice" id="v62GoldPrice">—</div><div class="v62Unit">ریال / هر گرم</div></div><div class="v62HeroLive"><span class="v62LiveDot" style="display:inline-block;margin-left:5px"></span> LIVE</div></div>
+          <div class="v62HeroTop"><div><div class="v62Kicker">GOLD / IRR • MARKET PRICE</div><div class="v62HeroTitle">طلای ۱۸ عیار</div><div class="v62HeroPrice" id="v62GoldPrice" aria-live="polite">—</div><div class="v62Unit">ریال / هر گرم</div></div><div class="v62HeroLive"><span class="v62LiveDot" style="display:inline-block;margin-left:5px"></span> بازار زنده</div></div>
           <div class="v62HeroMeta"><div class="v62Pill">تغییر <b id="v62GoldChange">—</b></div><div class="v62Pill">آخرین قیمت <b id="v62GoldTime">—</b></div><div class="v62Pill">منبع <b id="v62GoldSource">در حال اتصال</b></div></div>
+          <div class="v82PriceControl"><span class="v82PricePulse"><i></i><span id="v82PriceUpdatedAt">به‌روزرسانی خودکار هر ۴ ثانیه</span></span><button id="v82PriceRefresh" type="button" onclick="manualRefresh()">↻ بروزرسانی قیمت</button></div>
           <div class="v62HeroBottom"><div class="v62Source">وضعیت داده: <strong id="v62DataQuality">در حال بررسی</strong></div><div class="v62HeroChart" id="v62HeroChart"></div></div>
         </section>
         <section class="v62MarketCards" id="v62MarketCards">
@@ -1201,13 +1201,13 @@ body.authLocked .floatingMenuBtn,body.authLocked .menuBackdrop,body.authLocked .
 <link rel="stylesheet" href="/v69.css?build=75.4">
 <script>
 (function(){
-  const RELEASE='81.0.0';
-  const KEY='g2-release-migrated-v81';
+  const RELEASE='82.0.0';
+  const KEY='g2-release-migrated-v82';
   if(!('serviceWorker' in navigator)) return;
   window.addEventListener('load',async()=>{
     try{
       const regs=await navigator.serviceWorker.getRegistrations();
-      const stale=regs.filter(r=>!String(r.active?.scriptURL||r.installing?.scriptURL||r.waiting?.scriptURL||'').includes('v81.0.0'));
+      const stale=regs.filter(r=>!String(r.active?.scriptURL||r.installing?.scriptURL||r.waiting?.scriptURL||'').includes('v82.0.0'));
       if(!stale.length) return;
       await Promise.all(stale.map(r=>r.unregister()));
       if('caches' in window){
@@ -1222,8 +1222,8 @@ body.authLocked .floatingMenuBtn,body.authLocked .menuBackdrop,body.authLocked .
   });
 })();
 </script>
-<script src="/app.js?build=81.0.0" defer></script>
-<script src="/gold-intelligence.js?build=75.4" defer></script>
+<script src="/app.js?build=82.0.0" defer></script>
+<script src="/gold-intelligence.js?build=82.0.0" defer></script>
 
 
 <script src="/v67.js?build=75.4"></script>
@@ -1240,4 +1240,5 @@ body.authLocked .floatingMenuBtn,body.authLocked .menuBackdrop,body.authLocked .
 <script src="/v78.js?v=78.0.0" defer></script>
 <script src="/v79.js?v=79.0.0" defer></script>
 <script src="/v80.js?v=80.0.0" defer></script>
+<link rel="stylesheet" href="/v82.css?v=82.0.0">
 </body></html>

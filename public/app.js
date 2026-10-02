@@ -1,7 +1,7 @@
 const fa=n=>Number(n||0).toLocaleString('fa-IR',{maximumFractionDigits:0});
 const f2=n=>Number(n||0).toLocaleString('fa-IR',{maximumFractionDigits:2});
 const pct=n=>Number(n||0).toLocaleString('fa-IR',{maximumFractionDigits:1})+'٪';
-let latest=null,timer=null,deferredPrompt=null,pollMs=10000,nextAt=0;
+let latest=null,timer=null,deferredPrompt=null,pollMs=10000,nextAt=0,lastMarketEventAt=0,refreshInFlight=false;
 let aiCopilotCache={}; let aiCopilotLastCall=0; let aiCopilotPage='dashboard'; let aiCopilotOpen=true; let aiCopilotLastAlert='';
 const DEVICE_KEY='gold-alert-pro-device-id-v10';
 let lastNotificationIds=new Set();
@@ -112,7 +112,7 @@ function calcBuy(){
  const gold=w*p, make=gold*making/100, dealer=(gold+make)*profit/100, tax=(make+dealer)*vat/100,total=gold+make+dealer+tax;
  document.getElementById('buyResult').innerHTML=`اصل طلا: <b>${moneyIRR(gold)}</b><br>اجرت: ${moneyIRR(make)} • سود فروشنده: ${moneyIRR(dealer)} • مالیات: ${moneyIRR(tax)}<br>قیمت تقریبی فاکتور: <b>${moneyIRR(total)}</b>`;
 }
-async function manualRefresh(){await load();await news()}
+async function manualRefresh(){const btn=document.getElementById('v82PriceRefresh');if(btn){btn.disabled=true;btn.dataset.label=btn.textContent;btn.textContent='در حال دریافت…'}try{await load();await news()}finally{if(btn){btn.disabled=false;btn.textContent=btn.dataset.label||'↻ بروزرسانی قیمت'}}}
 async function enableBrowserNotification(){if(!('Notification'in window)){alert('مرورگر اعلان را پشتیبانی نمی‌کند');return}const p=Notification.permission==='granted'?'granted':await Notification.requestPermission();if(p!=='granted'){alert('اجازه اعلان داده نشد.');return}try{await enablePush(true);alert('✅ اعلان‌های کامپیوتر و Push فعال شد.');}catch(e){alert('⚠️ اعلان مرورگر فعال شد، اما Push کامل نشد: '+e.message)}}
 function showDesktopAlert(title,body,url='/'){try{if(!('Notification'in window)||Notification.permission!=='granted')return;const n=new Notification(title,{body,icon:'/icon-192.png',badge:'/icon-192.png',tag:'gold-alert-'+Date.now()});n.onclick=()=>{window.focus();if(url)location.hash=url.replace(/^#?/,'#');n.close()};}catch{}}
 function pushSubscriptionPayload(sub){
@@ -161,7 +161,7 @@ async function enablePush(silent=false){
 function urlBase64ToUint8Array(s){const padding='='.repeat((4-s.length%4)%4),base64=(s+padding).replace(/-/g,'+').replace(/_/g,'/'),raw=atob(base64),out=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++)out[i]=raw.charCodeAt(i);return out}
 async function runBacktest(){const el=document.getElementById('bt');el.textContent='در حال اجرای بک‌تست...';try{const x=await fetch('/api/backtest?deviceId='+encodeURIComponent(deviceId)+'&accountToken='+encodeURIComponent(accountToken)).then(r=>r.json());if(x.error)throw new Error(x.error);el.innerHTML=`دوره ${x.from} تا ${x.to}<br>معاملات: <b>${fa(x.trades)}</b> • موفقیت: <b>${f2(x.winRate)}٪</b><br>سود خالص تاریخی: <b>${f2(x.netReturn)}٪</b> • افت سرمایه: ${f2(x.maxDrawdown)}٪`}catch(e){el.textContent='خطا: '+e.message}}
 async function installApp(){if(deferredPrompt){deferredPrompt.prompt();await deferredPrompt.userChoice;deferredPrompt=null;document.getElementById('installBtn').style.display='none';const h=document.getElementById('installBtnHero');if(h)h.style.display='none'}else alert('در Chrome اندروید: منوی ⋮ → افزودن به صفحه اصلی / Install app')}
-const SW_BUILD_URL='/sw.js?v81.0.0';
+const SW_BUILD_URL='/sw.js?v82.0.0';
 let swRegistrationPromise=null;
 function registerSW(){
   if(!('serviceWorker' in navigator)) return Promise.resolve(null);
@@ -174,11 +174,12 @@ let liveStream=null, streamFallbackTimer=null;
 function connectLiveStream(){
   if(!('EventSource' in window)){ streamFallbackTimer=setInterval(()=>load(),10000); return; }
   liveStream=new EventSource('/api/stream');
-  liveStream.addEventListener('market',e=>{ try{ load(JSON.parse(e.data)); if(Date.now()-aiCopilotLastCall>60000) refreshAICopilot(false,aiCopilotPage); }catch{} });
+   liveStream.addEventListener('market',e=>{ try{ lastMarketEventAt=Date.now(); load(JSON.parse(e.data)); if(Date.now()-aiCopilotLastCall>60000) refreshAICopilot(false,aiCopilotPage); }catch{} });
   liveStream.onopen=()=>{ const s=document.getElementById('liveStatus'); if(s)s.innerHTML='<span class="pushDot"></span> آنلاین • اتصال زنده'; if(streamFallbackTimer){clearInterval(streamFallbackTimer);streamFallbackTimer=null;} };
   liveStream.onerror=()=>{ const s=document.getElementById('liveStatus'); if(s)s.innerHTML='<span class="pushDot"></span> در حال اتصال مجدد…'; if(!streamFallbackTimer)streamFallbackTimer=setInterval(()=>load(),10000); };
 }
-registerSW();load();connectLiveStream();loadPortfolio();loadUserSettings();news();initChartControls();setInterval(loadPortfolio,10000);setInterval(news,180000);
+function ensureMarketRefresh(){if(document.hidden||refreshInFlight||Date.now()-lastMarketEventAt<3500)return;refreshInFlight=true;load().finally(()=>{refreshInFlight=false})}
+registerSW();load();connectLiveStream();loadPortfolio();loadUserSettings();news();initChartControls();setInterval(ensureMarketRefresh,4000);setInterval(loadPortfolio,10000);setInterval(news,180000);
 
 async function loadAIHealth(){
  const status=document.getElementById('aiStatus');
@@ -923,6 +924,7 @@ window.adminLogin = adminLogin;
     const raw=(s?.prices||[]).map(Number).filter(Number.isFinite).slice(-60);const avg=raw.length?(raw.reduce((a,b)=>a+b,0)/raw.length):0;const vol=avg&&raw.length?((Math.max(...raw)-Math.min(...raw))/avg*100):0;set('v65Volatility',vol?vol.toFixed(2)+'٪':'—');
     const an=$('v65StateBadge');if(an)an.style.color=es.status==='LIVE'?'#5ee7a0':es.status==='STALE'?'#f5c451':'#ef7373';
     const q=$('v62DataQuality');if(q)q.textContent=s?.dataReady?'آماده تحلیل':(es.status==='LIVE'?'داده زنده':'داده ناقص');
+    set('v82PriceUpdatedAt',s?.updatedAt?'به‌روزرسانی خودکار • '+new Date(s.updatedAt).toLocaleTimeString('fa-IR'):'به‌روزرسانی خودکار هر ۴ ثانیه');
     const age=$('v62UpdateAge');if(age)age.textContent=s?.updatedAt?'آخرین بروزرسانی '+new Date(s.updatedAt).toLocaleTimeString('fa-IR'):'آخرین بروزرسانی —';
     const live=$('v62MarketState');if(live)live.style.color=es.status==='LIVE'?'#22c55e':es.status==='STALE'?'#f5c451':'#ef4444';
     set('v62DataSource',s?.iran?.source||'—');set('v62EngineReason',s?.engineStatus?.reason||'اتصال فعال');window.__v62Prev={price,dollar,xau,gram};
