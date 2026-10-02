@@ -208,3 +208,112 @@ body.v62Terminal .menuItem small{color:#9ab1ad}
   body.v62Terminal .v62HeroLive{font-size:8px;padding:6px 7px}
 }
 @media(prefers-reduced-motion:reduce){body.v62Terminal *,body.v62Terminal *::before,body.v62Terminal *::after{scroll-behavior:auto!important;transition-duration:.01ms!important;animation-duration:.01ms!important}}
+
+/* V83: bright, low-glare workspace with clear market-state accents. */
+:root{
+  color-scheme:light;
+  --v82-bg:#f3f6f8;
+  --v82-panel:#ffffff;
+  --v82-panel2:#f7f9fa;
+  --v82-panel3:#edf3f3;
+  --v82-line:#dce5e7;
+  --v82-text:#172326;
+  --v82-muted:#65777a;
+  --v82-teal:#168878;
+  --v82-gold:#b78a32;
+  --v82-up:#14845b;
+  --v82-down:#c54858;
+  --v82-blue:#2874b9;
+  --v82-shadow:0 12px 34px #163c4410;
+}
+html{background:#f3f6f8;color-scheme:light;scrollbar-color:#c7d6d8 #f3f6f8}
+body.v62Terminal{color:#172326;background:linear-gradient(180deg,#f8fafb,#f0f4f5 55%,#f7f9fa)!important}
+body.v62Terminal .v62Main,body.v62Terminal .v62Main h1,body.v62Terminal .v62Main h2,
+body.v62Terminal .v62Main h3,body.v62Terminal .v62HeroTitle,
+body.v62Terminal .dashboardHead h2,body.v62Terminal .brand h1,
+body.v62Terminal .v62Brand b,body.v62Terminal .v62HeaderBrand b{color:#172326!important}
+body.v62Terminal :is(.v62Sidebar,.v62Header,.v62Main) :where(*){color:#172326!important}
+body.v62Terminal .v62Sidebar,body.v62Terminal .v62Header,body.v62Terminal .v62MarketStatus,
+body.v62Terminal .v62Hero,body.v62Terminal .v62MarketCard,body.v62Terminal .v62Stat,
+body.v62Terminal .v62ChartPanel,body.v62Terminal .v62Timeline,body.v62Terminal .v62PulsePanel,
+body.v62Terminal .v62Copilot,body.v62Terminal .v62CopilotState,body.v62Terminal .v62StateGrid div,
+body.v62Terminal .v62PulseRow,body.v62Terminal .v62Pill,body.v62Terminal .v62MiniCalc,
+body.v62Terminal .v62Health,body.v62Terminal .v65MarketState,body.v62Terminal .v66DecisionCard,
+body.v62Terminal .v66HeatmapCard,body.v62Terminal .v61DecisionRoom,body.v62Terminal .v61SmartAlerts,
+body.v62Terminal .v61Metric,body.v62Terminal .v61Levels>div,body.v62Terminal .v61GuardGrid>div,
+body.v62Terminal .v80Hero,body.v62Terminal .adminCommandBar,body.v62Terminal .adminStat,
+body.v62Terminal .adminQuickGrid button,body.v62Terminal .adminSidebar,
+body.v62Terminal .adminSidebar button,body.v62Terminal .adminFilterBar input,
+body.v62Terminal .adminFilterBar select,body.v62Terminal .g2DashboardQuick button{
+  color:#172326!important;background:#fff!important;border-color:#dce5e7!important;
+  box-shadow:0 8px 24px #163c440d!important
+}
+body.v62Terminal :is([class*="Card"],[class*="Panel"],[class*="Box"],[class*="Metric"],[class*="Insight"],[class*="FeatureTile"]){
+  color:#172326!important;background:#fff!important;border-color:#dce5e7!important;box-shadow:0 8px 24px #163c440d!important
+}
+body.v62Terminal [class*="Grid"]>div{color:#172326!important;background:#f7f9f9!important;border-color:#dce5e7!important}
+body.v62Terminal .v62Sidebar,body.v62Terminal .v62Header{background:#fff!important}
+body.v62Terminal .v62Hero{background:linear-gradient(135deg,#fff,#f1f8f7)!important;border-color:#cfe3df!important}
+body.v62Terminal .v62HeroPrice,body.v62Terminal .v62MarketCard b,body.v62Terminal .v62Pill b,
+body.v62Terminal .v62CopilotHead b,body.v62Terminal .v62StateValue,body.v62Terminal .v62StateGrid b,
+body.v62Terminal .v62Stat b,body.v62Terminal .v62PanelHead h3,body.v62Terminal .v62TimelineText,
+body.v62Terminal .adminQuickGrid b,body.v62Terminal .adminStat b{color:#172326!important}
+body.v62Terminal .v62Brand small,body.v62Terminal .v62HeaderBrand span,body.v62Terminal .v62Kicker,
+body.v62Terminal .v62Unit,body.v62Terminal .v62MarketCard span,body.v62Terminal .v62MarketCard em,
+body.v62Terminal .v62Source,body.v62Terminal .v62PanelHead small,body.v62Terminal .v62Stat span,
+body.v62Terminal .v62Stat small,body.v62Terminal .v62CopilotHead small,body.v62Terminal .v62StateLabel,
+body.v62Terminal .v62StateGrid span,body.v62Terminal .v62CopilotText,body.v62Terminal .v62TimelineTime,
+body.v62Terminal .v62Health,body.v62Terminal .adminQuickGrid small{color:#65777a!important}
+body.v62Terminal .v62HeroLive{background:#e8f7ef!important;border-color:#bee5cf!important;color:#18734f!important}
+body.v62Terminal .v62Up,body.v62Terminal .v62CopilotLive{color:#14845b!important}
+body.v62Terminal .v62Down{color:#c54858!important}
+body.v62Terminal .v62Nav button{color:#53666a!important}
+body.v62Terminal .v62Nav button.active{background:#eaf6f3!important;border-color:#b6dcd3!important;color:#146b5e!important}
+body.v62Terminal .v62Nav .v62Icon{background:#f0f5f5!important;border-color:#dce7e7!important;color:#287a70!important}
+body.v62Terminal .v62HeaderActions button,body.v62Terminal .v82MenuBtn,
+body.v62Terminal .v62Range button,body.v62Terminal .v62ChartTools button,
+body.v62Terminal .v62ToolsRow button,body.v62Terminal .v62CopilotLink{
+  color:#41575a!important;background:#f5f8f8!important;border-color:#d4e0e1!important
+}
+body.v62Terminal .v62HeaderActions .v62CopilotBtn,
+body.v62Terminal #v82PriceRefresh{color:#fff!important;background:#178878!important;border-color:#178878!important}
+body.v62Terminal .v62ChartViewport{background:#fbfcfc!important;border-color:#dce5e7!important}
+body.v62Terminal .v62ChartViewport .chartGrid{stroke:#e1e8e9}
+body.v62Terminal .v62ChartViewport .chartAxis{fill:#718184}
+body.v62Terminal .v62ChartViewport .chartDot{stroke:#fff}
+body.v62Terminal .v62CopilotWarning,body.v62Terminal .v62Warning{background:#fff8e8!important;border-color:#eedda9!important;color:#725719!important}
+body.v62Terminal .v62BottomGrid,body.v62Terminal .v62ExtraStats{color:#172326}
+body.v62Terminal .v62BottomGrid>* ,body.v62Terminal .v62ExtraStats>*{background-color:#fff}
+body.v62Terminal input,body.v62Terminal select,body.v62Terminal textarea,
+body.v62Terminal .v62CopilotAsk input,body.v62Terminal .v62MiniCalc input{
+  color:#172326!important;background:#fff!important;border-color:#cbd9db!important
+}
+body.v62Terminal input::placeholder,body.v62Terminal textarea::placeholder{color:#809092!important}
+body.v62Terminal .v62Sidebar{box-shadow:0 10px 30px #18373d0a!important}
+body.v62Terminal .v62ChartLine{filter:none}
+body.v62Terminal .v62LevelLabel{fill:#9b762d}
+body.v62Terminal .v62LevelLine{stroke:#b78a32}
+body.v62Terminal .v62ChartViewport .v62ChartPanel{background:transparent!important}
+body.v62Terminal .v62BottomNav,body.v62Terminal .v75MobileNav{
+  background:#ffffffed!important;border-color:#dce5e7!important;box-shadow:0 12px 30px #18373d18!important
+}
+body.v62Terminal .v75MobileNav button{color:#53666a!important}
+body.v62Terminal .v75MobileNav button.active{color:#146b5e!important;background:#eaf6f3!important}
+body.v62Terminal #authGate.authOpen{background:#eaf1f1ed!important;backdrop-filter:blur(10px)}
+body.v62Terminal #authGate .authBox{background:#fff!important;border-color:#d5e1e2!important;box-shadow:0 30px 90px #173a401f!important}
+body.v62Terminal #authGate .authBrand{background:linear-gradient(150deg,#eff8f6,#e5f1f0)!important;border-color:#d4e3e2!important}
+body.v62Terminal #authGate .authBrand h1{color:#17302e}
+body.v62Terminal #authGate .authBrand p{color:#5c7270}
+body.v62Terminal #authGate .authTabs,body.v62Terminal #authGate .authForm{background:#fff!important}
+body.v62Terminal #authGate .authTabs button,body.v62Terminal #authGate .authForm input,
+body.v62Terminal #authGate #adminLoginModal input{color:#172326!important;background:#f7f9f9!important;border-color:#d5e0e1!important}
+body.v62Terminal #authGate .authTabs button.active{background:#178878!important;color:#fff!important}
+body.v62Terminal #authGate .authForm button:first-of-type,
+body.v62Terminal #authGate #adminLoginModal button:first-of-type{background:#178878!important;color:#fff!important}
+body.v62Terminal #authGate .authHint{background:#f6f8f7!important;border-color:#dce5e7!important;color:#65777a!important}
+@media(max-width:760px){
+  body.v62Terminal .v62Sidebar{background:#ffffffed!important}
+  body.v62Terminal .v62Nav>button{color:#52666a!important}
+  body.v62Terminal .v62Nav>button.active{color:#146b5e!important;background:#eaf6f3!important}
+}
+@media(prefers-reduced-motion:reduce){body.v62Terminal .v62LiveDot,body.v62Terminal .v62PricePulse i{animation:none!important}}

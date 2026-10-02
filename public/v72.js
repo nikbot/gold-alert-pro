@@ -245,8 +245,14 @@
       });
     });
 
-    refresh();
-    window.setInterval(refresh, 2500);
+    const visible = () => {
+      const panel = document.getElementById('v72CommandCenter');
+      if (document.hidden || !panel?.getClientRects().length) return false;
+      const box = panel.getBoundingClientRect();
+      return box.bottom > 0 && box.top < window.innerHeight;
+    };
+    if (visible()) refresh();
+    window.setInterval(() => { if (visible()) refresh(); }, 15000);
   }
 
   document.addEventListener('DOMContentLoaded', init, { once: true });

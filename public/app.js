@@ -10,7 +10,7 @@ const deviceId=localStorage.getItem(DEVICE_KEY)||(()=>{const id=(crypto.randomUU
 function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
 function moneyIRR(n){return n==null?'—':fa(n)+' ریال'}
 function normalizePhoneInput(v){return String(v||'').replace(/[۰-۹]/g,d=>String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d))).replace(/[٠-٩]/g,d=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(d))).replace(/[\u200c\u200f\u200e\s-]/g,'').trim();}
-function startCountdown(){clearInterval(timer);nextAt=Date.now()+pollMs;const tick=()=>{const left=Math.max(0,nextAt-Date.now()),sec=Math.ceil(left/1000);document.getElementById('count').textContent=sec+' ثانیه';document.getElementById('progress').style.width=Math.min(100,Math.max(0,100-left/pollMs*100))+'%';if(left<=0)clearInterval(timer)};tick();timer=setInterval(tick,250)}
+function startCountdown(){clearInterval(timer);nextAt=Date.now()+pollMs;const tick=()=>{const left=Math.max(0,nextAt-Date.now()),sec=Math.ceil(left/1000);document.getElementById('count').textContent=sec+' ثانیه';document.getElementById('progress').style.width=Math.min(100,Math.max(0,100-left/pollMs*100))+'%';if(left<=0)clearInterval(timer)};tick();timer=setInterval(tick,1000)}
 function changeClass(n){return Number(n)>0?'upTxt':Number(n)<0?'downTxt':''}
 function setAsset(id,value,prev){document.getElementById(id).textContent=moneyIRR(value);const el=document.getElementById(id+'Ch');if(el&&prev!=null){const d=(value/prev-1)*100;el.textContent=(d>=0?'▲ ':'▼ ')+pct(Math.abs(d));el.className=changeClass(d)}}
 function holderOpinion(a,p){
@@ -161,7 +161,7 @@ async function enablePush(silent=false){
 function urlBase64ToUint8Array(s){const padding='='.repeat((4-s.length%4)%4),base64=(s+padding).replace(/-/g,'+').replace(/_/g,'/'),raw=atob(base64),out=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++)out[i]=raw.charCodeAt(i);return out}
 async function runBacktest(){const el=document.getElementById('bt');el.textContent='در حال اجرای بک‌تست...';try{const x=await fetch('/api/backtest?deviceId='+encodeURIComponent(deviceId)+'&accountToken='+encodeURIComponent(accountToken)).then(r=>r.json());if(x.error)throw new Error(x.error);el.innerHTML=`دوره ${x.from} تا ${x.to}<br>معاملات: <b>${fa(x.trades)}</b> • موفقیت: <b>${f2(x.winRate)}٪</b><br>سود خالص تاریخی: <b>${f2(x.netReturn)}٪</b> • افت سرمایه: ${f2(x.maxDrawdown)}٪`}catch(e){el.textContent='خطا: '+e.message}}
 async function installApp(){if(deferredPrompt){deferredPrompt.prompt();await deferredPrompt.userChoice;deferredPrompt=null;document.getElementById('installBtn').style.display='none';const h=document.getElementById('installBtnHero');if(h)h.style.display='none'}else alert('در Chrome اندروید: منوی ⋮ → افزودن به صفحه اصلی / Install app')}
-const SW_BUILD_URL='/sw.js?v82.0.0';
+const SW_BUILD_URL='/sw.js?v84.0.0';
 let swRegistrationPromise=null;
 function registerSW(){
   if(!('serviceWorker' in navigator)) return Promise.resolve(null);
@@ -178,8 +178,8 @@ function connectLiveStream(){
   liveStream.onopen=()=>{ const s=document.getElementById('liveStatus'); if(s)s.innerHTML='<span class="pushDot"></span> آنلاین • اتصال زنده'; if(streamFallbackTimer){clearInterval(streamFallbackTimer);streamFallbackTimer=null;} };
   liveStream.onerror=()=>{ const s=document.getElementById('liveStatus'); if(s)s.innerHTML='<span class="pushDot"></span> در حال اتصال مجدد…'; if(!streamFallbackTimer)streamFallbackTimer=setInterval(()=>load(),10000); };
 }
-function ensureMarketRefresh(){if(document.hidden||refreshInFlight||Date.now()-lastMarketEventAt<3500)return;refreshInFlight=true;load().finally(()=>{refreshInFlight=false})}
-registerSW();load();connectLiveStream();loadPortfolio();loadUserSettings();news();initChartControls();setInterval(ensureMarketRefresh,4000);setInterval(loadPortfolio,10000);setInterval(news,180000);
+function ensureMarketRefresh(){if(document.hidden||refreshInFlight||Date.now()-lastMarketEventAt<12000)return;refreshInFlight=true;load().finally(()=>{refreshInFlight=false})}
+registerSW();load();connectLiveStream();loadPortfolio();loadUserSettings();news();initChartControls();setInterval(ensureMarketRefresh,12000);setInterval(()=>{if(!document.hidden)loadPortfolio()},30000);setInterval(()=>{if(!document.hidden)news()},180000);
 
 async function loadAIHealth(){
  const status=document.getElementById('aiStatus');
@@ -909,12 +909,14 @@ window.adminLogin = adminLogin;
     const pct=(a,b)=>b>0?((a/b-1)*100):null;
     const goldD=pct(price,prev.price), dollarD=pct(dollar,prev.dollar), xauD=pct(xau,prev.xau), gramD=pct(gram,prev.gram);
     const fmtPct=d=>d==null?'—':(d>=0?'▲ +':'▼ ')+f2(Math.abs(d))+'٪';
-    set('v62GoldPrice',safeMoney(price));set('v62GoldChange',fmtPct(goldD));set('v62GoldTime',s?.updatedAt?new Date(s.updatedAt).toLocaleTimeString('fa-IR'):'—');
+     set('v62GoldPrice',price>0?safeMoney(price):'در حال دریافت قیمت');const priceEl=$('v62GoldPrice');if(priceEl)priceEl.classList.toggle('v84WaitingPrice',price<=0);set('v62GoldChange',fmtPct(goldD));set('v62GoldTime',s?.updatedAt?new Date(s.updatedAt).toLocaleTimeString('fa-IR'):'—');
     set('v62CardGold',safeMoney(price));set('v62CardDollar',safeMoney(dollar));set('v62CardXau',xau?'$'+Number(xau).toLocaleString('en-US',{maximumFractionDigits:2}):'—');set('v62CardGram',safeMoney(gram));set('v62CardCoin',safeMoney(emami));
     set('v62CardGoldCh',fmtPct(goldD));set('v62CardDollarCh',fmtPct(dollarD));set('v62CardXauCh',fmtPct(xauD));set('v62CardGramCh',fmtPct(gramD));
     set('v62PulseGold',safeMoney(price));set('v62PulseDollar',safeMoney(dollar));set('v62PulseXau',xau?'$'+Number(xau).toLocaleString('en-US',{maximumFractionDigits:2}):'—');set('v62PulseGram',safeMoney(gram));
     set('v62PulseGoldCh',fmtPct(goldD));set('v62PulseDollarCh',fmtPct(dollarD));set('v62PulseXauCh',fmtPct(xauD));set('v62PulseGramCh',fmtPct(gramD));
-    const es=s?.engineStatus||{};set('v62MarketState',es.status==='LIVE'?'LIVE':es.status==='STALE'?'STALE':'OFFLINE');
+     const es=s?.engineStatus||{};set('v62MarketState',es.status==='LIVE'?'LIVE':es.status==='STALE'?'STALE':es.status==='STARTING'?'CONNECTING':'OFFLINE');
+     const quoteState=es.status==='LIVE'?'قیمت زنده':es.status==='STALE'?'آخرین قیمت با تأخیر':es.status==='STARTING'?'در حال اتصال':'منبع داده قطع';
+     set('v84QuoteState',quoteState);const quoteBadge=$('v84QuoteBadge');if(quoteBadge)quoteBadge.dataset.state=String(es.status||'OFFLINE').toLowerCase();
     const v65State=es.status==='LIVE'?'بازار زنده':es.status==='STALE'?'داده با تأخیر':'منبع داده قطع';
     set('v65StateBadge',v65State);set('v65Quality',s?.dataReady?'مناسب':(es.status==='LIVE'?'قابل استفاده':'ناقص'));set('v65QualityMeta',es.reason||'منبع فعال');
     const trend=$('ccTrend')?.textContent||$('quickTrend')?.textContent||'در حال بررسی';
@@ -922,11 +924,11 @@ window.adminLogin = adminLogin;
     const rsi=Number(String($('quickRsi')?.textContent||'').replace(/[^0-9.\-]/g,''));
     set('v65Trend',trend);set('v65TrendMeta',rsi?('RSI '+rsi):'تحلیل تکنیکال');set('v65Momentum',pressure);
     const raw=(s?.prices||[]).map(Number).filter(Number.isFinite).slice(-60);const avg=raw.length?(raw.reduce((a,b)=>a+b,0)/raw.length):0;const vol=avg&&raw.length?((Math.max(...raw)-Math.min(...raw))/avg*100):0;set('v65Volatility',vol?vol.toFixed(2)+'٪':'—');
-    const an=$('v65StateBadge');if(an)an.style.color=es.status==='LIVE'?'#5ee7a0':es.status==='STALE'?'#f5c451':'#ef7373';
+     const an=$('v65StateBadge');if(an)an.dataset.state=String(es.status||'OFFLINE').toLowerCase();
     const q=$('v62DataQuality');if(q)q.textContent=s?.dataReady?'آماده تحلیل':(es.status==='LIVE'?'داده زنده':'داده ناقص');
-    set('v82PriceUpdatedAt',s?.updatedAt?'به‌روزرسانی خودکار • '+new Date(s.updatedAt).toLocaleTimeString('fa-IR'):'به‌روزرسانی خودکار هر ۴ ثانیه');
+     set('v82PriceUpdatedAt',s?.updatedAt?'آخرین قیمت • '+new Date(s.updatedAt).toLocaleTimeString('fa-IR'):'با دریافت قیمت تازه از منبع');
     const age=$('v62UpdateAge');if(age)age.textContent=s?.updatedAt?'آخرین بروزرسانی '+new Date(s.updatedAt).toLocaleTimeString('fa-IR'):'آخرین بروزرسانی —';
-    const live=$('v62MarketState');if(live)live.style.color=es.status==='LIVE'?'#22c55e':es.status==='STALE'?'#f5c451':'#ef4444';
+     const live=$('v62MarketState');if(live){live.dataset.state=String(es.status||'OFFLINE').toLowerCase();if(live.parentElement)live.parentElement.dataset.state=live.dataset.state;}
     set('v62DataSource',s?.iran?.source||'—');set('v62EngineReason',s?.engineStatus?.reason||'اتصال فعال');window.__v62Prev={price,dollar,xau,gram};
     syncChart();
   }

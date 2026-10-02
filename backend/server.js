@@ -17,7 +17,7 @@ import { getTheme, setTheme } from "./theme.js";
 import { V78_PLANS, getSubscriptionFor, setSubscription, getWatchlist, addWatchSymbol, removeWatchSymbol, saveWatchlist, createApiKey, listApiKeys, revokeApiKey, authenticateApiKey, apiUsage, securityEvent, securityEvents, subscriptionOverview, platformOverview } from "./proPlatform.js";
 import { getTradingSignals, getGoldSignalCandles, getPaperQuote, normalizeTimeframe, paperPnl, isStrongTradingSignal } from "./tradingSignals.js";
 
-const APP_VERSION = "81.0.0"
+const APP_VERSION = "84.0.0"
 const USER_SESSION_HOURS = Math.max(1, Number(process.env.USER_SESSION_HOURS || 72));
 const LOGIN_WINDOW_MS = 10 * 60_000;
 const LOGIN_MAX_ATTEMPTS = 12;
@@ -607,8 +607,15 @@ function calcMarketPressure() {
   return {buy,sell,label,confidence,estimated:true,shortPct:r1,midPct:r5,longPct:rLong,disclaimer:"این شاخص برآورد فشار بازار از روی حرکت قیمت و همبستگی دارایی‌هاست؛ حجم واقعی سفارشات خرید/فروش نیست."};
 }
 async function loadHistorySeed() {
+  const updatedAtAtStart = state.updatedAt;
   const h = await getHistory();
-  for (const x of h.slice(-120)) pushPrice(x.close);
+  const seeded = h.slice(-120).map(x => Number(x.close)).filter(x => Number.isFinite(x) && x > 0);
+  if (state.updatedAt !== updatedAtAtStart) {
+    for (const price of state.prices) {
+      if (!seeded.length || Math.abs(seeded.at(-1) - price) >= 0.000001) seeded.push(price);
+    }
+  }
+  state.prices = seeded.slice(-500);
   state.historyLoaded = state.prices.length > 0;
   state.dataReady = state.prices.length >= 30;
 }
@@ -1562,15 +1569,16 @@ const server = app.listen(port, "0.0.0.0", async () => {
   // into a platform-level "app exited during startup" failure.
   try { await loadState(); } catch (e) { console.warn("State load error:", e.message); }
   try { await loadPersonalAlerts(); } catch (e) { console.warn("Personal alerts load error:", e.message); }
-  try { await loadSmartAlerts(); } catch (e) { console.warn("Smart alerts load error:", e.message); }
-   try { await initAlerts(); } catch (e) { console.warn("Push initialization unavailable:", e.message); }
-   try { await loadPaperTrades(); } catch (e) { console.warn("Paper-trade history load error:", e.message); }
-   try { await loadHistorySeed(); console.log(`History seed: ${state.prices.length} points`); } catch (e) { console.warn("History seed error:", e.message); }
-   try { await tick(); } catch (e) { console.warn("Initial market tick error:", e.message); }
-    setInterval(() => tick().catch(e => console.warn("Interval tick error:", e.message)), pollMs);
+  const historySeed = loadHistorySeed().then(() => console.log(`History seed: ${state.prices.length} points`)).catch(e => console.warn("History seed error:", e.message));
+  const optionalSetup = Promise.allSettled([loadSmartAlerts(), initAlerts(), loadPaperTrades()]);
+  try { await tick(); } catch (e) { console.warn("Initial market tick error:", e.message); }
+  setInterval(() => tick().catch(e => console.warn("Interval tick error:", e.message)), pollMs);
+  optionalSetup.then(() => {
     setInterval(() => evaluatePaperTrades().catch(e => console.warn("Paper-trade update error:", e.message)), 30000);
     setTimeout(() => monitorStrongSignals(), 5000);
     setInterval(() => monitorStrongSignals(), strongSignalPollMs);
+  });
+  await Promise.allSettled([historySeed, optionalSetup]);
  });
 server.on("error", e => console.error("Server error:", e));
 process.on("unhandledRejection", e => console.error("Unhandled rejection:", e));
