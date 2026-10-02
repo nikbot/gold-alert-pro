@@ -45,7 +45,7 @@
     const reasons = (row.reasons || []).map(x => `<li>${esc(x)}</li>`).join('');
     return `<article class="v80Asset ${row.symbol === selected ? 'selected' : ''} ${row.kind === 'gold' ? 'gold' : ''}">
       <div class="v80AssetTop"><div><small>${row.kind === 'gold' ? 'اولویت اول' : 'رمزارز'}</small><h3>${esc(row.name)}</h3></div><span class="v80Badge ${cls}">${direction[row.signal] || direction.WAIT}</span></div>
-      <div class="v80Price">${price(row)}</div><div class="v80DataLine">${esc(row.source || 'منبع نامشخص')} • ${row.quoteLive ? 'قیمت تازه' : 'قیمت تازه نیست'}</div>
+      <div class="v80Price">${price(row)}</div><div class="v80DataLine">${esc(row.quoteSource || row.source || 'منبع نامشخص')} • ${row.quoteLive ? 'قیمت تازه' : 'قیمت تازه نیست'}${row.kind === 'gold' && row.source ? `<br>کندل مرجع: ${esc(row.source)}` : ''}</div>
       <div class="v80Levels"><div><small>اگر وارد شوی</small><b>${price(row)}</b></div><div><small>هدف احتمالی</small><b>${price(row, row.target)}</b></div><div><small>حد خروج برای کنترل ضرر</small><b>${price(row, row.stop)}</b></div><div><small>زمان نگهداری پیشنهادی</small><b>${esc(row.hold || '—')}</b></div></div>
       <div class="v80Score"><span>قدرت هم‌جهتی نشانه‌ها</span><b>${fa(row.score || 0)} از ۱۰۰</b><i><em style="width:${Math.min(100, Math.max(0, Number(row.score || 0)))}%"></em></i></div>
       <div class="v80Flow"><div><small>${volName}</small><b>${share}</b></div><div><small>حجم خرید</small><b>${volume(row.buyVolume || 0, row)} ${row.kind === 'gold' ? 'قرارداد' : esc(row.symbol.slice(0, -3))}</b></div><div><small>حجم فروش</small><b>${volume(row.sellVolume || 0, row)} ${row.kind === 'gold' ? 'قرارداد' : esc(row.symbol.slice(0, -3))}</b></div></div>

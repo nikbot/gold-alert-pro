@@ -192,7 +192,8 @@ async function oneAsset(asset, tf, goldQuote) {
     const displayPrice = Number.isFinite(price) && price > 0 ? (isGold ? Math.round(price / 10) : price) : null;
     return {
       ...asset, price: displayPrice, unit: isGold ? "تومان/گرم" : "دلار", referencePrice: feed.bars.at(-1)?.close || null,
-      source: feed.source, sourceUnit: feed.unit, timeframe: tf.label, timeframeKey: Object.keys(TIMEFRAMES).find(k => TIMEFRAMES[k] === tf),
+      source: feed.source, quoteSource: isGold ? (goldQuote?.source || "منبع قیمت ایران") : feed.source,
+      sourceUnit: feed.unit, timeframe: tf.label, timeframeKey: Object.keys(TIMEFRAMES).find(k => TIMEFRAMES[k] === tf),
       quoteAt: marketTime || null, candles: feed.bars.slice(-100), ...analysis,
       hold: tf.hold, holdMs: tf.holdMs, targetPct, stopPct,
       target: displayPrice ? displayPrice * (1 + sign * targetPct / 100) : null,
@@ -223,7 +224,7 @@ export async function getTradingSignals(timeframe = "1h", goldQuote = null) {
       const quoteLive = goldQuote.status === "LIVE" && Date.now() - Date.parse(goldQuote.fetchedAt || 0) < 60_000;
       const signal = quoteLive ? row.signal : "WAIT";
       const sign = signal === "SELL" ? -1 : 1;
-      return { ...row, signal, score: quoteLive ? row.score : 0, price, target: price * (1 + sign * row.targetPct / 100), stop: price * (1 - sign * row.stopPct / 100), quoteAt: goldQuote.fetchedAt, quoteLive, reasons: quoteLive ? row.reasons : ["قیمت لحظه‌ای طلای ۱۸ تازه نیست؛ فعلاً سیگنال نمی‌دیم"] };
+      return { ...row, signal, score: quoteLive ? row.score : 0, price, target: price * (1 + sign * row.targetPct / 100), stop: price * (1 - sign * row.stopPct / 100), quoteAt: goldQuote.fetchedAt, quoteSource: goldQuote.source || "منبع قیمت ایران", quoteLive, reasons: quoteLive ? row.reasons : ["قیمت لحظه‌ای طلای ۱۸ تازه نیست؛ فعلاً سیگنال نمی‌دیم"] };
     });
   }
   const tf = TIMEFRAMES[key];

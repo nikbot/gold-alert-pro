@@ -1,12 +1,12 @@
 {
   "name": "gold-alert-pro",
-  "version": "80.0.0",
+  "version": "85.0.0",
   "private": true,
   "type": "module",
   "scripts": {
     "start": "node backend/server.js",
     "dev": "node --watch backend/server.js",
-    "check": "node --check backend/server.js && node --check backend/provider.js && node --check backend/indicators.js && node --check backend/alerts.js && node --check backend/backtest.js && node --check backend/smsPremium.js && node --check backend/commerceSettings.js && node --check backend/proPlatform.js && node --check backend/tradingSignals.js && node --check public/app.js && node --check public/admin.js && node --check public/v79.js && node --check public/v80.js && node --check backend/adminPanel.js",
+    "check": "node --check backend/server.js && node --check backend/provider.js && node --check backend/indicators.js && node --check backend/alerts.js && node --check backend/backtest.js && node --check backend/smsPremium.js && node --check backend/commerceSettings.js && node --check backend/proPlatform.js && node --check backend/tradingSignals.js && node --check public/app.js && node --check public/admin.js && node --check public/v79.js && node --check public/v80.js && node --check public/v85.js && node --check backend/adminPanel.js",
     "test": "node --test backend/proFeatures.test.js backend/tradingSignals.test.js"
   },
   "dependencies": {

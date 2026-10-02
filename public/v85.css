@@ -1,0 +1,114 @@
+:root{
+  --v85-bg:#0b1117;
+  --v85-panel:#111a22;
+  --v85-panel-raised:#16212b;
+  --v85-panel-soft:#0e171f;
+  --v85-line:#263642;
+  --v85-text:#e7edf2;
+  --v85-muted:#8798a6;
+  --v85-gold:#d5ad61;
+  --v85-green:#36c98f;
+  --v85-red:#eb6877;
+  --v85-shadow:0 12px 30px rgba(0,0,0,.22);
+}
+
+html{background:var(--v85-bg)!important;color-scheme:dark;scrollbar-color:#344956 var(--v85-bg)}
+html body.v62Terminal{background-color:var(--v85-bg)!important;background-image:radial-gradient(ellipse at 75% -20%,#183b3a 0,transparent 36%),linear-gradient(180deg,#0b1117,#0d141b 65%,#0b1117)!important}
+html body.v62Terminal.g2Dashboard,html body.v62Terminal.g2SectionPage{background-color:var(--v85-bg)!important;background-image:radial-gradient(ellipse at 75% -20%,#183b3a 0,transparent 36%),linear-gradient(180deg,#0b1117,#0d141b 65%,#0b1117)!important}
+body.v62Terminal{color:var(--v85-text)!important;background:radial-gradient(ellipse at 75% -20%,#183b3a 0,transparent 36%),linear-gradient(180deg,#0b1117,#0d141b 65%,#0b1117)!important}
+body.v62Terminal .wrap{max-width:1720px;padding:16px 22px 84px}
+body.v62Terminal .v62TerminalShell{grid-template-columns:238px minmax(0,1fr);gap:16px}
+body.v62Terminal .v62Sidebar{background:linear-gradient(180deg,#121c25,#0f171f)!important;border-color:#293944!important;box-shadow:var(--v85-shadow)!important}
+body.v62Terminal .v62Brand{border-color:#283943}
+html body.v62Terminal .v62Sidebar .v62BrandText b,html body.v62Terminal .v62HeaderBrand b{color:var(--v85-text)!important}
+html body.v62Terminal.g2Dashboard .v62Sidebar *,html body.v62Terminal.g2Dashboard .v62HeaderBrand *,html body.v62Terminal.g2Dashboard .v62Copilot *{color:var(--v85-text)!important}
+html body.v62Terminal.g2Dashboard .v62Sidebar .v62BrandText small,html body.v62Terminal.g2Dashboard .v62SideFoot,html body.v62Terminal.g2Dashboard .v62CopilotText{color:var(--v85-muted)!important}
+html body.v62Terminal.g2Dashboard .v62Copilot input,html body.v62Terminal.g2Dashboard .v62Copilot textarea{color:#27383c!important}
+html body.v62Terminal.g2Dashboard .v62MainGrid>div,html body.v62Terminal.g2Dashboard .v62MarketCards{background:transparent!important}
+html body.v62Terminal.g2Dashboard .dashboardHead h2{color:var(--v85-text)!important}
+html body.v62Terminal.g2Dashboard .dashboardHead .eyebrow{color:#70cdb1!important}
+html body.v62Terminal.g2Dashboard .dashboardHead .liveBadge{background:#10271f!important;border:1px solid #286447!important;color:#65d8a0!important}
+body.v62Terminal .v62BrandText small,body.v62Terminal .v62HeaderBrand span{color:var(--v85-muted)}
+body.v62Terminal .v62Nav button{color:#b9c7d0;border-color:transparent}
+body.v62Terminal .v62Nav button:hover{background:#17242d!important;border-color:#30454f!important}
+body.v62Terminal .v62Nav button.active{background:#18312f!important;border-color:#315c53!important;color:#e8f4ef!important;box-shadow:inset -3px 0 var(--v85-green)!important}
+body.v62Terminal .v62Nav .v62Icon{background:#1a2831!important;border-color:#30434e!important;color:#a9c1ca!important}
+body.v62Terminal .v62SideFoot{color:#71838e}
+body.v62Terminal .v62Header{background:#111a22ed!important;border-color:#2b3d48!important;box-shadow:var(--v85-shadow)!important}
+body.v62Terminal .v62MarketStatus{background:#17262b!important;border-color:#31464a!important;color:#b7c6ca!important}
+body.v62Terminal .v62MarketStatus[data-state="live"]{background:#10271f!important;border-color:#286447!important}
+body.v62Terminal .v62MarketStatus[data-state="stale"]{background:#292311!important;border-color:#6c5523!important}
+body.v62Terminal .v62MarketStatus[data-state="offline"]{background:#29191d!important;border-color:#65333c!important}
+body.v62Terminal .v62MainGrid{grid-template-columns:minmax(0,1.55fr) minmax(280px,.74fr)!important;gap:13px}
+body.v62Terminal .v62Hero{background:radial-gradient(ellipse at 0 100%,#286e6030,transparent 48%),linear-gradient(145deg,#17232b,#111a22)!important;border-color:#31504e!important;box-shadow:var(--v85-shadow)!important}
+body.v62Terminal .v62HeroTitle{color:#bdcccf!important}
+body.v62Terminal .v62HeroPrice{color:#f3f7f6!important;text-shadow:0 0 28px #4fd4ad18!important}
+body.v62Terminal .v84WaitingPrice{color:#95a8aa!important}
+body.v62Terminal .v62HeroLive{background:#102b21!important;border-color:#286847!important;color:#63d9a0!important}
+body.v62Terminal .v62HeroLive[data-state="stale"]{background:#292411!important;border-color:#69541f!important;color:#dfbd66!important}
+body.v62Terminal .v62HeroLive[data-state="offline"],body.v62Terminal .v62HeroLive[data-state="starting"]{background:#19242a!important;border-color:#34444b!important;color:#a5b2b5!important}
+body.v62Terminal .v62Pill,body.v62Terminal .v65StateGrid>div,body.v62Terminal .v62CopilotState,body.v62Terminal .v62StateGrid div{background:#121e26!important;border-color:#2b3d46!important;color:#9fb0b8!important}
+body.v62Terminal .v62Pill b,body.v62Terminal .v65StateGrid>div>b,body.v62Terminal .v62StateValue,body.v62Terminal .v62StateGrid b{color:#e4ecee!important}
+body.v62Terminal .v82PriceControl{border-color:#2a3a43}
+body.v62Terminal .v82PricePulse{color:#9aadb1!important}
+body.v62Terminal #v82PriceRefresh{background:linear-gradient(135deg,#257d6d,#14594f)!important;border-color:#327c6c!important;color:#effbf7!important}
+body.v62Terminal .v62MarketCard,body.v62Terminal .v65MarketState,body.v62Terminal .v62ChartPanel,body.v62Terminal .v62Timeline,body.v62Terminal .v62PulsePanel{background:linear-gradient(145deg,#131e27,#101820)!important;border-color:#293b46!important;box-shadow:var(--v85-shadow)!important}
+html body.v62Terminal.g2Dashboard .v62MarketCard{background:linear-gradient(145deg,#131e27,#101820)!important;border-color:#293b46!important;color:var(--v85-text)!important;box-shadow:var(--v85-shadow)!important}
+body.v62Terminal .v62MarketCard span,body.v62Terminal .v62Stat span,body.v62Terminal .v65StateGrid>div>span{color:#8d9da7!important}
+body.v62Terminal .v62MarketCard b,body.v62Terminal .v62Stat b{color:#e5edef!important}
+body.v62Terminal .g2DashboardQuick button{background:#131e27!important;border-color:#293b46!important;color:#d8e3e6!important;box-shadow:none!important}
+body.v62Terminal .g2DashboardQuick button:hover{background:#1a2a32!important;border-color:#456a67!important}
+body.v62Terminal .g2DashboardQuick .g2qIcon{background:#1b3032!important;border-color:#355254!important;color:#8ed8c3!important}
+body.v62Terminal .v62ChartPanel,body.v62Terminal .v62Copilot,body.v62Terminal .v62BottomGrid>div{background:linear-gradient(145deg,#131e27,#101820)!important;border-color:#293b46!important;color:var(--v85-text)!important}
+body.v62Terminal .v62ChartViewport{background:#0d151c!important;border-color:#263943!important}
+body.v62Terminal .chartGrid{stroke:#283941!important}
+body.v62Terminal .chartAxis{fill:#8498a2!important}
+body.v62Terminal .v62CopilotText{color:#afbec4!important}
+body.v62Terminal .v62Warning{background:#2a2415!important;border-color:#61502c!important;color:#ddc98f!important}
+html body.v62Terminal.g2Dashboard .v84MoreDetails{background:#111a22!important;border:1px solid #293b46!important;color:var(--v85-text)!important;box-shadow:var(--v85-shadow)!important}
+html body.v62Terminal.g2Dashboard .v84MoreDetails summary{color:var(--v85-text)!important}
+html body.v62Terminal.g2Dashboard .v84MoreDetails summary small{color:var(--v85-muted)!important}
+html body.v62Terminal.g2Dashboard .v67IndicatorBar>div{background:#111a22!important;border:1px solid #293b46!important;color:var(--v85-text)!important}
+html body.v62Terminal.g2Dashboard .v67IndicatorBar span,html body.v62Terminal.g2Dashboard .v67IndicatorBar small{color:var(--v85-muted)!important}
+html body.v62Terminal.g2Dashboard .v67IndicatorBar b{color:var(--v85-text)!important}
+body.v62Terminal button{background:#17232b;color:#dce7eb;border-color:#30434d}
+body.v62Terminal button.secondary,body.v62Terminal .v62CopilotLink{background:#17232b!important;color:#c9d6db!important;border-color:#334852!important}
+body.v62Terminal button:focus-visible,body.v62Terminal input:focus-visible,body.v62Terminal select:focus-visible{outline-color:#49bca4!important}
+body.v62Terminal input,body.v62Terminal select,body.v62Terminal textarea{background:#0c151c!important;color:#e6eef1!important;border-color:#30434d!important}
+body.v62Terminal *{color:var(--v85-text)!important}
+body.v62Terminal .v62Sidebar .v62BrandText small,body.v62Terminal .v62HeaderBrand span,body.v62Terminal .v62SideFoot,body.v62Terminal .v62MarketCard span,body.v62Terminal .v62Stat span,body.v62Terminal .v65StateGrid>div>span{color:var(--v85-muted)!important}
+body.v62Terminal .v62Nav button.active,body.v62Terminal #v82PriceRefresh,body.v62Terminal .g2DashboardQuick button,body.v62Terminal .v62CopilotLink{color:#e7edf2!important}
+
+body.v62Terminal .v85MarketMonitor{min-width:0;margin:10px 0;padding:14px;border:1px solid #2b3d47!important;border-radius:16px;background:linear-gradient(145deg,#121d25,#0f171f)!important;box-shadow:var(--v85-shadow)}
+.v85MonitorHead{display:flex;justify-content:space-between;align-items:center;gap:14px;margin-bottom:12px}
+body.v62Terminal .v85MarketMonitor *{color:var(--v85-text)!important}
+body.v62Terminal .v85MonitorHead h3,body.v62Terminal .v85WatchAsset b{color:#e8eff1!important}
+body.v62Terminal .v85MonitorHead small,body.v62Terminal .v85WatchAsset small,body.v62Terminal .v85WatchSource small,body.v62Terminal .v85MonitorFoot{color:#91a3ac!important;font-size:9px}
+body.v62Terminal .v85Eyebrow{color:#70cdb1!important;font-size:8px;font-weight:850;letter-spacing:.12em}
+.v85MonitorTools{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+body.v62Terminal .v85MonitorTools>span{margin-left:5px;color:#9fb0b8!important;font-size:9px}
+body.v62Terminal .v85MonitorTools>span[data-state="live"]{color:#61d8a0!important}
+body.v62Terminal .v85MonitorTools>span[data-state="stale"],body.v62Terminal .v85MonitorTools>span[data-state="error"]{color:#dfb85b!important}
+body.v62Terminal .v85MonitorTools button{min-height:29px;padding:5px 8px;border:1px solid #324650!important;border-radius:8px;background:#17242c!important;color:#bdcbd0!important;font-size:9px}
+body.v62Terminal .v85MonitorTools button.active{border-color:#377c6c!important;background:#15302b!important;color:#8de0c5!important}
+.v85WatchHeader,.v85WatchRow{display:grid;grid-template-columns:minmax(120px,1.2fr) minmax(120px,1fr) minmax(130px,1fr) 86px;align-items:center;gap:10px}
+body.v62Terminal .v85WatchHeader{padding:7px 10px;border-bottom:1px solid #283941;color:#879aa3!important;font-size:8px}
+.v85WatchRow{min-height:50px;padding:7px 10px;border-bottom:1px solid #1e2b32}
+.v85WatchRow:last-child{border-bottom:0}
+.v85WatchAsset{display:flex;align-items:center;gap:9px;min-width:0}
+.v85WatchIcon{width:29px;height:29px;display:grid;place-items:center;flex:none;border-radius:9px;background:#1b3030;color:#8dd8c0;font-size:9px;font-weight:900}
+body.v62Terminal .v85WatchAsset b,body.v62Terminal .v85WatchAsset small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+body.v62Terminal .v85WatchAsset b{color:#e0e9eb!important;font-size:10px}
+body.v62Terminal .v85WatchAsset small{margin-top:3px;color:#91a3ac!important;font-size:8px}
+body.v62Terminal .v85WatchPrice{color:#f0f4f5!important;font-size:12px;font-weight:850;font-variant-numeric:tabular-nums;white-space:nowrap}
+body.v62Terminal .v85WatchSource{min-width:0;color:#b5c2c7!important;font-size:9px;overflow-wrap:anywhere}
+body.v62Terminal .v85WatchSource small{display:block;margin-top:3px;color:#91a3ac!important;font-size:8px}
+body.v62Terminal .v85FeedBadge{justify-self:start;padding:5px 7px;border:1px solid #34464d!important;border-radius:999px;background:#19252c!important;color:#c1cdd0!important;font-size:8px;white-space:nowrap}
+body.v62Terminal .v85FeedBadge[data-state="live"]{background:#10261e!important;border-color:#286448!important;color:#65d8a1!important}
+body.v62Terminal .v85FeedBadge[data-state="stale"]{background:#282310!important;border-color:#675220!important;color:#e0bd5b!important}
+body.v62Terminal .v85MonitorFoot{margin-top:9px;color:#91a3ac!important;font-size:8px;line-height:1.8}
+body.v62Terminal .v85WatchLoading,body.v62Terminal .v85Empty{padding:20px;text-align:center;color:#9babb1!important;font-size:10px}
+
+@media(max-width:900px){body.v62Terminal .v62MainGrid{grid-template-columns:minmax(0,1fr)!important}.v85MonitorHead{align-items:flex-start;flex-direction:column}.v85MonitorTools{width:100%}}
+@media(max-width:650px){body.v62Terminal .wrap{padding:9px 10px calc(104px + env(safe-area-inset-bottom,0px))}.v85MarketMonitor{padding:11px}.v85WatchHeader{display:none}.v85WatchRow{grid-template-columns:minmax(100px,1.05fr) minmax(105px,1fr) 72px;gap:7px;padding:8px 3px}.v85WatchSource{grid-column:1/3;padding-right:38px;margin-top:-9px;font-size:8px}.v85WatchSource small{display:inline;margin-right:5px}.v85WatchPrice{font-size:11px}.v85FeedBadge{grid-column:3;grid-row:1/3}.v85MonitorTools>span{width:100%}}
+@media(max-width:390px){.v85WatchRow{grid-template-columns:minmax(90px,1fr) minmax(95px,1fr) 65px}.v85WatchIcon{width:25px;height:25px}.v85WatchPrice{font-size:10px}}

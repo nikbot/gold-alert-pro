@@ -5,12 +5,12 @@
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#070a0f",
-  "theme_color": "#080b10",
+  "background_color": "#0b1117",
+  "theme_color": "#0b1117",
   "lang": "fa",
   "dir": "rtl",
   "id": "/",
-  "description": "سامانه هوشمند پایش، تحلیل و هشدار طلای ۱۸ عیار",
+  "description": "ترمینال هوشمند پایش، تحلیل و هشدار بازار طلا و رمزارز",
   "icons": [
     {
       "src": "/icon-192.png",
