@@ -112,11 +112,21 @@ app.disable("x-powered-by");
 app.use((req,res,next)=>{res.setHeader("X-Content-Type-Options","nosniff");res.setHeader("Referrer-Policy","strict-origin-when-cross-origin");res.setHeader("X-Frame-Options","SAMEORIGIN");res.setHeader("Permissions-Policy","camera=(), microphone=(), geolocation=()");next();});
 console.log(`Gold Alert Pro v${APP_VERSION} booting`);
 app.use((req, res, next) => {
-  const origin = process.env.CORS_ORIGIN || req.headers.origin;
-  if (origin) { res.setHeader("Access-Control-Allow-Origin", origin); res.setHeader("Vary", "Origin"); res.setHeader("Access-Control-Allow-Credentials", "true"); }
+  // CORS is opt-in. Never reflect an arbitrary Origin header.
+  const configured = String(process.env.CORS_ORIGIN || "").split(",").map(s => s.trim()).filter(Boolean);
+  const requestOrigin = String(req.headers.origin || "").trim();
+  if (requestOrigin && configured.includes(requestOrigin)) {
+    res.setHeader("Access-Control-Allow-Origin", requestOrigin);
+    res.setHeader("Vary", "Origin");
+    res.setHeader("Access-Control-Allow-Credentials", "true");
+  }
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, X-Account-Token, X-Admin-Session");
   res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
-  if (req.method === "OPTIONS") return res.sendStatus(204); next();
+  if (req.method === "OPTIONS") {
+    if (requestOrigin && !configured.includes(requestOrigin)) return res.sendStatus(403);
+    return res.sendStatus(204);
+  }
+  next();
 });
 app.use(express.json({ limit: "64kb" }));
 app.use(express.static("public", {
@@ -1322,6 +1332,23 @@ app.delete("/api/v78/watchlist/:symbol", async (req,res)=>{ const a=await accoun
 app.get("/api/v78/api-keys", async (req,res)=>{ const a=await accountFromReq(req); if(!a)return res.status(401).json({error:'ابتدا وارد حساب شوید.'}); res.json({ok:true,keys:await listApiKeys(a.id),usage:await apiUsage(a.id),subscription:await getSubscriptionFor(a.id)}); });
 app.post("/api/v78/api-keys", async (req,res)=>{ const a=await accountFromReq(req); if(!a)return res.status(401).json({error:'ابتدا وارد حساب شوید.'}); try{const out=await createApiKey(a.id,req.body?.label); await audit('api_key_created',{userId:a.id,keyId:out.id}); res.json({ok:true,...out});}catch(e){res.status(400).json({error:e.message});} });
 app.delete("/api/v78/api-keys/:id", async (req,res)=>{ const a=await accountFromReq(req); if(!a)return res.status(401).json({error:'ابتدا وارد حساب شوید.'}); try{await revokeApiKey(a.id,req.params.id); await audit('api_key_revoked',{userId:a.id,keyId:req.params.id}); res.json({ok:true});}catch(e){res.status(400).json({error:e.message});} });
+app.get("/api/v85/provider-diagnostics", async (req,res)=>{
+  const account = await accountFromReq(req);
+  if(!account) return res.status(401).json({error:"ابتدا وارد حساب شوید."});
+  try{
+    const data = await getIran18Sources(true);
+    const configured = {
+      FORGOD_API_KEY: Boolean(process.env.FORGOD_API_KEY),
+      SERVIX_API_KEY: Boolean(process.env.SERVIX_API_KEY),
+      TINDEX_API_TOKEN: Boolean(process.env.TINDEX_API_TOKEN),
+      GAPGPT_API_KEY: Boolean(process.env.GAPGPT_API_KEY),
+      IPPANEL_API_KEY: Boolean(process.env.IPPANEL_API_KEY && process.env.IPPANEL_FROM)
+    };
+    res.set("Cache-Control","no-store");
+    res.json({ok:true,checkedAt:data.checkedAt,sources:data.sources,spreadPct:data.spreadPct,anomaly:data.anomaly,thresholdPct:data.thresholdPct,providerHealth:data.providerHealth,configured});
+  }catch(e){ res.status(503).json({ok:false,error:"خطا در بررسی منابع بازار."}); }
+});
+
 app.get("/api/v78/health", async (_,res)=>{ res.set('Cache-Control','no-store'); res.json({ok:true,version:APP_VERSION,market:{status:state.engineStatus?.status||'OFFLINE',priceIRR:Number(state.iran?.priceIRR||0),source:state.iran?.source||null,ageMs:state.iran?.fetchedAt?Date.now()-Date.parse(state.iran.fetchedAt):null},server:{uptime:Math.round(process.uptime()),updatedAt:state.updatedAt},platform:await platformOverview()}); });
 app.get("/api/v78/market/snapshot", async (_,res)=>{ res.set('Cache-Control','no-store'); res.json({ok:true,version:APP_VERSION,generatedAt:new Date().toISOString(),status:state.engineStatus||null,iran:state.iran||null,global:state.global||null,dollar:state.dollar||null,coins:state.coins||{},bitcoin:state.bitcoin||null,analysis:state.analysis||null,pressure:state.marketPressure||null,watchSymbols:['XAUUSD','GOLD18','USD','BTC']}); });
 app.get("/api/v1/market/gold", async (req,res)=>{ try{ const raw=String(req.headers.authorization||''); const key=raw.replace(/^Bearer\s+/i,'').trim()||String(req.headers['x-api-key']||'').trim(); if(!key)return res.status(401).json({error:'API key required'}); const auth=await authenticateApiKey(key); if(!auth)return res.status(401).json({error:'API key invalid'}); res.set('X-RateLimit-Daily',String(auth.subscription.limits.apiDaily)); res.set('X-RateLimit-Remaining',String(Math.max(0,auth.subscription.limits.apiDaily-auth.usage))); res.json({ok:true,data:{symbol:'XAUUSD',priceIRR:Number(state.iran?.priceIRR||0),xauUSD:Number(state.global?.price||state.global?.xau||0)||null,usdIRR:Number(state.dollar?.priceIRR||state.dollar?.price||0)||null,changePct:Number(state.iran?.changePct||0)||0,timestamp:state.updatedAt||new Date().toISOString(),status:state.engineStatus?.status||'OFFLINE',source:state.iran?.source||null}}); }catch(e){res.status(429).json({error:e.message});} });
