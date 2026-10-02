@@ -1,0 +1,328 @@
+
+/* Gold2 Pro V85.0.3 — Premium Financial Terminal visual system
+   Purpose: replace the accumulated brown/gold-heavy visual layers with a coherent
+   graphite + deep-navy + teal financial-terminal palette. */
+:root{
+  --g2-bg:#070b12;
+  --g2-bg-2:#0a1019;
+  --g2-panel:#0d1520;
+  --g2-panel-2:#111c29;
+  --g2-panel-3:#152334;
+  --g2-line:#203144;
+  --g2-line-strong:#2b4057;
+  --g2-text:#eef4f8;
+  --g2-muted:#8fa1b4;
+  --g2-teal:#36d6b0;
+  --g2-teal-2:#79f0d1;
+  --g2-blue:#69a9ff;
+  --g2-gold:#e7c56c;
+  --g2-gold-2:#f5dfa0;
+  --g2-red:#ff7188;
+  --g2-shadow:0 20px 60px rgba(0,0,0,.34);
+}
+
+/* ---------- Main site foundation ---------- */
+html,body{
+  background:
+    radial-gradient(900px 520px at 88% -12%,rgba(42,91,129,.20),transparent 62%),
+    radial-gradient(720px 480px at 4% 18%,rgba(26,133,116,.10),transparent 60%),
+    linear-gradient(180deg,#070b12 0%,#090f17 48%,#070b11 100%) !important;
+  color:var(--g2-text);
+}
+body{
+  font-family:Tahoma,"Segoe UI",Arial,sans-serif;
+}
+body::before{
+  content:"";
+  position:fixed;
+  inset:0;
+  pointer-events:none;
+  background-image:linear-gradient(rgba(255,255,255,.018) 1px,transparent 1px),
+                   linear-gradient(90deg,rgba(255,255,255,.014) 1px,transparent 1px);
+  background-size:48px 48px;
+  mask-image:linear-gradient(to bottom,rgba(0,0,0,.38),transparent 70%);
+  z-index:-1;
+}
+
+/* kill the old purple/brown/gold cast */
+body.v62Terminal{
+  --g2-bg:#070b12;
+  --g2-panel:#0d1520;
+  --g2-line:#203144;
+  --g2-text:#eef4f8;
+  --g2-muted:#8fa1b4;
+  --g2-gold:#e7c56c;
+  --g2-green:#36d6b0;
+}
+body.v62Terminal .wrap{
+  max-width:1280px;
+  padding:18px 20px 72px;
+}
+
+/* ---------- Brand / top bar ---------- */
+body.v62Terminal .v62Topbar,
+body.v62Terminal .topbar{
+  background:rgba(7,12,19,.82) !important;
+  border-bottom:1px solid rgba(79,112,139,.28) !important;
+  backdrop-filter:blur(22px);
+}
+body.v62Terminal .v62Brand,
+body.v62Terminal .brand{
+  color:#f2f7fa !important;
+}
+body.v62Terminal .v62Logo,
+body.v62Terminal .logo{
+  background:linear-gradient(145deg,#2bd1ad,#197f83) !important;
+  color:#041313 !important;
+  box-shadow:0 10px 28px rgba(39,210,174,.18) !important;
+}
+body.v62Terminal .v62Eyebrow,
+body.v62Terminal .eyebrow{
+  color:#6fd9c2 !important;
+}
+
+/* ---------- Navigation ---------- */
+body.v62Terminal .v62Sidebar{
+  background:linear-gradient(180deg,#0a111a 0%,#080e16 100%) !important;
+  border-color:#1d2d3e !important;
+  box-shadow:20px 0 55px rgba(0,0,0,.16);
+}
+body.v62Terminal .v62Nav button{
+  color:#91a4b7 !important;
+  background:transparent !important;
+  border:1px solid transparent !important;
+  border-radius:13px !important;
+}
+body.v62Terminal .v62Nav button:hover{
+  color:#eaf4f6 !important;
+  background:#101c29 !important;
+  border-color:#21374b !important;
+}
+body.v62Terminal .v62Nav button.active{
+  color:#8cf0d6 !important;
+  background:linear-gradient(90deg,rgba(48,211,174,.12),rgba(48,211,174,.035)) !important;
+  border-color:rgba(54,214,176,.25) !important;
+  box-shadow:inset 3px 0 0 #36d6b0,0 8px 24px rgba(0,0,0,.16) !important;
+}
+
+/* ---------- Cards / dashboard ---------- */
+body.v62Terminal .v62Hero,
+body.v62Terminal .v62ChartPanel,
+body.v62Terminal .v62Timeline,
+body.v62Terminal .v65MarketState,
+body.v62Terminal .v66DecisionCard,
+body.v62Terminal .v66HeatmapCard,
+body.v62Terminal .v62MarketCard,
+body.v62Terminal .v62Card{
+  background:linear-gradient(145deg,#101a27,#0b131d) !important;
+  border-color:#203347 !important;
+  box-shadow:var(--g2-shadow) !important;
+}
+body.v62Terminal .v62Hero::after{
+  background:radial-gradient(circle,rgba(54,214,176,.12),transparent 68%) !important;
+}
+body.v62Terminal .v62MarketCard:hover,
+body.v62Terminal .v62ChartPanel:hover{
+  border-color:#2c4c62 !important;
+  transform:translateY(-1px);
+}
+body.v62Terminal .v62MarketCard .value,
+body.v62Terminal .v62Hero .price{
+  color:#f1f6f8 !important;
+}
+body.v62Terminal .v62MarketCard .label,
+body.v62Terminal .muted,
+body.v62Terminal small{
+  color:var(--g2-muted);
+}
+
+/* Teal = healthy/live/positive */
+body.v62Terminal .live,
+body.v62Terminal .up,
+body.v62Terminal .positive,
+body.v62Terminal [data-state="live"]{
+  color:#72edcf !important;
+}
+body.v62Terminal .v62MarketStatus[data-state="live"],
+body.v62Terminal .v62HeroLive[data-state="live"]{
+  color:#72edcf !important;
+  background:rgba(54,214,176,.07);
+  border-color:rgba(54,214,176,.25);
+}
+body.v62Terminal .dot.live{
+  background:#36d6b0 !important;
+  box-shadow:0 0 0 4px rgba(54,214,176,.10),0 0 16px rgba(54,214,176,.5) !important;
+}
+
+/* Gold is a data accent, not the page color */
+body.v62Terminal .gold,
+body.v62Terminal .v62Price,
+body.v62Terminal .hero-time b{
+  color:#e7c56c !important;
+}
+
+/* ---------- Buttons / controls ---------- */
+body.v62Terminal button{
+  border-radius:11px !important;
+  transition:transform .16s ease,border-color .16s ease,background .16s ease,box-shadow .16s ease !important;
+}
+body.v62Terminal button:not(.secondary):not(.ghost):not(.danger){
+  background:linear-gradient(135deg,#39d6b2,#238d91) !important;
+  color:#041514 !important;
+  border:1px solid rgba(115,240,210,.30) !important;
+  box-shadow:0 8px 22px rgba(36,170,150,.12);
+}
+body.v62Terminal button.secondary,
+body.v62Terminal button.ghost{
+  background:#111c29 !important;
+  color:#dce8ee !important;
+  border:1px solid #294056 !important;
+}
+body.v62Terminal button:hover{
+  transform:translateY(-1px);
+  filter:brightness(1.06);
+}
+body.v62Terminal button:focus-visible,
+body.v62Terminal input:focus-visible,
+body.v62Terminal select:focus-visible,
+body.v62Terminal textarea:focus-visible{
+  outline:2px solid #4ce0bd !important;
+  outline-offset:2px;
+}
+
+/* ---------- Inputs ---------- */
+body.v62Terminal input,
+body.v62Terminal select,
+body.v62Terminal textarea{
+  background:#09121c !important;
+  color:#edf4f7 !important;
+  border:1px solid #263b50 !important;
+  border-radius:11px !important;
+}
+body.v62Terminal input:focus,
+body.v62Terminal select:focus,
+body.v62Terminal textarea:focus{
+  border-color:#38cdb0 !important;
+  box-shadow:0 0 0 3px rgba(54,214,176,.10) !important;
+}
+
+/* ---------- Provider / health cards ---------- */
+body.v62Terminal .v85ProviderHealthCard{
+  background:linear-gradient(145deg,#101b28,#0b141e) !important;
+  border-color:#243b50 !important;
+}
+body.v62Terminal .v85ProviderHealthCard[data-ok="true"]{
+  border-color:rgba(54,214,176,.42) !important;
+  box-shadow:inset 0 1px 0 rgba(54,214,176,.08);
+}
+body.v62Terminal .v85ProviderHealthCard[data-ok="false"]{
+  border-color:rgba(255,113,136,.38) !important;
+}
+
+/* ---------- Dashboard quick actions ---------- */
+body.g2Dashboard .g2DashboardQuick button{
+  background:linear-gradient(145deg,#101d2b,#0b151f) !important;
+  border-color:#263d52 !important;
+  color:#e8f1f4 !important;
+}
+body.g2Dashboard .g2DashboardQuick button:hover{
+  border-color:#35c9aa !important;
+  box-shadow:0 10px 30px rgba(0,0,0,.20);
+}
+body.g2Dashboard .g2DashboardQuick .g2qIcon{
+  background:linear-gradient(145deg,#12322f,#10252b) !important;
+  color:#6ee8cb !important;
+}
+
+/* ---------- Section headers ---------- */
+body.g2SectionPage .g2PageHeader h2{
+  color:#f1f6f8 !important;
+}
+body.g2SectionPage .g2PageHeader .eyebrow{
+  color:#54d8bc !important;
+}
+body.g2SectionPage .g2PageHeader .g2Back{
+  background:#101c29 !important;
+  border-color:#294056 !important;
+  color:#dce8ee !important;
+}
+
+/* ---------- Admin ---------- */
+body.admin-body,
+.admin-app{
+  --bg:#070b12 !important;
+  --panel:#0d1520 !important;
+  --panel2:#111c29 !important;
+  --line:#203144 !important;
+  --line2:#2b4057 !important;
+  --gold:#e7c56c !important;
+  --gold2:#f5dfa0 !important;
+  --green:#36d6b0 !important;
+  --blue:#69a9ff !important;
+}
+.admin-app,
+.admin-login-view{
+  background:
+    radial-gradient(800px 500px at 85% -10%,rgba(38,104,132,.18),transparent 62%),
+    radial-gradient(650px 450px at 5% 80%,rgba(31,130,112,.08),transparent 62%),
+    #070b12 !important;
+}
+.admin-app .sidebar{
+  background:linear-gradient(180deg,#0a111a,#080e15) !important;
+  border-color:#1d2d3e !important;
+}
+.admin-app .topbar{
+  background:rgba(7,12,19,.82) !important;
+  border-color:#1d2d3e !important;
+}
+.admin-app .hero-banner,
+.admin-app .section-hero,
+.admin-app .metric{
+  background:linear-gradient(145deg,#101a27,#0b131d) !important;
+  border-color:#203347 !important;
+}
+.admin-app .nav-item.active{
+  color:#8cf0d6 !important;
+  background:rgba(54,214,176,.08) !important;
+  border-color:rgba(54,214,176,.24) !important;
+  box-shadow:inset 3px 0 0 #36d6b0 !important;
+}
+.admin-app .primary{
+  background:linear-gradient(135deg,#39d6b2,#238d91) !important;
+  color:#041514 !important;
+  border-color:rgba(115,240,210,.30) !important;
+}
+.admin-app .brand-mark{
+  background:linear-gradient(145deg,#2bd1ad,#197f83) !important;
+  color:#041313 !important;
+  box-shadow:0 12px 30px rgba(39,210,174,.16) !important;
+}
+.admin-app .metric.green .value{color:#72edcf !important}
+.admin-app .metric.gold .value{color:#e7c56c !important}
+.admin-app .metric.blue .value{color:#69a9ff !important}
+.admin-app .live-status{
+  background:rgba(54,214,176,.06) !important;
+  border-color:rgba(54,214,176,.24) !important;
+  color:#9adfce !important;
+}
+.admin-app .login-card{
+  background:linear-gradient(145deg,rgba(14,23,34,.97),rgba(7,12,18,.99)) !important;
+  border-color:#294056 !important;
+}
+.admin-app .glow-one{background:#36d6b0 !important;opacity:.10}
+.admin-app .glow-two{background:#69a9ff !important;opacity:.08}
+
+/* Mobile polish */
+@media(max-width:760px){
+  body.v62Terminal .wrap{padding:12px 12px 88px}
+  body.v62Terminal .v62Sidebar{
+    background:rgba(8,15,23,.96) !important;
+    border-color:#284056 !important;
+  }
+}
+@media(prefers-reduced-motion:reduce){
+  body.v62Terminal *,body.admin-app *{
+    transition-duration:.01ms !important;
+    animation-duration:.01ms !important;
+  }
+}
